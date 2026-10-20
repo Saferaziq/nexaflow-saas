@@ -1,5 +1,7 @@
 import './globals.css'
-import Script from 'next/script'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'NexaFlow SaaS - Restoran UMKM',
@@ -9,12 +11,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <head>
-        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
-      </head>
-      <body style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        {children}
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

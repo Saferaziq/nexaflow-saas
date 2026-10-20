@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============ CUSTOM CLASSES ============ */
+.card-elevated {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 8px 24px -8px rgba(15, 23, 42, 0.1);
+  transition: all 0.25s ease;
+}
+.card-elevated:hover {
+  box-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.08), 0 16px 40px -8px rgba(15, 23, 42, 0.15);
+  transform: translateY(-2px);
+}
+
+.card-subtle {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+  border: 1px solid #c2410c;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 12px -2px rgba(234, 88, 12, 0.35);
+  transition: all 0.15s ease;
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-dark {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #0f172a;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.3);
+  transition: all 0.15s ease;
+}
+.btn-dark:hover {
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+}
+
+.btn-ghost {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  transition: all 0.15s ease;
+}
+.btn-ghost:hover {
+  background: #f8fafc;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+}
+.status-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pending { background: #fefce8; color: #a16207; border-color: #fde047; }
+.status-cooking { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.status-ready { background: #ecfdf5; color: #047857; border-color: #6ee7b7; }
+.status-completed { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
+.status-cancelled { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+
+.icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+}
