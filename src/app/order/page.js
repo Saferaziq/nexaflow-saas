@@ -138,9 +138,9 @@ function OrderContent() {
 
       {/* SEARCH */}
       <div className="px-4 -mt-5 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 flex items-center px-4 py-3">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200 flex items-center px-4 py-3">
           <span className="text-black font-black text-lg">🔍</span>
-          <input type="text" placeholder="Cari menu favorit Anda..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 ml-3 text-sm font-bold outline-none text-black placeholder:text-slate-600" />
+          <input type="text" placeholder="Cari menu favorit Anda..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 ml-3 text-sm font-bold outline-none text-black placeholder:text-slate-500" />
           {searchQuery && <button onClick={() => setSearchQuery('')} className="text-black text-xl font-black">×</button>}
         </div>
       </div>
@@ -165,16 +165,16 @@ function OrderContent() {
                 <div className="bg-white rounded-3xl p-12 text-center border-2 border-slate-200">
                   <div className="text-5xl mb-3">🍽️</div>
                   <p className="text-black font-black text-sm">Menu tidak ditemukan</p>
-                  <p className="text-slate-800 font-bold text-xs mt-1">Coba kata kunci lain</p>
+                  <p className="text-black font-bold text-xs mt-1">Coba kata kunci lain</p>
                 </div>
               ) : filteredMenus.map(menu => {
                 const cartItem = cart.find(c => c.id === menu.id);
                 return (
                   <div key={menu.id} className="bg-white p-3 rounded-3xl shadow-sm flex gap-3 border-2 border-slate-200 relative">
-                    <div className="w-24 h-24 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 relative border border-slate-200">
+                    <div className="w-24 h-24 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 relative border border-slate-300">
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
                       {cartItem && (
-                        <div className="absolute top-1 right-1 bg-orange-500 text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md">
+                        <div className="absolute top-1 right-1 bg-orange-500 text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white">
                           {cartItem.qty}
                         </div>
                       )}
@@ -182,7 +182,7 @@ function OrderContent() {
                     <div className="flex-1 flex flex-col justify-between min-w-0">
                       <div>
                         <h3 className="font-black text-black text-sm truncate">{menu.name}</h3>
-                        <p className="text-[11px] text-slate-800 font-bold line-clamp-2 mt-0.5">{menu.description || 'Menu andalan kami'}</p>
+                        <p className="text-[11px] text-black font-bold line-clamp-2 mt-0.5">{menu.description || 'Menu andalan kami'}</p>
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <span className="font-black text-orange-600 text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
@@ -210,21 +210,21 @@ function OrderContent() {
               <div className="bg-white rounded-3xl p-12 text-center border-2 border-slate-200 mt-4">
                 <div className="text-6xl mb-4">🛒</div>
                 <p className="text-black font-black text-base">Keranjang masih kosong</p>
-                <p className="text-slate-800 font-bold text-xs mt-2 mb-6">Yuk pilih menu favorit Anda dulu</p>
+                <p className="text-black font-bold text-xs mt-2 mb-6">Yuk pilih menu favorit Anda dulu</p>
                 <button onClick={() => setActiveTab('menu')} className="bg-orange-500 text-white font-black px-6 py-3 rounded-xl text-sm shadow-md">Lihat Menu</button>
               </div>
             ) : (
               <>
                 <div className="bg-white rounded-3xl p-4 border-2 border-slate-200 shadow-sm mt-2">
-                  <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-slate-100">
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-slate-200">
                     <h3 className="font-black text-black text-sm">Pesanan Anda</h3>
-                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-black">{totalCartQty} item</span>
+                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-black border border-orange-300">{totalCartQty} item</span>
                   </div>
                   <div className="space-y-4">
                     {cart.map(item => (
                       <div key={item.id} className="border-b pb-4 last:border-0 last:pb-0 border-slate-200">
                         <div className="flex justify-between items-start gap-3">
-                          <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200">
+                          <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-300">
                             {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xl">🍽️</div>}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -242,7 +242,7 @@ function OrderContent() {
                           placeholder="Catatan (mis. tanpa gula, tidak pedas)"
                           value={item.note || ''}
                           onChange={(e) => updateItemNote(item.id, e.target.value)}
-                          className="w-full mt-2 text-xs border-2 border-slate-200 rounded-xl px-3 py-2 focus:outline-orange-500 bg-slate-50 font-bold text-black placeholder:text-slate-600"
+                          className="w-full mt-2 text-xs border-2 border-slate-200 rounded-xl px-3 py-2 focus:outline-orange-500 bg-white font-bold text-black placeholder:text-slate-500"
                         />
                       </div>
                     ))}
@@ -251,11 +251,11 @@ function OrderContent() {
 
                 <div className="bg-white rounded-3xl p-4 border-2 border-slate-200 shadow-sm mt-3">
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between text-slate-800 font-bold">
+                    <div className="flex justify-between text-black font-bold">
                       <span>Subtotal</span>
                       <span>Rp {totalPrice.toLocaleString('id-ID')}</span>
                     </div>
-                    <div className="flex justify-between font-black text-base pt-2 border-t-2 border-slate-100">
+                    <div className="flex justify-between font-black text-base pt-2 border-t-2 border-slate-200">
                       <span className="text-black">Total Bayar</span>
                       <span className="text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span>
                     </div>
@@ -276,7 +276,7 @@ function OrderContent() {
               <div className="bg-white rounded-3xl p-12 text-center border-2 border-slate-200">
                 <div className="text-6xl mb-4">📋</div>
                 <p className="text-black font-black text-base">Belum ada pesanan</p>
-                <p className="text-slate-800 font-bold text-xs mt-2">Pesanan Anda akan muncul di sini</p>
+                <p className="text-black font-bold text-xs mt-2">Pesanan Anda akan muncul di sini</p>
               </div>
             ) : myOrders.map(o => {
               const statusIdx = ['pending', 'cooking', 'ready', 'completed'].indexOf(o.status);
@@ -288,7 +288,7 @@ function OrderContent() {
                 <div key={o.id} className="bg-white rounded-3xl p-5 border-2 border-slate-200 shadow-sm">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <p className="text-[10px] text-slate-800 font-black tracking-wider">ORDER #{o.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-[10px] text-black font-black tracking-wider">ORDER #{o.id.slice(0, 8).toUpperCase()}</p>
                       <p className="text-xs text-black font-bold mt-0.5">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                     <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase text-white ${statusColors[statusIdx]}`}>
@@ -303,34 +303,34 @@ function OrderContent() {
                           <span>{i.qty}x {i.name}</span>
                           <span>Rp {(i.price * i.qty).toLocaleString('id-ID')}</span>
                         </div>
-                        {i.note && <p className="text-[10px] text-orange-700 font-bold italic ml-3">↳ "{i.note}"</p>}
+                        {i.note && <p className="text-[10px] text-orange-700 font-black italic ml-3">↳ "{i.note}"</p>}
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-slate-100">
+                  <div className="flex justify-between items-center pt-3 border-t-2 border-slate-200">
                     <span className="text-xs text-black font-black">Total</span>
                     <span className="text-base font-black text-orange-600">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
                   </div>
 
-                  <div className="mt-4 space-y-3">
+                  {/* TIMELINE STATUS - SEMUA HITAM PEKAT */}
+                  <div className="mt-5 space-y-4">
                     {statusLabels.map((label, i) => {
                       const isDone = i <= statusIdx;
                       const isActive = i === statusIdx;
                       return (
                         <div key={i} className="flex items-start gap-3">
                           <div className="flex flex-col items-center">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${isDone ? statusColors[statusIdx] + ' text-white shadow-md' : 'bg-slate-300 text-black'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 ${isDone ? statusColors[statusIdx] + ' text-white border-transparent shadow-md' : 'bg-slate-100 text-black border-black'}`}>
                               {isDone ? statusEmojis[i] : (i + 1)}
                             </div>
                             {i < statusLabels.length - 1 && (
-                              <div className={`w-0.5 h-4 mt-0.5 ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-slate-300'}`}></div>
+                              <div className={`w-0.5 h-5 mt-1 ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-slate-400'}`}></div>
                             )}
                           </div>
-                          <div className="flex-1 pt-0.5">
-                            {/* TEKS STATUS: HITAM PEKAT */}
-                            <p className={`text-xs font-black ${isDone ? 'text-black' : 'text-slate-700'}`}>{label}</p>
-                            {isActive && <p className="text-[10px] text-slate-800 font-bold mt-0.5">Sedang berlangsung...</p>}
+                          <div className="flex-1 pt-1">
+                            <p className={`text-sm font-black text-black`}>{label}</p>
+                            {isActive && <p className="text-[11px] text-orange-700 font-black mt-1">Sedang berlangsung...</p>}
                           </div>
                         </div>
                       );
@@ -348,26 +348,26 @@ function OrderContent() {
         <p className="text-[11px] font-black text-black">
           Powered by <span className="text-orange-600 font-black">Nexa Flow</span>
         </p>
-        <p className="text-[10px] text-slate-800 font-bold mt-0.5">WA: 081389744957</p>
+        <p className="text-[10px] text-black font-bold mt-0.5">WA: 081389744957</p>
       </div>
 
       {/* FLOATING BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-3">
-        <div className="max-w-md mx-auto bg-white border-2 border-slate-200 rounded-3xl shadow-2xl p-1.5 flex gap-1">
-          <button onClick={() => setActiveTab('menu')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-slate-900 text-white' : 'text-slate-800'}`}>
+        <div className="max-w-md mx-auto bg-white border-2 border-slate-300 rounded-3xl shadow-2xl p-1.5 flex gap-1">
+          <button onClick={() => setActiveTab('menu')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-slate-900 text-white' : 'text-black'}`}>
             <span className="text-lg">🍽️</span>
             <span className={`text-[10px] font-black mt-0.5 ${activeTab === 'menu' ? 'text-white' : 'text-black'}`}>Menu</span>
           </button>
-          <button onClick={() => setActiveTab('cart')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-slate-900 text-white' : 'text-slate-800'}`}>
+          <button onClick={() => setActiveTab('cart')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-slate-900 text-white' : 'text-black'}`}>
             <span className="text-lg">🛒</span>
             <span className={`text-[10px] font-black mt-0.5 ${activeTab === 'cart' ? 'text-white' : 'text-black'}`}>Keranjang</span>
             {totalCartQty > 0 && (
-              <span className="absolute top-1 right-2 bg-orange-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">
+              <span className="absolute top-1 right-2 bg-orange-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow border border-white">
                 {totalCartQty}
               </span>
             )}
           </button>
-          <button onClick={() => setActiveTab('status')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'status' ? 'bg-slate-900 text-white' : 'text-slate-800'}`}>
+          <button onClick={() => setActiveTab('status')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'status' ? 'bg-slate-900 text-white' : 'text-black'}`}>
             <span className="text-lg">📋</span>
             <span className={`text-[10px] font-black mt-0.5 ${activeTab === 'status' ? 'text-white' : 'text-black'}`}>Status</span>
           </button>
