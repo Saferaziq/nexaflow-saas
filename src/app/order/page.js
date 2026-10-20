@@ -387,3 +387,4 @@ function OrderContent() {
 export default function OrderPage() {
   return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin"></div></div>}><OrderContent /></Suspense>;
 }
+// FORCE UPDATE VERCEL
