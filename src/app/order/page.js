@@ -8,37 +8,42 @@ function OrderContent() {
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Memuat...' });
+  const [cafe, setCafe] = useState({ name: 'Memuat...', logo_url: '' });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('menu'); // 'menu' | 'cart' | 'status'
+  const [activeTab, setActiveTab] = useState('menu');
   const [category, setCategory] = useState('all');
   const [myOrders, setMyOrders] = useState([]);
 
   useEffect(() => {
     if (!tenantId) return;
+    
     const fetchData = async () => {
+      // Ambil data kafe
       const { data: cafeData } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
       if (cafeData) setCafe(cafeData);
+      
+      // Ambil data menu
       const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
       if (menuData) setMenus(menuData);
+      
       setLoading(false);
     };
     fetchData();
 
-    // Realtime untuk pesanan pelanggan ini
-    const channel = supabase.channel('my-orders-' + Date.now())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+    // Dengarkan perubahan pada tabel kafe (logo/nama) & pesanan
+    const channel = supabase.channel('customer-realtime-' + Date.now())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
+        setCafe(payload.new); // Update nama/logo secara live
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => {
         const existingOrders = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
-        if (payload.new && existingOrders.includes(payload.new.id)) {
-          fetchMyOrders(existingOrders);
-        }
+        if (existingOrders.length > 0) fetchMyOrders(existingOrders);
       })
       .subscribe();
 
-    // Load pesanan yang sudah pernah dibuat dari localStorage
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     if (existingIds.length > 0) fetchMyOrders(existingIds);
 
@@ -59,25 +64,30 @@ function OrderContent() {
     setIsSubmitting(true);
     const orderData = { tenant_id: tenantId, table_number: tableNumber, items: cart, total_price: totalPrice, status: 'pending', payment_status: 'unpaid', payment_method: 'cash' };
     const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
+    
     if (error) { alert('Gagal: ' + error.message); setIsSubmitting(false); return; }
-    // Simpan ID ke localStorage agar bisa tracking
+    
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify([...existingIds, data.id]));
     setCart([]); setIsSubmitting(false); setActiveTab('status');
     fetchMyOrders([...existingIds, data.id]);
   };
 
-  if (!tenantId || !tableNumber) return <div className="p-10 text-center font-bold">QR Code tidak valid. Silakan scan ulang.</div>;
-  if (loading) return <div className="p-10 text-center font-bold">Memuat menu...</div>;
+  if (!tenantId || !tableNumber) return <div className="p-10 text-center font-bold text-slate-800">QR Code tidak valid. Silakan scan ulang.</div>;
+  if (loading) return <div className="p-10 text-center font-bold text-slate-800">Memuat menu...</div>;
 
   const filteredMenus = category === 'all' ? menus : menus.filter(m => m.category === category);
   const totalCartQty = cart.reduce((a,b) => a+b.qty, 0);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
-      <div className="bg-gradient-to-br from-orange-500 to-amber-500 text-white p-6 rounded-b-3xl shadow-lg mb-4">
-        <h1 className="text-2xl font-black">{cafe.name}</h1>
-        <p className="text-sm font-bold opacity-90 mt-1">📍 Meja {tableNumber}</p>
+      {/* HEADER KAFE (Nama & Logo) */}
+      <div className="bg-gradient-to-br from-orange-500 to-amber-500 text-white p-6 rounded-b-3xl shadow-lg mb-4 flex items-center gap-4">
+        {cafe.logo_url && <img src={cafe.logo_url} className="w-16 h-16 rounded-xl bg-white object-cover border-2 border-white shadow-md" alt="Logo" />}
+        <div>
+          <h1 className="text-2xl font-black">{cafe.name}</h1>
+          <p className="text-sm font-bold opacity-90 mt-1">📍 Meja {tableNumber}</p>
+        </div>
       </div>
 
       <div className="flex gap-1 px-4 max-w-md mx-auto">
@@ -122,10 +132,7 @@ function OrderContent() {
                     <div className="flex items-center gap-2"><button onClick={() => decCart(item.id)} className="w-7 h-7 bg-slate-100 rounded-lg font-black">-</button><span className="w-6 text-center font-bold text-sm">{item.qty}</span><button onClick={() => addToCart(item)} className="w-7 h-7 bg-orange-100 text-orange-600 rounded-lg font-black">+</button></div>
                   </div>
                 ))}
-                <div className="pt-3 border-t flex justify-between items-center">
-                  <span className="font-bold">Total:</span>
-                  <span className="font-black text-lg text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span>
-                </div>
+                <div className="pt-3 border-t flex justify-between items-center"><span className="font-bold">Total:</span><span className="font-black text-lg text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span></div>
               </div>
               <button onClick={handleCheckout} disabled={isSubmitting} className="w-full btn-3d-orange text-white font-black py-4 rounded-2xl mt-4">{isSubmitting ? 'Mengirim...' : '🚀 Kirim Pesanan'}</button>
             </>
@@ -153,15 +160,6 @@ function OrderContent() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {totalCartQty > 0 && activeTab !== 'cart' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-2xl z-50 rounded-t-3xl">
-          <div className="max-w-md mx-auto flex justify-between items-center">
-            <div><p className="text-xs text-slate-500 font-bold">{totalCartQty} item</p><p className="font-black text-lg">Rp {totalPrice.toLocaleString('id-ID')}</p></div>
-            <button onClick={() => setActiveTab('cart')} className="btn-3d-orange text-white font-black py-3 px-6 rounded-xl">Lihat Keranjang</button>
-          </div>
         </div>
       )}
     </div>
