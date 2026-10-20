@@ -135,7 +135,7 @@ export default function DashboardPage() {
       </head><body>
       <div class="center"><h3>${settings.name}</h3><p>${settings.address}</p><p>WA: ${settings.wa}</p></div>
       <hr><p>Meja: ${order.table_number}<br>Order: ${order.id.slice(0,8)}<br>Tanggal: ${new Date(order.created_at).toLocaleString('id-ID')}</p><hr>
-      <table>${order.items.map(i => `<tr><td>${i.name} x${i.qty}</td><td style="text-align:right">${rp(i.price*i.qty)}</td></tr>`).join('')}</table>
+      <table>${order.items.map(i => `<tr><td>${i.name} x${i.qty} ${i.note ? '('+i.note+')' : ''}</td><td style="text-align:right">${rp(i.price*i.qty)}</td></tr>`).join('')}</table>
       <hr><table><tr><td><b>TOTAL</b></td><td style="text-align:right"><b>${rp(order.total_price)}</b></td></tr></table>
       <hr><div class="center"><p>${order.payment_status === 'paid' ? 'LUNAS' : 'BELUM LUNAS'}</p><p>Terima Kasih!</p></div>
       </body></html>
@@ -216,9 +216,24 @@ export default function DashboardPage() {
                             <span className="font-black text-lg">Meja {order.table_number}</span>
                             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${order.status === 'pending' ? 'bg-amber-100 text-amber-700' : order.status === 'cooking' ? 'bg-blue-100 text-blue-700' : order.status === 'ready' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>{order.status}</span>
                           </div>
-                          <div className="space-y-1.5 mb-4">
-                            {order.items.map((item, idx) => <div key={idx} className="flex justify-between text-xs font-semibold"><span>{item.qty}x {item.name}</span><span>{rp(item.price * item.qty)}</span></div>)}
+                          
+                          {/* DAFTAR PESANAN & CATATAN */}
+                          <div className="space-y-2 mb-4">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex flex-col border-b border-slate-50 pb-1.5 last:border-0">
+                                <div className="flex justify-between text-xs font-semibold">
+                                  <span>{item.qty}x {item.name}</span>
+                                  <span>{rp(item.price * item.qty)}</span>
+                                </div>
+                                {item.note && (
+                                  <span className="text-[10px] text-orange-700 bg-orange-50 px-2 py-1 rounded-md mt-1 font-bold w-fit">
+                                    Catatan: {item.note}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
                           </div>
+
                         </div>
                         <div>
                           <p className="font-black text-right border-t pt-2 mb-4 text-sm">Total: {rp(order.total_price)}</p>
@@ -267,11 +282,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* TAB MEJA & QR (Di sinilah fitur Print berada) */}
+            {/* TAB MEJA & QR */}
             {activeTab === 'tables' && (
               <div className="card-3d p-6 rounded-3xl print:border-none print:shadow-none print:p-0">
                 
-                {/* Header & Tombol Print (Disembunyikan saat print) */}
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 print:hidden">
                   <h3 className="font-black text-lg">Generator QR Meja</h3>
                   <div className="flex gap-2 w-full sm:w-auto">
@@ -285,7 +299,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Grid QR Code */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:w-full">
                   {tables.map(t => (
                     <div key={t.id} className="bg-slate-50 border p-4 rounded-2xl text-center print:border-dashed print:border-gray-400 print:bg-white print:p-2 print:rounded-none">

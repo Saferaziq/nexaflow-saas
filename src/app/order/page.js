@@ -52,8 +52,14 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
-  const addToCart = (menu) => { setCart(prev => { const ex = prev.find(i => i.id === menu.id); if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i); return [...prev, { ...menu, qty: 1 }]; }); };
+  const addToCart = (menu) => { setCart(prev => { const ex = prev.find(i => i.id === menu.id); if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i); return [...prev, { ...menu, qty: 1, note: '' }]; }); };
   const decCart = (id) => { setCart(prev => { const ex = prev.find(i => i.id === id); if (ex.qty === 1) return prev.filter(i => i.id !== id); return prev.map(i => i.id === id ? { ...i, qty: i.qty - 1 } : i); }); };
+  
+  // Fungsi untuk mengubah catatan pada item tertentu
+  const updateItemNote = (id, note) => {
+    setCart(prev => prev.map(i => i.id === id ? { ...i, note: note } : i));
+  };
+
   const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0);
 
   const handleCheckout = async () => {
@@ -111,12 +117,10 @@ function OrderContent() {
                 </div>
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
-                    {/* Nama Menu: Warna Gelap, Bukan Hitam Pekat */}
                     <h3 className="font-extrabold text-slate-900 text-sm">{menu.name}</h3>
                     <p className="text-xs text-slate-500 font-medium line-clamp-2 mt-0.5">{menu.description}</p>
                   </div>
                   <div className="flex justify-between items-center mt-2">
-                    {/* Harga: Oranye Tegas */}
                     <span className="font-extrabold text-orange-600 text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
                     <button onClick={() => addToCart(menu)} className="w-8 h-8 bg-orange-50 text-orange-600 rounded-full font-bold text-xl flex items-center justify-center shadow-sm">+</button>
                   </div>
@@ -133,19 +137,33 @@ function OrderContent() {
             <>
               <div className="bg-white rounded-2xl p-4 space-y-4 border border-slate-100 shadow-sm">
                 {cart.map(item => (
-                  <div key={item.id} className="flex justify-between items-center border-b pb-3 last:border-0 border-slate-100">
-                    <div>
-                      <p className="font-extrabold text-slate-900 text-sm">{item.name}</p>
-                      <p className="text-xs text-slate-500 font-bold mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                  <div key={item.id} className="border-b pb-4 last:border-0 border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-extrabold text-slate-900 text-sm">{item.name}</p>
+                        <p className="text-xs text-slate-500 font-bold mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => decCart(item.id)} className="w-8 h-8 bg-slate-100 rounded-lg font-bold text-slate-700">-</button>
+                        <span className="w-6 text-center font-bold text-slate-900 text-sm">{item.qty}</span>
+                        <button onClick={() => addToCart(item)} className="w-8 h-8 bg-orange-50 text-orange-600 rounded-lg font-bold shadow-sm">+</button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => decCart(item.id)} className="w-8 h-8 bg-slate-100 rounded-lg font-bold text-slate-700">-</button>
-                      <span className="w-6 text-center font-bold text-slate-900 text-sm">{item.qty}</span>
-                      <button onClick={() => addToCart(item)} className="w-8 h-8 bg-orange-50 text-orange-600 rounded-lg font-bold shadow-sm">+</button>
+                    
+                    {/* KOLOM CATATAN */}
+                    <div className="mt-3">
+                      <input 
+                        type="text" 
+                        placeholder="Catatan (mis. jangan pakai gula, tidak terlalu panas)" 
+                        value={item.note || ''} 
+                        onChange={(e) => updateItemNote(item.id, e.target.value)} 
+                        className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-orange-500 bg-slate-50"
+                      />
                     </div>
                   </div>
                 ))}
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                
+                <div className="pt-2 flex justify-between items-center">
                   <span className="font-extrabold text-slate-900">Total:</span>
                   <span className="font-extrabold text-lg text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span>
                 </div>
