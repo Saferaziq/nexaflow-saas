@@ -12,6 +12,7 @@ const Icons = {
   Print: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
+  X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
 };
 
 export default function DashboardPage() {
@@ -99,6 +100,11 @@ export default function DashboardPage() {
 
   const handleDeleteMenu = async (id) => { if (confirm('Hapus menu ini?')) { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); } };
   const handleUpdateOrderStatus = async (id, status) => { const updates = { status }; if (status === 'completed') updates.payment_status = 'paid'; await supabase.from('orders').update(updates).eq('id', id); fetchOrders(tenantId); };
+  const handleCancelOrder = async (id) => {
+    if (!confirm('Tolak pesanan ini?\n\nPesanan akan dibatalkan dan tidak diproses ke dapur.')) return;
+    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id);
+    fetchOrders(tenantId);
+  };
   const handleAddTable = async (e) => { e.preventDefault(); if (!newTableNum) return; await supabase.from('tables').insert([{ tenant_id: tenantId, table_number: newTableNum }]); setNewTableNum(''); fetchTables(tenantId); };
   const handleDeleteTable = async (id) => { if (confirm('Hapus meja ini?')) { await supabase.from('tables').delete().eq('id', id); fetchTables(tenantId); } };
   const handleSaveSettings = async (e) => { e.preventDefault(); await supabase.from('tenants').update({ name: settings.name, wa_number: settings.wa, address: settings.address, logo_url: settings.logo_url }).eq('id', tenantId); setCafeName(settings.name); alert('Pengaturan disimpan!'); };
@@ -241,7 +247,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
 
-      {/* ============ SIDEBAR DARK ============ */}
       <aside className="w-64 bg-gradient-to-b from-slate-950 to-slate-900 flex-col justify-between hidden md:flex h-screen sticky top-0 print:hidden border-r border-slate-800">
         <div className="flex flex-col h-full">
           <div className="px-5 py-6 border-b border-slate-800/60">
@@ -293,7 +298,6 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* ============ MAIN CONTENT ============ */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0 z-10 print:hidden">
           <div>
@@ -401,10 +405,15 @@ export default function DashboardPage() {
                           </div>
 
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
-                            <div className="grid grid-cols-2 gap-2 pt-1">
-                              <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2 rounded-lg text-xs transition-all">Masak</button>
-                              <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-lg text-xs transition-all">Sajikan</button>
-                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="col-span-2 btn-dark py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">Selesai / Lunas</button>
+                            <div className="space-y-2 pt-1">
+                              <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2 rounded-lg text-xs transition-all">Masak</button>
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-lg text-xs transition-all">Sajikan</button>
+                              </div>
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full btn-dark py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">Selesai / Lunas</button>
+                              <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all">
+                                <Icons.X /> Tolak Pesanan
+                              </button>
                             </div>
                           )}
                           <button onClick={() => printBill(order)} className="w-full btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
