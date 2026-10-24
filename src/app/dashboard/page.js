@@ -20,7 +20,8 @@ const Icons = {
   Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   Calendar: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   TrendUp: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
-  QR: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h.01M17 14h.01M17 17h.01M21 14h.01M21 17h.01M14 21h.01M17 21h.01M21 21h.01"/></svg>,
+  Expand: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
+  Shrink: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
 };
 
 // ==========================================
@@ -98,6 +99,7 @@ export default function DashboardPage() {
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -165,6 +167,19 @@ export default function DashboardPage() {
     }
   };
 
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch {}
+  };
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
   useEffect(() => {
     const update = () => setNowTick(Date.now());
     update();
@@ -203,6 +218,7 @@ export default function DashboardPage() {
       if (!session) return router.push('/login');
       if (!isMounted) return;
       setUserEmail(session.user.email);
+      
       const { data: userData } = await supabase.from('users').select('tenant_id, tenants(*)').eq('id', session.user.id).single();
       if (userData && userData.tenants && isMounted) {
         const tId = userData.tenant_id;
@@ -215,7 +231,14 @@ export default function DashboardPage() {
           logo_url: userData.tenants.logo_url || '',
           qris_string: userData.tenants.qris_string || ''
         });
-        fetchMenus(tId); fetchTables(tId); fetchOrders(tId);
+        
+        // Parallel fetch untuk mempercepat loading
+        await Promise.all([
+          fetchMenus(tId), 
+          fetchTables(tId), 
+          fetchOrders(tId)
+        ]);
+
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
           .subscribe((status) => {
@@ -353,7 +376,7 @@ export default function DashboardPage() {
     win.document.write(`
       <html><head><title>Bill - Meja ${order.table_number}</title><style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; color: #000; }
+        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; color: #000; max-width: 80mm; margin: 0 auto; }
         .center { text-align: center; }
         .bold { font-weight: bold; }
         h2 { font-size: 16px; margin-bottom: 4px; }
@@ -363,9 +386,13 @@ export default function DashboardPage() {
         .line { border-top: 1px dashed #000; margin: 8px 0; }
         .total { font-size: 14px; font-weight: bold; margin-top: 8px; }
         .qris-box { text-align: center; margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
-        .qris-box img { width: 200px; height: 200px; display: block; margin: 0 auto; }
+        .qris-box img { width: 180px; height: 180px; display: block; margin: 0 auto; }
         .qris-text { font-size: 10px; color: #555; margin-top: 5px; }
-        @media print { body { padding: 0; } .qris-box { border: none; } }
+        @media print { 
+          body { padding: 0; max-width: 100%; } 
+          @page { margin: 5mm; }
+          .qris-box { border: none; } 
+        }
       </style></head><body>
         <div class="center">
           <h2>${settings.name || 'Kafe'}</h2>
@@ -402,19 +429,6 @@ export default function DashboardPage() {
     `);
     win.document.close();
     setTimeout(() => { win.focus(); win.print(); }, 1000);
-  };
-
-  const printBill = (order) => {
-    const win = window.open('', '', 'width=400,height=600');
-    win.document.write(`
-      <html><head><title>Struk</title><style>body{font-family:monospace;font-size:12px;padding:10px;} .center{text-align:center;} table{width:100%;} td{padding:2px 0;}</style></head><body>
-      <div class="center"><h3>${settings.name}</h3><p>${settings.address}</p><p>WA: ${settings.wa}</p></div>
-      <hr><p>Pelanggan: ${order.customer_name || 'Tamu'}<br>Meja: ${order.table_number}<br>Order: ${order.id.slice(0,8)}<br>Tanggal: ${new Date(order.created_at).toLocaleString('id-ID')}</p><hr>
-      <table>${order.items.map(i => `<tr><td>${i.name} x${i.qty} ${i.note ? '('+i.note+')' : ''}</td><td style="text-align:right">${rp(i.price*i.qty)}</td></tr>`).join('')}</table>
-      <hr><table><tr><td><b>TOTAL</b></td><td style="text-align:right"><b>${rp(order.total_price)}</b></td></tr></table>
-      <hr><div class="center"><p>${order.payment_status === 'paid' ? 'LUNAS' : 'BELUM LUNAS'}</p><p>Terima Kasih!</p></div></body></html>
-    `);
-    win.document.close(); win.print();
   };
 
   const printTableQR = (table) => {
@@ -679,6 +693,19 @@ export default function DashboardPage() {
     return { mins, cls: 'bg-rose-50 border-rose-300 text-rose-700', pulse: true };
   };
 
+  // TAMPILAN LOADING (Mencegah layar kosong saat loading awal)
+  if (!tenantId) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-black text-slate-900">Memuat Dashboard...</h2>
+          <p className="text-sm font-bold text-slate-500 mt-1">Menyiapkan data pesanan & menu</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
       <aside className="w-64 bg-gradient-to-b from-slate-950 to-slate-900 flex-col justify-between hidden md:flex h-screen sticky top-0 print:hidden border-r border-slate-800">
@@ -723,12 +750,18 @@ export default function DashboardPage() {
           <div><h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{pageTitle}</h2><p className="text-xs text-slate-500 font-medium mt-0.5">{pageSubtitle}</p></div>
           <div className="flex items-center gap-2">
             <button onClick={openKitchenLink} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-slate-900 hover:bg-slate-800 border-slate-800 text-white shadow-md transition-all text-[11px] font-bold" title="Buka layar dapur (KDS)">🍳 <span className="hidden sm:inline">Layar Dapur</span></button>
+            
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-200' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
               <span className={`text-[11px] font-bold ${realtimeStatus === 'online' ? 'text-emerald-700' : realtimeStatus === 'offline' ? 'text-rose-700' : 'text-amber-700'}`}>{realtimeStatus === 'online' ? 'Sistem Online' : realtimeStatus === 'offline' ? 'Koneksi Terputus' : 'Menghubungkan...'}</span>
             </div>
+            
             <button onClick={handleSoundToggle} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-[11px] font-bold ${!audioUnlocked ? 'bg-orange-500 hover:bg-orange-600 border-orange-600 text-white shadow-md shadow-orange-500/30' : soundEnabled ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500'}`}>
               {!audioUnlocked ? (<><span>🔕</span><span className="hidden sm:inline">Aktifkan Suara</span></>) : soundEnabled ? (<><span>🔊</span><span className="hidden sm:inline">Suara Aktif</span></>) : (<><span>🔇</span><span className="hidden sm:inline">Suara Mati</span></>)}
+            </button>
+
+            <button onClick={toggleFullscreen} className="p-1.5 px-2.5 rounded-full border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm" title="Layar Penuh">
+              {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
             </button>
           </div>
         </header>
@@ -797,9 +830,10 @@ export default function DashboardPage() {
                               </div>
                             )}
                             
-                            <div className="grid grid-cols-2 gap-2 pt-1">
-                              <button onClick={() => printBill(order)} className="btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5"><Icons.Print /> Struk</button>
-                              <button onClick={() => printBillWithQRIS(order)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/30"><Icons.QR /> QRIS</button>
+                            <div className="pt-2">
+                              <button onClick={() => printBillWithQRIS(order)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/30">
+                                <Icons.Print /> Cetak Bill & QRIS
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1019,11 +1053,10 @@ export default function DashboardPage() {
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" /></div>
                   
-                  {/* BATCH 4B: QRIS INPUT */}
                   <div className="border-t border-slate-100 pt-4">
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">QRIS DANA String (Untuk Cetak Bill)</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
                     <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-900 bg-slate-50" rows="4" placeholder="00020101021126..."></textarea>
-                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis dari DANA Bisnis Anda. Sistem akan otomatis mengisi nominal tagihan saat cetak bill.</p>
+                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis (DANA, Mandiri, BCA, dll). Sistem akan otomatis mengisi nominal tagihan saat cetak bill.</p>
                   </div>
 
                   <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm mt-2">Simpan Pengaturan</button>
