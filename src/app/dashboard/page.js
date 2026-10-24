@@ -5,6 +5,58 @@ import { useRouter } from 'next/navigation';
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+// FUNGSI EKSTRAKSI WARNA DARI BANNER
+const extractDominantColor = (imgUrl) => {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = imgUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 40) {
+          const alpha = data[i + 3];
+          if (alpha < 128) continue;
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+        }
+        if (count > 0) {
+          r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+          // Set warna dasar
+          document.documentElement.style.setProperty('--primary-color', `rgb(${r}, ${g}, ${b})`);
+          // Set warna soft (untuk background tombol sekunder)
+          document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.1)`);
+          // Set warna gelap (untuk efek 3D gradient)
+          const darkR = Math.max(0, r - 30);
+          const darkG = Math.max(0, g - 30);
+          const darkB = Math.max(0, b - 30);
+          document.documentElement.style.setProperty('--primary-dark', `rgb(${darkR}, ${darkG}, ${darkB})`);
+        } else {
+          throw new Error('Fallback');
+        }
+      } catch (err) {
+        document.documentElement.style.setProperty('--primary-color', '#4f46e5');
+        document.documentElement.style.setProperty('--primary-light', '#e0e7ff');
+        document.documentElement.style.setProperty('--primary-dark', '#3730a3');
+      }
+    };
+    img.onerror = () => {
+      document.documentElement.style.setProperty('--primary-color', '#4f46e5');
+      document.documentElement.style.setProperty('--primary-light', '#e0e7ff');
+      document.documentElement.style.setProperty('--primary-dark', '#3730a3');
+    };
+  } catch (e) {
+    document.documentElement.style.setProperty('--primary-color', '#4f46e5');
+    document.documentElement.style.setProperty('--primary-light', '#e0e7ff');
+    document.documentElement.style.setProperty('--primary-dark', '#3730a3');
+  }
+};
+
 const Icons = {
   Clipboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,
   Utensils: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>,
@@ -98,7 +150,6 @@ export default function DashboardPage() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -234,6 +285,10 @@ export default function DashboardPage() {
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11
         });
         
+        // Ekstrak warna saat load
+        if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
+        else if (userData.tenants.logo_url) extractDominantColor(userData.tenants.logo_url);
+
         await Promise.all([
           fetchMenus(tId), 
           fetchTables(tId), 
@@ -338,7 +393,10 @@ export default function DashboardPage() {
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       
       if (type === 'logo') setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
-      else if (type === 'banner') setSettings(prev => ({ ...prev, banner_url: urlData.publicUrl }));
+      else if (type === 'banner') {
+        setSettings(prev => ({ ...prev, banner_url: urlData.publicUrl }));
+        extractDominantColor(urlData.publicUrl); // Langsung ekstrak warna baru
+      }
       else setCurrentMenu(prev => ({ ...prev, image_url: urlData.publicUrl }));
       
       showToast('Foto berhasil diupload', 'success');
@@ -498,11 +556,11 @@ export default function DashboardPage() {
       <html><head><title>QR Meja ${table.table_number}</title><style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, system-ui, sans-serif; text-align: center; padding: 30px; }
-        .logo { width: 80px; height: 80px; object-fit: cover; border-radius: 16px; margin: 0 auto 16px; display: block; border: 2px solid #ea580c; }
-        .badge { display: inline-block; background: #ea580c; color: white; font-size: 11px; font-weight: bold; padding: 4px 14px; border-radius: 99px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+        .logo { width: 80px; height: 80px; object-fit: cover; border-radius: 16px; margin: 0 auto 16px; display: block; border: 2px solid var(--primary-color); }
+        .badge { display: inline-block; background: var(--primary-color); color: white; font-size: 11px; font-weight: bold; padding: 4px 14px; border-radius: 99px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
         h1 { font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 900; }
-        h2 { font-size: 48px; color: #ea580c; margin: 8px 0 20px; font-weight: 900; letter-spacing: -1px; }
-        .qr-wrapper { display: inline-block; padding: 16px; background: white; border: 3px dashed #ea580c; border-radius: 16px; margin: 10px 0; }
+        h2 { font-size: 48px; color: var(--primary-color); margin: 8px 0 20px; font-weight: 900; letter-spacing: -1px; }
+        .qr-wrapper { display: inline-block; padding: 16px; background: white; border: 3px dashed var(--primary-color); border-radius: 16px; margin: 10px 0; }
         .qr-wrapper img { width: 320px; height: 320px; display: block; }
         .hint { font-size: 14px; color: #475569; font-weight: 600; margin-top: 16px; }
         .url { font-size: 10px; color: #94a3b8; margin-top: 8px; word-break: break-all; padding: 0 20px; }
@@ -726,7 +784,7 @@ export default function DashboardPage() {
 
   const statusColors = {
     pending: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-    cooking: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+    cooking: { bg: 'bg-[var(--primary-light)]', border: 'border-[var(--primary-color)]', text: 'text-[var(--primary-color)]' },
     ready: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
     completed: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' },
     cancelled: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
@@ -754,7 +812,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-slate-200 border-t-[var(--primary-color)] rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className="text-xl font-black text-slate-800">Memuat Dashboard...</h2>
         </div>
       </div>
@@ -771,12 +829,12 @@ export default function DashboardPage() {
             
             {/* Logo & Brand */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] flex items-center justify-center shadow-lg shadow-[var(--primary-color)]/30">
                 <span className="text-white font-black text-lg">N</span>
               </div>
               <div>
                 <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none">NexaFlow</h1>
-                <p className="text-[10px] font-bold text-orange-500 tracking-widest uppercase mt-0.5">Kasir</p>
+                <p className="text-[10px] font-bold text-[var(--primary-color)] tracking-widest uppercase mt-0.5">Kasir</p>
               </div>
             </div>
 
@@ -789,7 +847,7 @@ export default function DashboardPage() {
                 { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
                 { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
               ].map(({ key, label, Icon, badge }) => (
-                <button key={key} onClick={() => setActiveTab(key)} className={`relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 ${activeTab === key ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+                <button key={key} onClick={() => setActiveTab(key)} className={`relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 ${activeTab === key ? 'bg-[var(--primary-light)] text-[var(--primary-color)] shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
                   <Icon />
                   <span>{label}</span>
                   {badge > 0 && <span className="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">{badge}</span>}
@@ -806,7 +864,7 @@ export default function DashboardPage() {
                 <span className={`w-2 h-2 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
                 <span className={`text-[11px] font-bold ${realtimeStatus === 'online' ? 'text-emerald-700' : realtimeStatus === 'offline' ? 'text-rose-700' : 'text-amber-700'}`}>{realtimeStatus === 'online' ? 'Online' : 'Offline'}</span>
               </div>
-              <button onClick={handleSoundToggle} className={`p-2.5 rounded-2xl border transition-all ${!audioUnlocked ? 'bg-orange-500 border-orange-600 text-white shadow-md shadow-orange-500/30' : soundEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+              <button onClick={handleSoundToggle} className={`p-2.5 rounded-2xl border transition-all ${!audioUnlocked ? 'bg-[var(--primary-color)] border-[var(--primary-dark)] text-white shadow-md shadow-[var(--primary-color)]/30' : soundEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
                 {!audioUnlocked ? <span className="text-xs font-bold">🔕 ON</span> : soundEnabled ? <span className="text-lg">🔊</span> : <span className="text-lg">🔇</span>}
               </button>
               <button onClick={toggleFullscreen} className="p-2.5 rounded-2xl border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm">
@@ -818,24 +876,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        
-        {/* Mobile Nav Dropdown */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-100 bg-white p-4 space-y-2 absolute w-full shadow-xl">
-            {[
-              { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },
-              { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
-              { key: 'tables', label: 'Meja', Icon: Icons.Grid },
-              { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
-              { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
-            ].map(({ key, label, Icon, badge }) => (
-              <button key={key} onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === key ? 'bg-orange-50 text-orange-600' : 'text-slate-600'}`}>
-                <Icon /> {label}
-                {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
@@ -853,12 +893,12 @@ export default function DashboardPage() {
           </div>
           
           <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--primary-light)] rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm text-xl">👨‍🍳</div>
-              <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest">Dimasak</p>
+              <div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] text-[var(--primary-color)] flex items-center justify-center shadow-sm text-xl">👨‍🍳</div>
+              <p className="text-[11px] font-bold text-[var(--primary-color)] uppercase tracking-widest">Dimasak</p>
             </div>
-            <h3 className="text-4xl font-black text-amber-600 tracking-tight">{stats.cooking}</h3>
+            <h3 className="text-4xl font-black text-[var(--primary-color)] tracking-tight">{stats.cooking}</h3>
             <p className="text-xs text-slate-500 font-medium mt-1">Sedang diproses</p>
           </div>
           
@@ -872,13 +912,13 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-500 font-medium mt-1">Menunggu diantar</p>
           </div>
 
-          <div className="rounded-[2rem] p-6 bg-gradient-to-br from-orange-500 to-orange-600 shadow-[0_8px_30px_rgb(234,88,12,0.3)] relative overflow-hidden group text-white">
+          <div className="rounded-[2rem] p-6 bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] shadow-[0_8px_30px_var(--primary-color)] relative overflow-hidden group text-white border border-[var(--primary-dark)]">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-sm text-xl backdrop-blur-sm">💰</div>
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner text-xl backdrop-blur-sm">💰</div>
               <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest">Omset Hari Ini</p>
             </div>
-            <h3 className="text-3xl font-black tracking-tight">{rp(stats.revenue)}</h3>
+            <h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats.revenue)}</h3>
             <p className="text-xs text-white/80 font-medium mt-1">Total pendapatan</p>
           </div>
         </div>
@@ -905,7 +945,7 @@ export default function DashboardPage() {
                   {displayOrders.map(order => {
                     const badge = ['pending', 'cooking', 'ready'].includes(order.status) ? getTimeBadge(order.created_at) : null;
                     return (
-                      <div key={order.id} className="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                      <div key={order.id} className="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300">
                         
                         {/* Card Header */}
                         <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
@@ -937,7 +977,7 @@ export default function DashboardPage() {
                               <div key={idx} className="flex justify-between items-start gap-3">
                                 <div className="flex-1">
                                   <span className="font-bold text-slate-700 text-sm">{item.qty}× {item.name}</span>
-                                  {item.note && (<p className="text-[11px] text-orange-600 font-bold mt-1 italic bg-orange-50 inline-block px-2 py-0.5 rounded">↳ "{item.note}"</p>)}
+                                  {item.note && (<p className="text-[11px] text-[var(--primary-color)] font-bold mt-1 italic bg-[var(--primary-light)] inline-block px-2 py-0.5 rounded">↳ "{item.note}"</p>)}
                                 </div>
                                 <span className="font-bold text-slate-900 text-sm whitespace-nowrap">{rp(item.price * item.qty)}</span>
                               </div>
@@ -946,15 +986,15 @@ export default function DashboardPage() {
 
                           <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
                             <span className="text-xs font-bold text-slate-500">Total Tagihan</span>
-                            <span className="text-xl font-black text-orange-600">{rp(order.total_price)}</span>
+                            <span className="text-xl font-black text-[var(--primary-color)]">{rp(order.total_price)}</span>
                           </div>
                           
                           {/* Actions */}
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
                             <div className="space-y-2 pt-2">
                               <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm">Masak</button>
-                                <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm">Sajikan</button>
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-[var(--primary-light)] hover:bg-[var(--primary-color)] hover:text-white border border-[var(--primary-color)] text-[var(--primary-color)] font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm active:scale-95">Masak</button>
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-500 hover:text-white border border-emerald-200 text-emerald-700 font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm active:scale-95">Sajikan</button>
                               </div>
                               <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition-all">Selesai / Lunas</button>
                               <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95"><Icons.X /> Tolak Pesanan</button>
@@ -962,7 +1002,7 @@ export default function DashboardPage() {
                           )}
                           
                           <div className="pt-2 mt-auto">
-                            <button onClick={() => printBillWithQRIS(order)} className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/30 active:scale-95">
+                            <button onClick={() => printBillWithQRIS(order)} className="w-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 border border-[var(--primary-dark)]">
                               <Icons.Print /> Cetak Bill & QRIS
                             </button>
                           </div>
@@ -979,16 +1019,16 @@ export default function DashboardPage() {
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><h3 className="font-black text-xl text-slate-800">Daftar Menu</h3><p className="text-xs text-slate-500 mt-1">{filteredMenus.length} dari {menus.length} menu</p></div>
-                <button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-orange-500 to-orange-400 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-orange-500/30 active:scale-95 transition-all"><Icons.Plus /> Tambah Menu</button>
+                <button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border border-[var(--primary-dark)]"><Icons.Plus /> Tambah Menu</button>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
                 <div className="relative flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></span>
-                  <input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className="w-full pl-10 pr-4 py-2.5 border-none bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-800" />
+                  <input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className="w-full pl-10 pr-4 py-2.5 border-none bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 font-medium text-slate-800" />
                 </div>
                 <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 overflow-x-auto">
-                  {[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${menuCategoryFilter === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
+                  {[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${menuCategoryFilter === k ? 'bg-white text-[var(--primary-color)] shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
                 </div>
               </div>
 
@@ -997,7 +1037,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {filteredMenus.map(menu => (
-                    <div key={menu.id} className="bg-white rounded-[2rem] overflow-hidden flex flex-col border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-transform duration-300">
+                    <div key={menu.id} className="bg-white rounded-[2rem] overflow-hidden flex flex-col border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                       <div className="h-48 bg-slate-100 relative overflow-hidden">
                         {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
                         <div className="absolute top-4 left-4 z-10"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button></div>
@@ -1005,10 +1045,10 @@ export default function DashboardPage() {
                       </div>
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div>
-                          <span className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">{menu.category}</span>
+                          <span className="text-[9px] font-bold text-[var(--primary-color)] uppercase tracking-widest">{menu.category}</span>
                           <h4 className="font-black text-slate-800 text-lg mt-1">{menu.name}</h4>
                           <p className="text-xs text-slate-500 font-medium line-clamp-2 mt-1 min-h-[2rem]">{menu.description || 'Tidak ada deskripsi'}</p>
-                          <p className="font-black text-orange-600 text-xl mt-3">{rp(menu.price)}</p>
+                          <p className="font-black text-[var(--primary-color)] text-xl mt-3">{rp(menu.price)}</p>
                         </div>
                         <div className="flex gap-2 mt-5">
                           <button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '' }); setIsMenuModalOpen(true); }} className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors">Edit</button>
@@ -1027,7 +1067,7 @@ export default function DashboardPage() {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
                 <div><h3 className="font-black text-xl text-slate-800">QR Code Meja</h3><p className="text-xs text-slate-500 mt-1">{tables.length} meja terdaftar · Klik "Cetak QR" untuk cetak per meja</p></div>
                 <form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto">
-                  <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-slate-800" />
+                  <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-bold text-slate-800" />
                   <button type="submit" className="bg-slate-900 text-white hover:bg-slate-800 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors">Tambah</button>
                 </form>
               </div>
@@ -1071,7 +1111,7 @@ export default function DashboardPage() {
                   {reportMode === 'daily' && (
                     <div className="flex items-center gap-4 flex-wrap">
                       <label className="text-xs font-bold text-slate-600 flex items-center gap-2"><Icons.Calendar /> Pilih Tanggal:</label>
-                      <input type="date" value={reportDateStr} onChange={e => setReportDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                      <input type="date" value={reportDateStr} onChange={e => setReportDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20" />
                     </div>
                   )}
                   {reportMode === 'monthly' && (
@@ -1091,7 +1131,7 @@ export default function DashboardPage() {
                   )}
                   <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode:</p>
-                    <p className="text-sm font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block">{reportLabel}</p>
+                    <p className="text-sm font-black text-[var(--primary-color)] bg-[var(--primary-light)] px-3 py-1 rounded-lg inline-block">{reportLabel}</p>
                   </div>
                 </div>
               )}
@@ -1102,7 +1142,7 @@ export default function DashboardPage() {
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
                     <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pesanan</p><h3 className="text-4xl font-black text-slate-800">{reportStats.totalOrders}</h3><p className="text-xs text-slate-500 font-medium mt-1">{reportStats.paidCount} lunas</p></div>
-                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-6 shadow-lg text-white"><p className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-2">Total Omset</p><h3 className="text-3xl font-black">{rp(reportStats.revenue)}</h3><p className="text-xs text-slate-400 font-medium mt-1">Dari pesanan lunas</p></div>
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-6 shadow-lg text-white"><p className="text-[11px] font-bold text-[var(--primary-color)] uppercase tracking-widest mb-2">Total Omset</p><h3 className="text-3xl font-black">{rp(reportStats.revenue)}</h3><p className="text-xs text-slate-400 font-medium mt-1">Dari pesanan lunas</p></div>
                     <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Rata-rata / Order</p><h3 className="text-3xl font-black text-slate-800">{rp(reportStats.avgOrder)}</h3><p className="text-xs text-slate-500 font-medium mt-1">Per transaksi lunas</p></div>
                     <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Item Terjual</p><h3 className="text-4xl font-black text-slate-800">{reportStats.totalItems}</h3><p className="text-xs text-slate-500 font-medium mt-1">Total porsi</p></div>
                   </div>
@@ -1123,14 +1163,14 @@ export default function DashboardPage() {
                           {chartData.map((d, i) => (
                             <div key={i} className="flex-1 h-full flex flex-col">
                               <div className="flex-1 relative group">
-                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-500 to-orange-300 rounded-t-lg transition-all cursor-default shadow-sm group-hover:from-orange-600 group-hover:to-orange-400" style={{ height: `${(d.revenue / maxChartRev) * 100}%`, minHeight: d.revenue > 0 ? '4px' : '0' }} title={`${d.label}: ${rp(d.revenue)} (${d.orders} order)`}></div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--primary-color)] to-[var(--primary-light)] rounded-t-lg transition-all cursor-default shadow-sm group-hover:from-[var(--primary-dark)]" style={{ height: `${(d.revenue / maxChartRev) * 100}%`, minHeight: d.revenue > 0 ? '4px' : '0' }} title={`${d.label}: ${rp(d.revenue)} (${d.orders} order)`}></div>
                               </div>
                               <p className="text-[10px] font-bold text-slate-400 mt-2 text-center truncate">{d.label}</p>
                             </div>
                           ))}
                         </div>
                         <div className="mt-6 pt-6 border-t border-slate-100 flex justify-between text-sm">
-                          <span className="font-bold text-slate-500">Total: <span className="text-orange-600 font-black text-lg ml-1">{rp(totalChartRev)}</span></span>
+                          <span className="font-bold text-slate-500">Total: <span className="text-[var(--primary-color)] font-black text-lg ml-1">{rp(totalChartRev)}</span></span>
                           <span className="font-bold text-slate-500">Max hari: <span className="text-slate-800 font-black text-lg ml-1">{rp(maxChartRev)}</span></span>
                         </div>
                       </>
@@ -1157,7 +1197,7 @@ export default function DashboardPage() {
                           {topMenus.map(([name, data], idx) => {
                             const maxQty = topMenus[0][1].qty;
                             const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0;
-                            const rankBg = idx === 0 ? 'bg-amber-100 text-amber-700' : idx === 1 ? 'bg-slate-200 text-slate-700' : idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-500';
+                            const rankBg = idx === 0 ? 'bg-amber-100 text-amber-700' : idx === 1 ? 'bg-slate-200 text-slate-700' : idx === 2 ? 'bg-[var(--primary-light)] text-[var(--primary-color)]' : 'bg-slate-50 text-slate-500';
                             return (
                               <div key={name}>
                                 <div className="flex justify-between items-center mb-2">
@@ -1167,7 +1207,7 @@ export default function DashboardPage() {
                                   </div>
                                   <span className="text-xs font-bold text-slate-600 whitespace-nowrap ml-2 bg-slate-50 px-2 py-1 rounded-lg">{data.qty}× · {rp(data.revenue)}</span>
                                 </div>
-                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all" style={{ width: `${pct}%` }}></div></div>
+                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] rounded-full transition-all" style={{ width: `${pct}%` }}></div></div>
                               </div>
                             );
                           })}
@@ -1185,8 +1225,8 @@ export default function DashboardPage() {
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50"><tr><th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-l-xl">Tanggal</th><th className="text-right py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pesanan</th><th className="text-right py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-r-xl">Omset</th></tr></thead>
-                            <tbody>{activeDays.map(d => (<tr key={d.date.toISOString()} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"><td className="py-3 px-4 font-bold text-slate-700">{d.date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td><td className="text-right py-3 px-4 font-semibold text-slate-600">{d.orders}</td><td className="text-right py-3 px-4 font-black text-orange-600">{rp(d.revenue)}</td></tr>))}</tbody>
-                            <tfoot><tr className="border-t-2 border-slate-800"><td className="py-4 px-4 font-black text-slate-800">TOTAL</td><td className="text-right py-4 px-4 font-black text-slate-800">{reportStats.totalOrders}</td><td className="text-right py-4 px-4 font-black text-orange-600 text-lg">{rp(reportStats.revenue)}</td></tr></tfoot>
+                            <tbody>{activeDays.map(d => (<tr key={d.date.toISOString()} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"><td className="py-3 px-4 font-bold text-slate-700">{d.date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td><td className="text-right py-3 px-4 font-semibold text-slate-600">{d.orders}</td><td className="text-right py-3 px-4 font-black text-[var(--primary-color)]">{rp(d.revenue)}</td></tr>))}</tbody>
+                            <tfoot><tr className="border-t-2 border-slate-800"><td className="py-4 px-4 font-black text-slate-800">TOTAL</td><td className="text-right py-4 px-4 font-black text-slate-800">{reportStats.totalOrders}</td><td className="text-right py-4 px-4 font-black text-[var(--primary-color)] text-lg">{rp(reportStats.revenue)}</td></tr></tfoot>
                           </table>
                         </div>
                       )}
@@ -1233,21 +1273,21 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" /></div>
-                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="08xxxxxxxxxx" /></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" /></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" placeholder="08xxxxxxxxxx" /></div>
                 </div>
 
-                <div><label className="block text-xs font-bold text-slate-700 mb-2">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Jl. Contoh No. 123" /></div>
+                <div><label className="block text-xs font-bold text-slate-700 mb-2">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" placeholder="Jl. Contoh No. 123" /></div>
                 
                 <div className="border-t border-slate-100 pt-6">
                   <label className="block text-xs font-bold text-slate-700 mb-2">Persentase PPN (%)</label>
-                  <input type="number" min="0" max="100" value={settings.tax_percentage} onChange={e => setSettings({...settings, tax_percentage: Number(e.target.value)})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="11" />
+                  <input type="number" min="0" max="100" value={settings.tax_percentage} onChange={e => setSettings({...settings, tax_percentage: Number(e.target.value)})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" placeholder="11" />
                   <p className="text-[11px] text-slate-500 font-medium mt-2">Sesuai ketentuan pemerintah, standar PPN adalah 11%. Isi 0 jika tidak ada pajak.</p>
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
                   <label className="block text-xs font-bold text-slate-700 mb-2">QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
-                  <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-800" rows="3" placeholder="00020101021126..."></textarea>
+                  <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-mono text-slate-800" rows="3" placeholder="00020101021126..."></textarea>
                   <p className="text-[11px] text-slate-500 font-medium mt-2">Paste string QRIS statis (DANA, Mandiri, BCA, dll).</p>
                 </div>
 
@@ -1265,11 +1305,11 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start mb-6"><div><h3 className="font-black text-xl text-slate-800">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className="text-xs text-slate-500 mt-1">Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xl flex items-center justify-center transition-colors">×</button></div>
             <form onSubmit={handleSaveMenu} className="space-y-5">
               <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label><div className="flex items-center gap-4"><div className="w-28 h-28 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-4xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold w-full py-2.5 rounded-xl text-xs transition-colors">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Contoh: Nasi Goreng Spesial" /></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="25000" /></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" rows="2" placeholder="Deskripsi singkat menu"></textarea></div>
-              <div className="flex gap-3 pt-3"><button type="submit" className="flex-1 bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 active:scale-95 transition-all">Simpan</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl text-sm transition-colors">Batal</button></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" placeholder="Contoh: Nasi Goreng Spesial" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" placeholder="25000" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] font-medium text-slate-800" rows="2" placeholder="Deskripsi singkat menu"></textarea></div>
+              <div className="flex gap-3 pt-3"><button type="submit" className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border border-[var(--primary-dark)]">Simpan</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl text-sm transition-colors">Batal</button></div>
             </form>
           </div>
         </div>
@@ -1293,7 +1333,7 @@ export default function DashboardPage() {
       {/* Toasts */}
       <div className="fixed top-4 right-4 z-[100] space-y-2 w-80 max-w-[calc(100vw-2rem)] print:hidden pointer-events-none">
         {toasts.map(t => {
-          const c = { success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' }, error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' }, warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' }, info: { border: 'border-orange-400', icon: '🔔', bar: 'bg-orange-500' } }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
+          const c = { success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' }, error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' }, warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' }, info: { border: 'border-[var(--primary-color)]', icon: '🔔', bar: 'bg-[var(--primary-color)]' } }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
           return (<div key={t.id} className={`pointer-events-auto bg-white rounded-2xl shadow-2xl border ${c.border} overflow-hidden flex items-stretch animate-in slide-in-from-right-8`}><div className={`${c.bar} w-1.5 shrink-0`}></div><div className="flex items-start gap-3 px-4 py-3 flex-1"><span className="text-xl shrink-0">{c.icon}</span><p className="text-sm font-bold text-slate-800 flex-1">{t.message}</p></div></div>);
         })}
       </div>
