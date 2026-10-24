@@ -70,7 +70,9 @@ export default function DashboardPage() {
   const [queueFilter, setQueueFilter] = useState('active');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [currentMenu, setCurrentMenu] = useState({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' });
-  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '' });
+  
+  // Tambah tax_percentage di state settings
+  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11 });
   const [newTableNum, setNewTableNum] = useState('');
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -229,7 +231,8 @@ export default function DashboardPage() {
           address: userData.tenants.address || '', 
           logo_url: userData.tenants.logo_url || '',
           qris_string: userData.tenants.qris_string || '',
-          banner_url: userData.tenants.banner_url || ''
+          banner_url: userData.tenants.banner_url || '',
+          tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11
         });
         
         await Promise.all([
@@ -396,7 +399,8 @@ export default function DashboardPage() {
       address: settings.address, 
       logo_url: settings.logo_url,
       qris_string: settings.qris_string,
-      banner_url: settings.banner_url
+      banner_url: settings.banner_url,
+      tax_percentage: settings.tax_percentage
     }).eq('id', tenantId);
     setCafeName(settings.name); showToast('✅ Pengaturan disimpan', 'success');
   };
@@ -419,6 +423,10 @@ export default function DashboardPage() {
       showToast('Gagal generate QRIS. Periksa string QRIS Anda di Pengaturan.', 'error');
       return;
     }
+
+    const subtotal = order.subtotal || order.total_price;
+    const taxAmount = order.tax_amount || 0;
+    const taxRate = settings.tax_percentage || 0;
 
     const win = window.open('', '', 'width=400,height=800');
     win.document.write(`
@@ -460,6 +468,8 @@ export default function DashboardPage() {
         </table>
         <div class="line"></div>
         <table>
+          <tr><td>Subtotal</td><td class="right">${rp(subtotal)}</td></tr>
+          ${taxAmount > 0 ? `<tr><td>PPN (${taxRate}%)</td><td class="right">${rp(taxAmount)}</td></tr>` : ''}
           <tr class="total"><td>TOTAL</td><td class="right">${rp(order.total_price)}</td></tr>
         </table>
         
@@ -514,14 +524,14 @@ export default function DashboardPage() {
 
   const exportCSV = (reportOrders, reportLabelForFile) => {
     if (reportOrders.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
-    const headers = ['Tanggal', 'Jam', 'Pelanggan', 'Meja', 'Order ID', 'Status', 'Pembayaran', 'Menu', 'Qty', 'Harga', 'Subtotal', 'Total Order'];
+    const headers = ['Tanggal', 'Jam', 'Pelanggan', 'Meja', 'Order ID', 'Status', 'Pembayaran', 'Menu', 'Qty', 'Harga', 'Subtotal', 'PPN', 'Total Order'];
     const rows = [];
     reportOrders.forEach(o => {
       const dt = new Date(o.created_at);
       const dateStr = dt.toLocaleDateString('id-ID');
       const timeStr = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       (o.items || []).forEach(item => {
-        rows.push([dateStr, timeStr, o.customer_name || 'Tamu', o.table_number, o.id.slice(0, 8), o.status, o.payment_status, item.name, item.qty, item.price, item.price * item.qty, o.total_price]);
+        rows.push([dateStr, timeStr, o.customer_name || 'Tamu', o.table_number, o.id.slice(0, 8), o.status, o.payment_status, item.name, item.qty, item.price, item.price * item.qty, o.tax_amount || 0, o.total_price]);
       });
     });
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -1118,10 +1128,17 @@ export default function DashboardPage() {
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" /></div>
                   
+                  {/* TAX PERCENTAGE */}
+                  <div className="border-t border-slate-100 pt-4">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Persentase PPN (%)</label>
+                    <input type="number" min="0" max="100" value={settings.tax_percentage} onChange={e => setSettings({...settings, tax_percentage: Number(e.target.value)})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="11" />
+                    <p className="text-[10px] text-slate-500 mt-1.5">Sesuai ketentuan pemerintah, standar PPN adalah 11%. Isi 0 jika tidak ada pajak.</p>
+                  </div>
+
                   <div className="border-t border-slate-100 pt-4">
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
                     <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-900 bg-slate-50" rows="4" placeholder="00020101021126..."></textarea>
-                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis (DANA, Mandiri, BCA, dll). Sistem akan otomatis mengisi nominal tagihan saat cetak bill.</p>
+                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis (DANA, Mandiri, BCA, dll).</p>
                   </div>
 
                   <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm mt-2">Simpan Pengaturan</button>
