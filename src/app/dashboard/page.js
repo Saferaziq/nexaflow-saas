@@ -11,6 +11,7 @@ const Icons = {
   Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Print: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
 };
 
 export default function DashboardPage() {
@@ -30,6 +31,8 @@ export default function DashboardPage() {
   const [baseUrl, setBaseUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState('daily');
+  const [reportNow, setReportNow] = useState(null);
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const router = useRouter();
@@ -38,6 +41,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setTodayStr(new Date().toDateString());
+    setReportNow(new Date());
     setBaseUrl(window.location.origin);
     let channel, isMounted = true;
 
@@ -113,9 +117,42 @@ export default function DashboardPage() {
     win.print();
   };
 
+  const printTableQR = (table) => {
+    if (!baseUrl) { alert('Halaman belum siap. Tunggu sebentar lalu coba lagi.'); return; }
+    const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(orderUrl)}`;
+    const win = window.open('', '', 'width=600,height=800');
+    if (!win) { alert('Popup diblokir browser. Izinkan popup untuk mencetak QR.'); return; }
+    win.document.write(`
+      <html><head><title>QR Meja ${table.table_number}</title><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, system-ui, sans-serif; text-align: center; padding: 30px; }
+        .logo { width: 80px; height: 80px; object-fit: cover; border-radius: 16px; margin: 0 auto 16px; display: block; border: 2px solid #ea580c; }
+        .badge { display: inline-block; background: #ea580c; color: white; font-size: 11px; font-weight: bold; padding: 4px 14px; border-radius: 99px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+        h1 { font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 900; }
+        h2 { font-size: 48px; color: #ea580c; margin: 8px 0 20px; font-weight: 900; letter-spacing: -1px; }
+        .qr-wrapper { display: inline-block; padding: 16px; background: white; border: 3px dashed #ea580c; border-radius: 16px; margin: 10px 0; }
+        .qr-wrapper img { width: 320px; height: 320px; display: block; }
+        .hint { font-size: 14px; color: #475569; font-weight: 600; margin-top: 16px; }
+        .url { font-size: 10px; color: #94a3b8; margin-top: 8px; word-break: break-all; padding: 0 20px; }
+        @media print { body { padding: 10px; } }
+      </style></head><body>
+        ${settings.logo_url ? `<img src="${settings.logo_url}" class="logo" alt="Logo" />` : ''}
+        <span class="badge">Scan untuk Pesan</span>
+        <h1>${settings.name || 'Kafe'}</h1>
+        <h2>Meja ${table.table_number}</h2>
+        <div class="qr-wrapper"><img src="${qrUrl}" alt="QR" /></div>
+        <p class="hint">📱 Buka kamera HP, arahkan ke QR code</p>
+        <p class="url">${orderUrl}</p>
+      </body></html>
+    `);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 1000);
+  };
+
   const activeOrders = orders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status));
   const filteredOrders = queueFilter === 'active' ? activeOrders : queueFilter === 'done' ? orders.filter(o => ['completed', 'cancelled'].includes(o.status)) : orders;
-  const todayOrders = orders.filter(o => todayStr && new Date(o.created_at).toDateString() === todayStr);
+  const todayOrders = todayStr ? orders.filter(o => new Date(o.created_at).toDateString() === todayStr) : [];
   const stats = {
     total: todayOrders.length,
     cooking: todayOrders.filter(o => o.status === 'cooking').length,
@@ -123,8 +160,77 @@ export default function DashboardPage() {
     revenue: todayOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + Number(o.total_price), 0)
   };
 
-  const pageTitle = { queue: 'Antrian Pesanan', menu: 'Kelola Menu', tables: 'Meja & QR Code', settings: 'Pengaturan Toko' }[activeTab];
-  const pageSubtitle = { queue: 'Kelola dan proses pesanan masuk secara real-time', menu: 'Atur daftar menu, harga, dan ketersediaan', tables: 'Generate dan kelola QR code per meja', settings: 'Konfigurasi profil dan identitas kafe' }[activeTab];
+  // ===== REPORT DATA =====
+  let reportOrders = [];
+  let reportStats = { totalOrders: 0, revenue: 0, paidCount: 0, totalItems: 0, avgOrder: 0, statusCount: { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 } };
+  let topMenus = [];
+  let activeDays = [];
+  let reportLabel = 'Memuat...';
+  let monthName = '';
+
+  if (reportNow) {
+    const todayStart = new Date(reportNow.getFullYear(), reportNow.getMonth(), reportNow.getDate());
+    const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const monthStart = new Date(reportNow.getFullYear(), reportNow.getMonth(), 1);
+    const monthEnd = new Date(reportNow.getFullYear(), reportNow.getMonth() + 1, 1);
+
+    reportOrders = orders.filter(o => {
+      const d = new Date(o.created_at);
+      if (reportPeriod === 'daily') return d >= todayStart && d < tomorrowStart;
+      return d >= monthStart && d < monthEnd;
+    });
+
+    reportStats = {
+      totalOrders: reportOrders.length,
+      revenue: reportOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total_price || 0), 0),
+      paidCount: reportOrders.filter(o => o.payment_status === 'paid').length,
+      totalItems: reportOrders.reduce((s, o) => s + (o.items || []).reduce((si, i) => si + (i.qty || 0), 0), 0),
+      statusCount: {
+        pending: reportOrders.filter(o => o.status === 'pending').length,
+        cooking: reportOrders.filter(o => o.status === 'cooking').length,
+        ready: reportOrders.filter(o => o.status === 'ready').length,
+        completed: reportOrders.filter(o => o.status === 'completed').length,
+        cancelled: reportOrders.filter(o => o.status === 'cancelled').length,
+      },
+    };
+    reportStats.avgOrder = reportStats.paidCount > 0 ? reportStats.revenue / reportStats.paidCount : 0;
+
+    const menuSales = {};
+    reportOrders.forEach(o => {
+      (o.items || []).forEach(item => {
+        const key = item.name || 'Unknown';
+        if (!menuSales[key]) menuSales[key] = { qty: 0, revenue: 0 };
+        menuSales[key].qty += item.qty || 0;
+        menuSales[key].revenue += (item.price || 0) * (item.qty || 0);
+      });
+    });
+    topMenus = Object.entries(menuSales).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
+
+    const daysInMonth = new Date(reportNow.getFullYear(), reportNow.getMonth() + 1, 0).getDate();
+    const dailyBreakdown = Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      const dayOrders = reportOrders.filter(o => new Date(o.created_at).getDate() === day);
+      const dayRevenue = dayOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total_price || 0), 0);
+      return { day, orders: dayOrders.length, revenue: dayRevenue };
+    });
+    activeDays = dailyBreakdown.filter(d => d.orders > 0);
+
+    reportLabel = reportPeriod === 'daily'
+      ? reportNow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : reportNow.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    monthName = reportNow.toLocaleDateString('id-ID', { month: 'short' });
+  }
+
+  const statusColors = {
+    pending: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
+    cooking: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+    ready: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+    completed: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' },
+    cancelled: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
+  };
+
+  const pageTitle = { queue: 'Antrian Pesanan', menu: 'Kelola Menu', tables: 'Meja & QR Code', reports: 'Laporan Penjualan', settings: 'Pengaturan Toko' }[activeTab];
+  const pageSubtitle = { queue: 'Kelola dan proses pesanan masuk secara real-time', menu: 'Atur daftar menu, harga, dan ketersediaan', tables: 'Generate dan kelola QR code per meja', reports: 'Ringkasan omset harian dan bulanan', settings: 'Konfigurasi profil dan identitas kafe' }[activeTab];
 
   const getStatusPill = (status) => {
     const map = { pending: 'status-pending', cooking: 'status-cooking', ready: 'status-ready', completed: 'status-completed', cancelled: 'status-cancelled' };
@@ -134,11 +240,10 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
-      
+
       {/* ============ SIDEBAR DARK ============ */}
       <aside className="w-64 bg-gradient-to-b from-slate-950 to-slate-900 flex-col justify-between hidden md:flex h-screen sticky top-0 print:hidden border-r border-slate-800">
         <div className="flex flex-col h-full">
-          {/* Brand */}
           <div className="px-5 py-6 border-b border-slate-800/60">
             <div className="flex items-center gap-3">
               {settings.logo_url ? (
@@ -153,13 +258,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Nav */}
           <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Menu Utama</p>
             {[
               { key: 'queue', label: 'Antrian Pesanan', Icon: Icons.Clipboard, badge: activeOrders.length },
               { key: 'menu', label: 'Kelola Menu', Icon: Icons.Utensils },
               { key: 'tables', label: 'Meja & QR', Icon: Icons.Grid },
+              { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
               { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
             ].map(({ key, label, Icon, badge }) => (
               <button key={key} onClick={() => setActiveTab(key)} className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${activeTab === key ? 'bg-white/[0.08] text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'}`}>
@@ -171,7 +276,6 @@ export default function DashboardPage() {
             ))}
           </nav>
 
-          {/* User Card */}
           <div className="p-4 border-t border-slate-800/60">
             <div className="bg-white/[0.04] rounded-xl p-3 border border-white/[0.06]">
               <div className="flex items-center gap-2.5 mb-3">
@@ -191,7 +295,6 @@ export default function DashboardPage() {
 
       {/* ============ MAIN CONTENT ============ */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0 z-10 print:hidden">
           <div>
             <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{pageTitle}</h2>
@@ -207,8 +310,7 @@ export default function DashboardPage() {
 
         <div className="flex-1 overflow-y-auto p-6 print:p-0">
           <div className="max-w-6xl mx-auto space-y-6 print:space-y-0">
-            
-            {/* Stats Cards */}
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
               <div className="card-elevated rounded-2xl p-5">
                 <div className="flex items-start justify-between mb-3">
@@ -247,7 +349,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* TAB: QUEUE */}
             {activeTab === 'queue' && (
               <div className="space-y-4 print:hidden">
                 <div className="flex items-center gap-2 bg-white rounded-xl p-1 w-fit border border-slate-200 shadow-sm">
@@ -266,7 +367,6 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredOrders.map(order => (
                       <div key={order.id} className="card-elevated rounded-2xl overflow-hidden">
-                        {/* Card Header */}
                         <div className="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
                           <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja</p>
@@ -275,7 +375,6 @@ export default function DashboardPage() {
                           <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
                         </div>
 
-                        {/* Body */}
                         <div className="px-5 py-4 space-y-3">
                           <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                             <span>#{order.id.slice(0, 8).toUpperCase()}</span>
@@ -319,7 +418,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* TAB: MENU */}
             {activeTab === 'menu' && (
               <div className="space-y-4 print:hidden">
                 <div className="flex justify-between items-center">
@@ -367,38 +465,188 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* TAB: TABLES */}
             {activeTab === 'tables' && (
-              <div className="card-elevated rounded-2xl p-6 print:border-none print:shadow-none print:p-0">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 print:hidden">
+              <div className="card-elevated rounded-2xl p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
                   <div>
                     <h3 className="font-black text-slate-900">QR Code Meja</h3>
-                    <p className="text-xs text-slate-500">{tables.length} meja terdaftar</p>
+                    <p className="text-xs text-slate-500">{tables.length} meja terdaftar · Klik "Cetak QR" untuk cetak per meja</p>
                   </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <form onSubmit={handleAddTable} className="flex gap-2 flex-1">
-                      <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold" />
-                      <button type="submit" className="btn-primary px-4 py-2 rounded-xl text-xs">Tambah</button>
-                    </form>
-                    <button onClick={() => window.print()} className="btn-dark px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 whitespace-nowrap">
-                      <Icons.Print /> Cetak Semua
-                    </button>
-                  </div>
+                  <form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto">
+                    <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold" />
+                    <button type="submit" className="btn-primary px-4 py-2 rounded-xl text-xs">Tambah</button>
+                  </form>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
-                  {tables.map(t => (
-                    <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center group hover:bg-white hover:border-slate-300 hover:shadow-md transition-all print:border-dashed print:bg-white print:rounded-none print:p-2">
-                      <p className="font-black text-slate-900 text-sm mb-3 print:mb-1">Meja {t.table_number}</p>
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/order?tenant=${tenantId}&table=${t.table_number}`)}`} className="w-full rounded-lg mb-3 print:mb-1" alt="QR" />
-                      <button onClick={() => handleDeleteTable(t.id)} className="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline print:hidden">Hapus Meja</button>
-                    </div>
-                  ))}
-                </div>
+                {tables.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl">🪑</div>
+                    <p className="font-bold text-slate-900">Belum ada meja</p>
+                    <p className="text-sm text-slate-500 mt-1">Tambahkan meja untuk generate QR code</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {tables.map(t => (
+                      <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center group hover:bg-white hover:border-slate-300 hover:shadow-md transition-all">
+                        <p className="font-black text-slate-900 text-sm mb-3">Meja {t.table_number}</p>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/order?tenant=${tenantId}&table=${t.table_number}`)}`} className="w-full rounded-lg mb-3" alt="QR" />
+                        <div className="flex gap-1.5">
+                          <button onClick={() => printTableQR(t)} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all">
+                            <Icons.Print /> Cetak QR
+                          </button>
+                          <button onClick={() => handleDeleteTable(t.id)} className="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline px-2">Hapus</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* TAB: SETTINGS */}
+            {activeTab === 'reports' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
+                    <button onClick={() => setReportPeriod('daily')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'daily' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                      📅 Harian
+                    </button>
+                    <button onClick={() => setReportPeriod('monthly')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'monthly' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                      📊 Bulanan
+                    </button>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode</p>
+                    <p className="text-sm font-black text-slate-900">{reportLabel}</p>
+                  </div>
+                </div>
+
+                {!reportNow ? (
+                  <div className="card-subtle rounded-2xl p-16 text-center">
+                    <p className="font-bold text-slate-900">Memuat laporan...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="card-elevated rounded-2xl p-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pesanan</p>
+                        <h3 className="text-3xl font-black text-slate-900">{reportStats.totalOrders}</h3>
+                        <p className="text-[11px] text-slate-500 font-semibold mt-1">{reportStats.paidCount} lunas</p>
+                      </div>
+                      <div className="rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-800 shadow-lg">
+                        <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-2">Total Omset</p>
+                        <h3 className="text-2xl font-black text-white">{rp(reportStats.revenue)}</h3>
+                        <p className="text-[11px] text-slate-400 font-semibold mt-1">Dari pesanan lunas</p>
+                      </div>
+                      <div className="card-elevated rounded-2xl p-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Rata-rata / Order</p>
+                        <h3 className="text-2xl font-black text-slate-900">{rp(reportStats.avgOrder)}</h3>
+                        <p className="text-[11px] text-slate-500 font-semibold mt-1">Per transaksi lunas</p>
+                      </div>
+                      <div className="card-elevated rounded-2xl p-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Item Terjual</p>
+                        <h3 className="text-3xl font-black text-slate-900">{reportStats.totalItems}</h3>
+                        <p className="text-[11px] text-slate-500 font-semibold mt-1">Total porsi</p>
+                      </div>
+                    </div>
+
+                    <div className="card-elevated rounded-2xl p-6">
+                      <h3 className="font-black text-slate-900 mb-4">Status Pesanan</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[
+                          { key: 'pending', label: 'Baru' },
+                          { key: 'cooking', label: 'Dimasak' },
+                          { key: 'ready', label: 'Siap' },
+                          { key: 'completed', label: 'Selesai' },
+                          { key: 'cancelled', label: 'Batal' },
+                        ].map(({ key, label }) => {
+                          const c = statusColors[key];
+                          return (
+                            <div key={key} className={`p-4 rounded-xl border ${c.bg} ${c.border}`}>
+                              <p className={`text-[10px] font-bold uppercase tracking-widest ${c.text}`}>{label}</p>
+                              <p className={`text-2xl font-black ${c.text}`}>{reportStats.statusCount[key] || 0}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="card-elevated rounded-2xl p-6">
+                      <h3 className="font-black text-slate-900 mb-4">🔥 Menu Terlaris</h3>
+                      {topMenus.length === 0 ? (
+                        <div className="text-center py-10">
+                          <p className="text-4xl mb-2">📊</p>
+                          <p className="text-sm font-bold text-slate-900">Belum ada penjualan</p>
+                          <p className="text-xs text-slate-500 mt-1">Data akan muncul setelah ada pesanan</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {topMenus.map(([name, data], idx) => {
+                            const maxQty = topMenus[0][1].qty;
+                            const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0;
+                            const rankBg = idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-slate-700' : idx === 2 ? 'bg-orange-300 text-white' : 'bg-slate-100 text-slate-600';
+                            return (
+                              <div key={name}>
+                                <div className="flex justify-between items-center mb-1.5">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${rankBg}`}>{idx + 1}</span>
+                                    <span className="font-bold text-sm text-slate-900 truncate">{name}</span>
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-600 whitespace-nowrap ml-2">{data.qty}× · {rp(data.revenue)}</span>
+                                </div>
+                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all" style={{ width: `${pct}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {reportPeriod === 'monthly' && (
+                      <div className="card-elevated rounded-2xl p-6">
+                        <h3 className="font-black text-slate-900 mb-4">📅 Rincian Per Hari</h3>
+                        {activeDays.length === 0 ? (
+                          <div className="text-center py-10">
+                            <p className="text-4xl mb-2">🗓️</p>
+                            <p className="text-sm font-bold text-slate-900">Belum ada pesanan bulan ini</p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b-2 border-slate-200">
+                                  <th className="text-left py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal</th>
+                                  <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pesanan</th>
+                                  <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Omset</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {activeDays.map(d => (
+                                  <tr key={d.day} className="border-b border-slate-100 hover:bg-slate-50">
+                                    <td className="py-2 px-2 font-bold text-slate-700">{d.day} {monthName}</td>
+                                    <td className="text-right py-2 px-2 font-semibold text-slate-600">{d.orders}</td>
+                                    <td className="text-right py-2 px-2 font-black text-orange-600">{rp(d.revenue)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t-2 border-slate-900">
+                                  <td className="py-3 px-2 font-black text-slate-900">TOTAL</td>
+                                  <td className="text-right py-3 px-2 font-black text-slate-900">{reportStats.totalOrders}</td>
+                                  <td className="text-right py-3 px-2 font-black text-orange-600">{rp(reportStats.revenue)}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {activeTab === 'settings' && (
               <div className="card-elevated rounded-2xl p-6 md:p-8 max-w-xl mx-auto print:hidden">
                 <div className="border-b border-slate-100 pb-4 mb-6">
@@ -406,7 +654,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500">Ubah identitas dan kontak kafe Anda</p>
                 </div>
                 <form onSubmit={handleSaveSettings} className="space-y-5">
-                  
+
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label>
                     <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -439,7 +687,7 @@ export default function DashboardPage() {
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label>
                     <input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" />
                   </div>
-                  
+
                   <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm">Simpan Pengaturan</button>
                 </form>
               </div>
@@ -448,7 +696,6 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* ============ MODAL MENU ============ */}
       {isMenuModalOpen && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 print:hidden">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
