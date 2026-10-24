@@ -24,9 +24,6 @@ const Icons = {
   Shrink: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
 };
 
-// ==========================================
-// NATIVE QRIS DYNAMIC GENERATOR (EMVCo CRC16)
-// ==========================================
 function crc16(str) {
   let crc = 0xFFFF;
   for (let c = 0; c < str.length; c++) {
@@ -73,12 +70,13 @@ export default function DashboardPage() {
   const [queueFilter, setQueueFilter] = useState('active');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [currentMenu, setCurrentMenu] = useState({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' });
-  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '' });
+  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '' });
   const [newTableNum, setNewTableNum] = useState('');
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const [reportNow, setReportNow] = useState(null);
   const [reportMode, setReportMode] = useState('daily');
@@ -103,6 +101,7 @@ export default function DashboardPage() {
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(true);
   const audioUnlockedRef = useRef(false);
@@ -229,7 +228,8 @@ export default function DashboardPage() {
           wa: userData.tenants.wa_number || '', 
           address: userData.tenants.address || '', 
           logo_url: userData.tenants.logo_url || '',
-          qris_string: userData.tenants.qris_string || ''
+          qris_string: userData.tenants.qris_string || '',
+          banner_url: userData.tenants.banner_url || ''
         });
         
         await Promise.all([
@@ -282,15 +282,15 @@ export default function DashboardPage() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
-  // FUNGSI BARU: Kompres gambar otomatis (Support semua ukuran & iPhone HEIC)
-  const handleImageUpload = async (e, isLogo = false) => {
+  const handleImageUpload = async (e, type = 'menu') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (isLogo) setUploadingLogo(true); else setUploading(true);
+    if (type === 'logo') setUploadingLogo(true); 
+    else if (type === 'banner') setUploadingBanner(true);
+    else setUploading(true);
 
     try {
-      // 1. Proses Kompresi via Canvas
       const compressedFile = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -301,9 +301,8 @@ export default function DashboardPage() {
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-            const MAX_SIZE = 800; // Ukuran maksimal gambar (px)
+            const MAX_SIZE = type === 'banner' ? 1200 : 800;
 
-            // Hitung rasio aspek
             if (width > height) {
               if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
             } else {
@@ -315,7 +314,6 @@ export default function DashboardPage() {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Convert ke Blob JPG (kualitas 80%)
             canvas.toBlob((blob) => {
               const newFile = new File([blob], `img-${Date.now()}.jpg`, { type: 'image/jpeg' });
               resolve(newFile);
@@ -326,9 +324,8 @@ export default function DashboardPage() {
         reader.onerror = (error) => reject(error);
       });
 
-      // 2. Upload file yang sudah dikompres ke Supabase
-      const fileName = `${tenantId}-${Date.now()}.jpg`;
-      const bucket = isLogo ? 'cafe-logos' : 'menu-images';
+      const fileName = `${tenantId}-${type}-${Date.now()}.jpg`;
+      const bucket = (type === 'logo' || type === 'banner') ? 'cafe-logos' : 'menu-images';
       
       const { error: uploadError } = await supabase.storage
         .from(bucket)
@@ -338,15 +335,18 @@ export default function DashboardPage() {
       
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       
-      if (isLogo) setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+      if (type === 'logo') setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+      else if (type === 'banner') setSettings(prev => ({ ...prev, banner_url: urlData.publicUrl }));
       else setCurrentMenu(prev => ({ ...prev, image_url: urlData.publicUrl }));
       
-      showToast('Foto berhasil dikompres & diupload', 'success');
+      showToast('Foto berhasil diupload', 'success');
     } catch (err) { 
       showToast('Gagal upload: ' + err.message, 'error'); 
     }
     
-    if (isLogo) setUploadingLogo(false); else setUploading(false);
+    if (type === 'logo') setUploadingLogo(false); 
+    else if (type === 'banner') setUploadingBanner(false);
+    else setUploading(false);
   };
 
   const handleSaveMenu = async (e) => {
@@ -395,7 +395,8 @@ export default function DashboardPage() {
       wa_number: settings.wa, 
       address: settings.address, 
       logo_url: settings.logo_url,
-      qris_string: settings.qris_string
+      qris_string: settings.qris_string,
+      banner_url: settings.banner_url
     }).eq('id', tenantId);
     setCafeName(settings.name); showToast('✅ Pengaturan disimpan', 'success');
   };
@@ -1094,7 +1095,25 @@ export default function DashboardPage() {
               <div className="card-elevated rounded-2xl p-6 md:p-8 max-w-xl mx-auto print:hidden">
                 <div className="border-b border-slate-100 pb-4 mb-6"><h3 className="font-black text-slate-900">Profil Toko</h3><p className="text-xs text-slate-500">Ubah identitas dan kontak kafe Anda</p></div>
                 <form onSubmit={handleSaveSettings} className="space-y-5">
-                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label><div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">{settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />) : (<div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>)}<div className="flex-1"><input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, true)} className="hidden" /><button type="button" onClick={() => logoInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button><p className="text-[10px] text-slate-500 mt-1.5">PNG/JPG, maksimal 2MB</p></div></div></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label><div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">{settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />) : (<div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>)}<div className="flex-1"><input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" /><button type="button" onClick={() => logoInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button><p className="text-[10px] text-slate-500 mt-1.5">PNG/JPG, maksimal 2MB</p></div></div></div>
+                  
+                  {/* BANNER UPLOAD */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">Banner Kafe (Latar Belakang)</label>
+                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      {settings.banner_url ? (
+                        <img src={settings.banner_url} className="w-24 h-16 rounded-lg object-cover shadow-sm bg-white border border-slate-200" />
+                      ) : (
+                        <div className="w-24 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-2xl">🖼️</div>
+                      )}
+                      <div className="flex-1">
+                        <input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleImageUpload(e, 'banner')} className="hidden" />
+                        <button type="button" onClick={() => bannerInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploadingBanner ? 'Mengupload...' : '📷 Pilih Banner'}</button>
+                        <p className="text-[10px] text-slate-500 mt-1.5">Disarankan gambar landscape.</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" /></div>
@@ -1119,7 +1138,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
             <div className="flex justify-between items-start mb-5"><div><h3 className="font-black text-lg text-slate-900">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className="text-xs text-slate-500 mt-0.5">Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">×</button></div>
             <form onSubmit={handleSaveMenu} className="space-y-4">
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label><div className="flex items-center gap-3"><div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-3xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label><div className="flex items-center gap-3"><div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-3xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
               <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Contoh: Nasi Goreng Spesial" /></div>
               <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="25000" /></div>
               <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>

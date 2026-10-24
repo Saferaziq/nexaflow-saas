@@ -3,12 +3,54 @@ import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
 
+// Fungsi untuk mendeteksi warna dominan dari gambar banner
+const extractDominantColor = (imgUrl) => {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = imgUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 40) {
+          const alpha = data[i + 3];
+          if (alpha < 128) continue;
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+        }
+        if (count > 0) {
+          r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+          document.documentElement.style.setProperty('--primary-color', `rgb(${r}, ${g}, ${b})`);
+          document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.1)`);
+        } else {
+          throw new Error('Fallback');
+        }
+      } catch (err) {
+        document.documentElement.style.setProperty('--primary-color', '#ea580c');
+        document.documentElement.style.setProperty('--primary-light', '#fff7ed');
+      }
+    };
+    img.onerror = () => {
+      document.documentElement.style.setProperty('--primary-color', '#ea580c');
+      document.documentElement.style.setProperty('--primary-light', '#fff7ed');
+    };
+  } catch (e) {
+    document.documentElement.style.setProperty('--primary-color', '#ea580c');
+    document.documentElement.style.setProperty('--primary-light', '#fff7ed');
+  }
+};
+
 function OrderContent() {
   const searchParams = useSearchParams();
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', wa_number: '' });
+  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '' });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +66,18 @@ function OrderContent() {
   const [globalNote, setGlobalNote] = useState('');
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--primary-color', '#ea580c');
+    document.documentElement.style.setProperty('--primary-light', '#fff7ed');
+
     if (!tenantId) return;
     const fetchData = async () => {
       const { data: cafeData } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
-      if (cafeData) setCafe(cafeData);
+      if (cafeData) {
+        setCafe(cafeData);
+        if (cafeData.banner_url) extractDominantColor(cafeData.banner_url);
+        else if (cafeData.logo_url) extractDominantColor(cafeData.logo_url);
+      }
+      
       const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
       if (menuData) setMenus(menuData);
       
@@ -39,7 +89,10 @@ function OrderContent() {
     fetchData();
 
     const channel = supabase.channel('customer-realtime-' + Date.now())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => setCafe(payload.new))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
+        setCafe(payload.new);
+        if (payload.new.banner_url) extractDominantColor(payload.new.banner_url);
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => {
         const existingOrders = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
         if (existingOrders.length > 0) fetchMyOrders(existingOrders);
@@ -135,7 +188,7 @@ function OrderContent() {
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
+        <div className="w-12 h-12 border-4 border-slate-200 rounded-full animate-spin mx-auto border-t-[var(--primary-color)]"></div>
         <p className="mt-4 text-slate-500 font-bold text-sm">Memuat menu...</p>
       </div>
     </div>
@@ -151,27 +204,36 @@ function OrderContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
-      {/* HERO HEADER */}
-      <div className="relative bg-gradient-to-br from-orange-500 to-orange-400 text-white overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-        <div className="relative px-6 pt-10 pb-12">
+      {/* HERO HEADER (Banner Background) */}
+      <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
+        {/* Banner Image */}
+        {cafe.banner_url ? (
+          <img src={cafe.banner_url} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Banner" />
+        ) : (
+          <div className="absolute inset-0 w-full h-full bg-[var(--primary-color)] opacity-90"></div>
+        )}
+        
+        {/* Gradient Overlay agar teks terbaca */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10"></div>
+
+        <div className="relative px-6 pt-10 pb-12 z-10">
           <div className="flex items-center justify-between mb-8">
-            <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider">✦ NEXAFLOW</div>
-            <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
+            <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider text-white border border-white/20">✦ NEXAFLOW</div>
+            <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 text-white border border-white/20">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Meja {tableNumber}
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mt-2">
             {cafe.logo_url ? (
-              <img src={cafe.logo_url} className="w-16 h-16 rounded-2xl bg-white object-cover border-2 border-white/50 shadow-md" alt="Logo" />
+              <img src={cafe.logo_url} className="w-16 h-16 rounded-2xl bg-white object-cover border-2 border-white/80 shadow-lg" alt="Logo" />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl font-black border border-white/30 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl font-black border border-white/30 text-white shadow-sm">
                 {cafe.name.charAt(0)}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-black text-white drop-shadow-sm truncate">{cafe.name}</h1>
+              <h1 className="text-3xl font-black text-white drop-shadow-md truncate">{cafe.name}</h1>
               <p className="text-xs text-white/90 font-medium mt-1">Silakan pilih menu favorit Anda</p>
             </div>
           </div>
@@ -179,8 +241,8 @@ function OrderContent() {
       </div>
 
       {/* SEARCH */}
-      <div className="px-5 -mt-6 relative z-10">
-        <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center px-4 py-3">
+      <div className="px-5 -mt-6 relative z-20">
+        <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center px-4 py-3">
           <span className="text-slate-400 text-lg">🔍</span>
           <input type="text" placeholder="Cari menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 ml-3 text-[16px] font-medium outline-none text-slate-800 placeholder:text-slate-400 bg-transparent" />
           {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 text-xl font-bold px-2">×</button>}
@@ -203,10 +265,10 @@ function OrderContent() {
               ))}
             </div>
 
-            {/* LIST MENU */}
-            <div className="space-y-3 mt-4">
+            {/* GRID MENU (2 KOLOM) */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
               {filteredMenus.length === 0 ? (
-                <div className="bg-white rounded-3xl p-10 text-center shadow-sm border border-slate-100">
+                <div className="col-span-2 bg-white rounded-3xl p-10 text-center shadow-sm border border-slate-100">
                   <div className="text-5xl mb-3 opacity-50">🍽️</div>
                   <p className="text-slate-800 font-bold text-sm">Menu tidak ditemukan</p>
                   <p className="text-slate-400 text-xs mt-1">Coba kata kunci lain</p>
@@ -214,30 +276,32 @@ function OrderContent() {
               ) : filteredMenus.map(menu => {
                 const cartItem = cart.find(c => c.id === menu.id);
                 return (
-                  <div key={menu.id} className="bg-white p-3.5 rounded-3xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex gap-4 border border-slate-100 relative">
-                    <div className="w-24 h-24 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 relative">
+                  <div key={menu.id} className="bg-white rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-slate-100 relative">
+                    <div className="aspect-[4/3] bg-slate-100 relative w-full">
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
                       {cartItem && (
-                        <div className="absolute top-1.5 right-1.5 bg-orange-500 text-white text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-sm border border-white">
+                        <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-sm border border-white">
                           {cartItem.qty}
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
+                    
+                    <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
-                        <h3 className="font-bold text-slate-800 text-sm truncate">{menu.name}</h3>
-                        <p className="text-[11px] text-slate-500 font-medium line-clamp-2 mt-1 leading-relaxed">{menu.description || 'Menu andalan kami'}</p>
+                        <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
+                        <p className="text-[10px] text-slate-500 font-medium line-clamp-2 mt-1 leading-snug min-h-[2em]">{menu.description || 'Menu andalan kami'}</p>
                       </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-bold text-orange-600 text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
+                      
+                      <div className="mt-2 flex flex-col gap-2">
+                        <span className="font-black text-[var(--primary-color)] text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
                         {cartItem ? (
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => decCart(menu.id)} className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full font-bold text-slate-600 text-lg flex items-center justify-center transition-colors">-</button>
-                            <span className="font-bold text-slate-800 text-sm w-4 text-center">{cartItem.qty}</span>
-                            <button onClick={() => addToCart(menu)} className="w-8 h-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full font-bold text-lg flex items-center justify-center shadow-sm transition-colors">+</button>
+                          <div className="flex items-center justify-between bg-slate-50 rounded-lg p-1 border border-slate-200">
+                            <button onClick={() => decCart(menu.id)} className="w-6 h-6 bg-white rounded-md shadow-sm font-bold text-slate-600 flex items-center justify-center">-</button>
+                            <span className="font-bold text-slate-800 text-xs">{cartItem.qty}</span>
+                            <button onClick={() => addToCart(menu)} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded-md shadow-sm font-bold flex items-center justify-center">+</button>
                           </div>
                         ) : (
-                          <button onClick={() => addToCart(menu)} className="w-9 h-9 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-full font-bold text-xl flex items-center justify-center transition-colors">+</button>
+                          <button onClick={() => addToCart(menu)} className="w-full bg-[var(--primary-light)] text-[var(--primary-color)] font-bold py-1.5 rounded-lg text-xs transition-colors hover:bg-[var(--primary-color)] hover:text-white">Tambah</button>
                         )}
                       </div>
                     </div>
@@ -255,14 +319,14 @@ function OrderContent() {
                 <div className="text-6xl mb-4 opacity-50">🛒</div>
                 <p className="text-slate-800 font-bold text-base">Keranjang masih kosong</p>
                 <p className="text-slate-500 font-medium text-xs mt-2 mb-6">Yuk pilih menu favorit Anda dulu</p>
-                <button onClick={() => setActiveTab('menu')} className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md shadow-orange-500/20 transition-all">Lihat Menu</button>
+                <button onClick={() => setActiveTab('menu')} className="bg-[var(--primary-color)] text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md transition-all">Lihat Menu</button>
               </div>
             ) : (
               <>
                 <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm mt-2">
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-800 text-sm">Pesanan Anda</h3>
-                    <span className="text-[10px] bg-orange-50 text-orange-600 px-2.5 py-1 rounded-full font-bold">{totalCartQty} item</span>
+                    <span className="text-[10px] bg-[var(--primary-light)] text-[var(--primary-color)] px-2.5 py-1 rounded-full font-bold">{totalCartQty} item</span>
                   </div>
                   <div className="space-y-5">
                     {cart.map(item => (
@@ -273,12 +337,12 @@ function OrderContent() {
                           </div>
                           <div className="flex-1 min-w-0 pt-0.5">
                             <p className="font-bold text-slate-800 text-sm truncate">{item.name}</p>
-                            <p className="text-xs text-orange-600 font-bold mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                            <p className="text-xs text-[var(--primary-color)] font-bold mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => decCart(item.id)} className="w-7 h-7 bg-slate-100 rounded-full font-bold text-slate-600 transition-colors">-</button>
                             <span className="w-5 text-center font-bold text-slate-800 text-xs">{item.qty}</span>
-                            <button onClick={() => addToCart(item)} className="w-7 h-7 bg-orange-50 text-orange-600 rounded-full font-bold transition-colors">+</button>
+                            <button onClick={() => addToCart(item)} className="w-7 h-7 bg-[var(--primary-light)] text-[var(--primary-color)] rounded-full font-bold transition-colors">+</button>
                           </div>
                         </div>
                         <input
@@ -286,7 +350,7 @@ function OrderContent() {
                           placeholder="Catatan (mis. tanpa gula, tidak pedas)"
                           value={item.note || ''}
                           onChange={(e) => updateItemNote(item.id, e.target.value)}
-                          className="w-full mt-3 text-[16px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-800 placeholder:text-slate-400 transition-all"
+                          className="w-full mt-3 text-[16px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-light)] font-medium text-slate-800 placeholder:text-slate-400 transition-all"
                         />
                       </div>
                     ))}
@@ -301,12 +365,12 @@ function OrderContent() {
                     </div>
                     <div className="flex justify-between font-bold text-base pt-3 border-t border-slate-100 mt-2">
                       <span className="text-slate-800">Total Bayar</span>
-                      <span className="text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span>
+                      <span className="text-[var(--primary-color)]">Rp {totalPrice.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
                 </div>
 
-                <button onClick={openConfirmation} disabled={isSubmitting} className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold py-4 rounded-2xl mt-3 shadow-lg shadow-orange-500/30 text-sm active:scale-[0.98] transition-transform disabled:opacity-50">
+                <button onClick={openConfirmation} disabled={isSubmitting} className="w-full bg-[var(--primary-color)] text-white font-bold py-4 rounded-2xl mt-3 shadow-lg text-sm active:scale-[0.98] transition-transform disabled:opacity-50">
                   {isSubmitting ? 'Memproses...' : 'Lanjut ke Konfirmasi'}
                 </button>
               </>
@@ -347,14 +411,14 @@ function OrderContent() {
                           <span>{i.qty}x {i.name}</span>
                           <span>Rp {(i.price * i.qty).toLocaleString('id-ID')}</span>
                         </div>
-                        {i.note && <p className="text-[10px] text-orange-600 font-medium italic mt-1 ml-2">↳ "{i.note}"</p>}
+                        {i.note && <p className="text-[10px] text-[var(--primary-color)] font-medium italic mt-1 ml-2">↳ "{i.note}"</p>}
                       </div>
                     ))}
                   </div>
 
                   <div className="flex justify-between items-center pt-3 border-t border-slate-50">
                     <span className="text-xs text-slate-500 font-medium">Total</span>
-                    <span className="text-base font-bold text-orange-600">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
+                    <span className="text-base font-bold text-[var(--primary-color)]">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
                   </div>
 
                   {/* TIMELINE STATUS */}
@@ -374,7 +438,7 @@ function OrderContent() {
                           </div>
                           <div className="flex-1 pt-1.5">
                             <p className={`text-sm font-bold ${isDone ? 'text-slate-800' : 'text-slate-400'}`}>{label}</p>
-                            {isActive && <p className="text-[11px] text-orange-600 font-medium mt-1 animate-pulse">Sedang berlangsung...</p>}
+                            {isActive && <p className="text-[11px] text-[var(--primary-color)] font-medium mt-1 animate-pulse">Sedang berlangsung...</p>}
                           </div>
                         </div>
                       );
@@ -390,7 +454,7 @@ function OrderContent() {
       {/* FOOTER */}
       <div className="text-center mt-8 pb-32">
         <p className="text-[11px] font-medium text-slate-400">
-          Powered by <span className="text-orange-500 font-bold">Nexa Flow</span>
+          Powered by <span className="text-[var(--primary-color)] font-bold">Nexa Flow</span>
         </p>
         {cafe.wa_number && (
           <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-3 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100 shadow-sm transition-all hover:bg-emerald-100">
@@ -402,11 +466,11 @@ function OrderContent() {
       {/* FLOATING BOTTOM NAV with Safe Area */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto bg-white/95 backdrop-blur-xl border border-slate-200 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-1.5 flex gap-1">
-          <button onClick={() => setActiveTab('menu')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-orange-50 text-orange-600' : 'text-slate-400 hover:bg-slate-50'}`}>
+          <button onClick={() => setActiveTab('menu')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-[var(--primary-light)] text-[var(--primary-color)]' : 'text-slate-400 hover:bg-slate-50'}`}>
             <span className="text-lg mb-0.5">🍽️</span>
             <span className={`text-[10px] font-bold`}>Menu</span>
           </button>
-          <button onClick={() => setActiveTab('cart')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-orange-50 text-orange-600' : 'text-slate-400 hover:bg-slate-50'}`}>
+          <button onClick={() => setActiveTab('cart')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-[var(--primary-light)] text-[var(--primary-color)]' : 'text-slate-400 hover:bg-slate-50'}`}>
             <span className="text-lg mb-0.5">🛒</span>
             <span className={`text-[10px] font-bold`}>Keranjang</span>
             {totalCartQty > 0 && (
@@ -415,7 +479,7 @@ function OrderContent() {
               </span>
             )}
           </button>
-          <button onClick={() => setActiveTab('status')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'status' ? 'bg-orange-50 text-orange-600' : 'text-slate-400 hover:bg-slate-50'}`}>
+          <button onClick={() => setActiveTab('status')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all ${activeTab === 'status' ? 'bg-[var(--primary-light)] text-[var(--primary-color)]' : 'text-slate-400 hover:bg-slate-50'}`}>
             <span className="text-lg mb-0.5">📋</span>
             <span className={`text-[10px] font-bold`}>Status</span>
           </button>
@@ -427,7 +491,7 @@ function OrderContent() {
         <div className="fixed bottom-28 left-0 right-0 z-40 px-5 animate-in slide-in-from-bottom-5">
           <div className="max-w-md mx-auto bg-white/90 backdrop-blur-lg rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-2.5 flex justify-between items-center border border-slate-100">
             <div className="flex items-center gap-3 pl-2">
-              <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center font-bold text-lg">
+              <div className="w-10 h-10 bg-[var(--primary-light)] text-[var(--primary-color)] rounded-xl flex items-center justify-center font-bold text-lg">
                 {totalCartQty}
               </div>
               <div>
@@ -435,7 +499,7 @@ function OrderContent() {
                 <p className="text-sm font-bold text-slate-800">Rp {totalPrice.toLocaleString('id-ID')}</p>
               </div>
             </div>
-            <button onClick={() => setActiveTab('cart')} className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-3 rounded-xl text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-transform">
+            <button onClick={() => setActiveTab('cart')} className="bg-[var(--primary-color)] text-white font-bold px-5 py-3 rounded-xl text-xs shadow-md active:scale-95 transition-transform">
               Lihat Keranjang
             </button>
           </div>
@@ -459,7 +523,7 @@ function OrderContent() {
                   value={customerName} 
                   onChange={e => setCustomerName(e.target.value)} 
                   placeholder="Contoh: Budi" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[16px] font-bold text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[16px] font-bold text-slate-800 focus:outline-none focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-light)] transition-all" 
                   autoFocus
                 />
               </div>
@@ -470,7 +534,7 @@ function OrderContent() {
                   value={globalNote} 
                   onChange={e => setGlobalNote(e.target.value)} 
                   placeholder="Contoh: Tolong cepat ya" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[16px] font-bold text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[16px] font-bold text-slate-800 focus:outline-none focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-light)] transition-all" 
                 />
               </div>
             </div>
@@ -482,7 +546,7 @@ function OrderContent() {
               </div>
               <div className="flex justify-between text-base font-bold text-slate-800 pt-3 border-t border-slate-200">
                 <span>Total Bayar</span>
-                <span className="text-orange-600">Rp {totalPrice.toLocaleString('id-ID')}</span>
+                <span className="text-[var(--primary-color)]">Rp {totalPrice.toLocaleString('id-ID')}</span>
               </div>
             </div>
 
@@ -490,7 +554,7 @@ function OrderContent() {
               <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
                 Batal
               </button>
-              <button onClick={handleCheckout} disabled={isSubmitting || !customerName.trim()} className="flex-[2] bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-orange-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100">
+              <button onClick={handleCheckout} disabled={isSubmitting || !customerName.trim()} className="flex-[2] bg-[var(--primary-color)] text-white font-bold py-3.5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100">
                 {isSubmitting ? 'Memproses...' : 'Ya, Kirim Pesanan'}
               </button>
             </div>
@@ -509,5 +573,5 @@ function OrderContent() {
 }
 
 export default function OrderPage() {
-  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-12 h-12 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin"></div></div>}><OrderContent /></Suspense>;
+  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-12 h-12 border-4 border-slate-200 border-t-[var(--primary-color)] rounded-full animate-spin"></div></div>}><OrderContent /></Suspense>;
 }
