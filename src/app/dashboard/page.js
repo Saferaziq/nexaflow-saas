@@ -36,13 +36,12 @@ export default function DashboardPage() {
   const [reportPeriod, setReportPeriod] = useState('daily');
   const [reportNow, setReportNow] = useState(null);
   const [nowTick, setNowTick] = useState(0);
-
-  // Batch 1 states
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
+  const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -54,7 +53,6 @@ export default function DashboardPage() {
 
   const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
 
-  // ===== HELPERS: Toast & Confirm =====
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -65,7 +63,6 @@ export default function DashboardPage() {
     setConfirmDialog({ open: true, title, message, onConfirm, danger });
   };
 
-  // ===== HELPERS: Audio (Web Audio API) =====
   const playBeep = () => {
     if (!soundEnabledRef.current) return;
     if (!audioCtxRef.current) return;
@@ -110,16 +107,11 @@ export default function DashboardPage() {
       const newEnabled = !soundEnabledRef.current;
       soundEnabledRef.current = newEnabled;
       setSoundEnabled(newEnabled);
-      if (newEnabled) {
-        playBeep();
-        showToast('🔊 Suara aktif', 'info');
-      } else {
-        showToast('🔇 Suara dimatikan', 'info');
-      }
+      if (newEnabled) { playBeep(); showToast('🔊 Suara aktif', 'info'); }
+      else { showToast('🔇 Suara dimatikan', 'info'); }
     }
   };
 
-  // ===== TICK: update badge waktu tiap 60 detik =====
   useEffect(() => {
     const update = () => setNowTick(Date.now());
     update();
@@ -127,7 +119,6 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
-  // ===== WINDOW: online/offline detection =====
   useEffect(() => {
     const onOffline = () => setRealtimeStatus('offline');
     const onOnline = () => setRealtimeStatus('connecting');
@@ -139,7 +130,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // ===== MAIN SETUP: auth + realtime =====
   useEffect(() => {
     setTodayStr(new Date().toDateString());
     setReportNow(new Date());
@@ -172,7 +162,6 @@ export default function DashboardPage() {
     return () => { isMounted = false; if (channel) supabase.removeChannel(channel); };
   }, [router]);
 
-  // ===== FETCH =====
   const fetchMenus = async (tId) => { const { data } = await supabase.from('menus').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }); if (data) setMenus(data); };
   const fetchTables = async (tId) => { const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId).order('table_number', { ascending: true }); if (data) setTables(data); };
   const fetchOrders = async (tId) => {
@@ -193,12 +182,26 @@ export default function DashboardPage() {
     }
   };
 
-  // ===== HANDLERS =====
   const handleLogout = () => {
     askConfirm('Keluar dari Dashboard', 'Yakin ingin logout dari akun ini?', async () => {
       await supabase.auth.signOut();
       router.push('/login');
     }, true);
+  };
+
+  const openKitchenLink = async () => {
+    try {
+      const { data, error } = await supabase.from('tenants').select('kitchen_pin').eq('id', tenantId).single();
+      if (error) {
+        showToast('Kolom kitchen_pin belum ada. Jalankan SQL migration dulu.', 'error');
+        return;
+      }
+      const pin = data?.kitchen_pin || '1234';
+      const url = `${baseUrl}/kitchen/${tenantId}?pin=${pin}`;
+      setKitchenModal({ open: true, url, pin });
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    }
   };
 
   const handleImageUpload = async (e, isLogo = false) => {
@@ -284,7 +287,6 @@ export default function DashboardPage() {
     showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
   };
 
-  // ===== PRINT =====
   const printBill = (order) => {
     const win = window.open('', '', 'width=400,height=600');
     win.document.write(`
@@ -332,10 +334,8 @@ export default function DashboardPage() {
     setTimeout(() => { win.focus(); win.print(); }, 1000);
   };
 
-  // ===== COMPUTED =====
   const activeOrders = orders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status));
   const filteredOrders = queueFilter === 'active' ? activeOrders : queueFilter === 'done' ? orders.filter(o => ['completed', 'cancelled'].includes(o.status)) : orders;
-
   const displayOrders = (() => {
     const arr = [...filteredOrders];
     if (queueFilter === 'active') arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -351,7 +351,6 @@ export default function DashboardPage() {
     revenue: todayOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + Number(o.total_price), 0)
   };
 
-  // ===== REPORT DATA =====
   let reportOrders = [];
   let reportStats = { totalOrders: 0, revenue: 0, paidCount: 0, totalItems: 0, avgOrder: 0, statusCount: { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 } };
   let topMenus = [];
@@ -364,13 +363,11 @@ export default function DashboardPage() {
     const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
     const monthStart = new Date(reportNow.getFullYear(), reportNow.getMonth(), 1);
     const monthEnd = new Date(reportNow.getFullYear(), reportNow.getMonth() + 1, 1);
-
     reportOrders = orders.filter(o => {
       const d = new Date(o.created_at);
       if (reportPeriod === 'daily') return d >= todayStart && d < tomorrowStart;
       return d >= monthStart && d < monthEnd;
     });
-
     reportStats = {
       totalOrders: reportOrders.length,
       revenue: reportOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total_price || 0), 0),
@@ -385,18 +382,9 @@ export default function DashboardPage() {
       },
     };
     reportStats.avgOrder = reportStats.paidCount > 0 ? reportStats.revenue / reportStats.paidCount : 0;
-
     const menuSales = {};
-    reportOrders.forEach(o => {
-      (o.items || []).forEach(item => {
-        const key = item.name || 'Unknown';
-        if (!menuSales[key]) menuSales[key] = { qty: 0, revenue: 0 };
-        menuSales[key].qty += item.qty || 0;
-        menuSales[key].revenue += (item.price || 0) * (item.qty || 0);
-      });
-    });
+    reportOrders.forEach(o => { (o.items || []).forEach(item => { const key = item.name || 'Unknown'; if (!menuSales[key]) menuSales[key] = { qty: 0, revenue: 0 }; menuSales[key].qty += item.qty || 0; menuSales[key].revenue += (item.price || 0) * (item.qty || 0); }); });
     topMenus = Object.entries(menuSales).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
-
     const daysInMonth = new Date(reportNow.getFullYear(), reportNow.getMonth() + 1, 0).getDate();
     const dailyBreakdown = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
@@ -405,7 +393,6 @@ export default function DashboardPage() {
       return { day, orders: dayOrders.length, revenue: dayRevenue };
     });
     activeDays = dailyBreakdown.filter(d => d.orders > 0);
-
     reportLabel = reportPeriod === 'daily'
       ? reportNow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
       : reportNow.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -499,6 +486,13 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-500 font-medium mt-0.5">{pageSubtitle}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={openKitchenLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-slate-900 hover:bg-slate-800 border-slate-800 text-white shadow-md transition-all text-[11px] font-bold"
+              title="Buka layar dapur (KDS)"
+            >
+              🍳 <span className="hidden sm:inline">Layar Dapur</span>
+            </button>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
               realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-200' :
               realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-200' :
@@ -527,13 +521,7 @@ export default function DashboardPage() {
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500'
               }`}
             >
-              {!audioUnlocked ? (
-                <><span>🔕</span><span className="hidden sm:inline">Aktifkan Suara</span></>
-              ) : soundEnabled ? (
-                <><span>🔊</span><span className="hidden sm:inline">Suara Aktif</span></>
-              ) : (
-                <><span>🔇</span><span className="hidden sm:inline">Suara Mati</span></>
-              )}
+              {!audioUnlocked ? (<><span>🔕</span><span className="hidden sm:inline">Aktifkan Suara</span></>) : soundEnabled ? (<><span>🔊</span><span className="hidden sm:inline">Suara Aktif</span></>) : (<><span>🔇</span><span className="hidden sm:inline">Suara Mati</span></>)}
             </button>
           </div>
         </header>
@@ -613,7 +601,6 @@ export default function DashboardPage() {
                             </div>
                             <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
                           </div>
-
                           <div className="px-5 py-4 space-y-3">
                             <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 font-semibold">
                               <span>#{order.id.slice(0, 8).toUpperCase()}</span>
@@ -626,7 +613,6 @@ export default function DashboardPage() {
                                 <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
                               </div>
                             </div>
-
                             <div className="space-y-2 pt-1">
                               {order.items.map((item, idx) => (
                                 <div key={idx}>
@@ -634,18 +620,14 @@ export default function DashboardPage() {
                                     <span className="font-bold text-slate-700">{item.qty}× {item.name}</span>
                                     <span className="font-bold text-slate-900">{rp(item.price * item.qty)}</span>
                                   </div>
-                                  {item.note && (
-                                    <p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>
-                                  )}
+                                  {item.note && (<p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>)}
                                 </div>
                               ))}
                             </div>
-
                             <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                               <span className="text-xs font-bold text-slate-500">Total</span>
                               <span className="text-lg font-black text-orange-600">{rp(order.total_price)}</span>
                             </div>
-
                             {order.status !== 'completed' && order.status !== 'cancelled' && (
                               <div className="space-y-2 pt-1">
                                 <div className="grid grid-cols-2 gap-2">
@@ -686,18 +668,12 @@ export default function DashboardPage() {
                   {menus.map(menu => (
                     <div key={menu.id} className="card-elevated rounded-2xl overflow-hidden flex flex-col">
                       <div className="h-44 bg-slate-100 relative overflow-hidden">
-                        {menu.image_url ? (
-                          <img src={menu.image_url} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>
-                        )}
+                        {menu.image_url ? (<img src={menu.image_url} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>)}
                         <div className="absolute top-3 left-3 z-10">
                           <button
                             onClick={() => toggleMenuStatus(menu)}
                             className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg transition-all backdrop-blur-md ${
-                              menu.status === 'available'
-                                ? 'bg-rose-600/90 hover:bg-rose-700 text-white'
-                                : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'
+                              menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'
                             }`}
                           >
                             {menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}
@@ -771,12 +747,8 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div className="flex items-center gap-2 bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
-                    <button onClick={() => setReportPeriod('daily')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'daily' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                      📅 Harian
-                    </button>
-                    <button onClick={() => setReportPeriod('monthly')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'monthly' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                      📊 Bulanan
-                    </button>
+                    <button onClick={() => setReportPeriod('daily')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'daily' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>📅 Harian</button>
+                    <button onClick={() => setReportPeriod('monthly')} className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${reportPeriod === 'monthly' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>📊 Bulanan</button>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode</p>
@@ -785,9 +757,7 @@ export default function DashboardPage() {
                 </div>
 
                 {!reportNow ? (
-                  <div className="card-subtle rounded-2xl p-16 text-center">
-                    <p className="font-bold text-slate-900">Memuat laporan...</p>
-                  </div>
+                  <div className="card-subtle rounded-2xl p-16 text-center"><p className="font-bold text-slate-900">Memuat laporan...</p></div>
                 ) : (
                   <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -816,20 +786,9 @@ export default function DashboardPage() {
                     <div className="card-elevated rounded-2xl p-6">
                       <h3 className="font-black text-slate-900 mb-4">Status Pesanan</h3>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        {[
-                          { key: 'pending', label: 'Baru' },
-                          { key: 'cooking', label: 'Dimasak' },
-                          { key: 'ready', label: 'Siap' },
-                          { key: 'completed', label: 'Selesai' },
-                          { key: 'cancelled', label: 'Batal' },
-                        ].map(({ key, label }) => {
+                        {[{key:'pending',label:'Baru'},{key:'cooking',label:'Dimasak'},{key:'ready',label:'Siap'},{key:'completed',label:'Selesai'},{key:'cancelled',label:'Batal'}].map(({key,label}) => {
                           const c = statusColors[key];
-                          return (
-                            <div key={key} className={`p-4 rounded-xl border ${c.bg} ${c.border}`}>
-                              <p className={`text-[10px] font-bold uppercase tracking-widest ${c.text}`}>{label}</p>
-                              <p className={`text-2xl font-black ${c.text}`}>{reportStats.statusCount[key] || 0}</p>
-                            </div>
-                          );
+                          return (<div key={key} className={`p-4 rounded-xl border ${c.bg} ${c.border}`}><p className={`text-[10px] font-bold uppercase tracking-widest ${c.text}`}>{label}</p><p className={`text-2xl font-black ${c.text}`}>{reportStats.statusCount[key] || 0}</p></div>);
                         })}
                       </div>
                     </div>
@@ -837,11 +796,7 @@ export default function DashboardPage() {
                     <div className="card-elevated rounded-2xl p-6">
                       <h3 className="font-black text-slate-900 mb-4">🔥 Menu Terlaris</h3>
                       {topMenus.length === 0 ? (
-                        <div className="text-center py-10">
-                          <p className="text-4xl mb-2">📊</p>
-                          <p className="text-sm font-bold text-slate-900">Belum ada penjualan</p>
-                          <p className="text-xs text-slate-500 mt-1">Data akan muncul setelah ada pesanan</p>
-                        </div>
+                        <div className="text-center py-10"><p className="text-4xl mb-2">📊</p><p className="text-sm font-bold text-slate-900">Belum ada penjualan</p></div>
                       ) : (
                         <div className="space-y-4">
                           {topMenus.map(([name, data], idx) => {
@@ -857,9 +812,7 @@ export default function DashboardPage() {
                                   </div>
                                   <span className="text-xs font-bold text-slate-600 whitespace-nowrap ml-2">{data.qty}× · {rp(data.revenue)}</span>
                                 </div>
-                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all" style={{ width: `${pct}%` }}></div>
-                                </div>
+                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all" style={{ width: `${pct}%` }}></div></div>
                               </div>
                             );
                           })}
@@ -871,36 +824,21 @@ export default function DashboardPage() {
                       <div className="card-elevated rounded-2xl p-6">
                         <h3 className="font-black text-slate-900 mb-4">📅 Rincian Per Hari</h3>
                         {activeDays.length === 0 ? (
-                          <div className="text-center py-10">
-                            <p className="text-4xl mb-2">🗓️</p>
-                            <p className="text-sm font-bold text-slate-900">Belum ada pesanan bulan ini</p>
-                          </div>
+                          <div className="text-center py-10"><p className="text-4xl mb-2">🗓️</p><p className="text-sm font-bold text-slate-900">Belum ada pesanan bulan ini</p></div>
                         ) : (
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b-2 border-slate-200">
-                                  <th className="text-left py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal</th>
-                                  <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pesanan</th>
-                                  <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Omset</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {activeDays.map(d => (
-                                  <tr key={d.day} className="border-b border-slate-100 hover:bg-slate-50">
-                                    <td className="py-2 px-2 font-bold text-slate-700">{d.day} {monthName}</td>
-                                    <td className="text-right py-2 px-2 font-semibold text-slate-600">{d.orders}</td>
-                                    <td className="text-right py-2 px-2 font-black text-orange-600">{rp(d.revenue)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                              <tfoot>
-                                <tr className="border-t-2 border-slate-900">
-                                  <td className="py-3 px-2 font-black text-slate-900">TOTAL</td>
-                                  <td className="text-right py-3 px-2 font-black text-slate-900">{reportStats.totalOrders}</td>
-                                  <td className="text-right py-3 px-2 font-black text-orange-600">{rp(reportStats.revenue)}</td>
-                                </tr>
-                              </tfoot>
+                              <thead><tr className="border-b-2 border-slate-200">
+                                <th className="text-left py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal</th>
+                                <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pesanan</th>
+                                <th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Omset</th>
+                              </tr></thead>
+                              <tbody>{activeDays.map(d => (<tr key={d.day} className="border-b border-slate-100 hover:bg-slate-50"><td className="py-2 px-2 font-bold text-slate-700">{d.day} {monthName}</td><td className="text-right py-2 px-2 font-semibold text-slate-600">{d.orders}</td><td className="text-right py-2 px-2 font-black text-orange-600">{rp(d.revenue)}</td></tr>))}</tbody>
+                              <tfoot><tr className="border-t-2 border-slate-900">
+                                <td className="py-3 px-2 font-black text-slate-900">TOTAL</td>
+                                <td className="text-right py-3 px-2 font-black text-slate-900">{reportStats.totalOrders}</td>
+                                <td className="text-right py-3 px-2 font-black text-orange-600">{rp(reportStats.revenue)}</td>
+                              </tr></tfoot>
                             </table>
                           </div>
                         )}
@@ -918,40 +856,20 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500">Ubah identitas dan kontak kafe Anda</p>
                 </div>
                 <form onSubmit={handleSaveSettings} className="space-y-5">
-
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label>
                     <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      {settings.logo_url ? (
-                        <img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>
-                      )}
+                      {settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />) : (<div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>)}
                       <div className="flex-1">
                         <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, true)} className="hidden" />
-                        <button type="button" onClick={() => logoInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">
-                          {uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}
-                        </button>
+                        <button type="button" onClick={() => logoInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button>
                         <p className="text-[10px] text-slate-500 mt-1.5">PNG/JPG, maksimal 2MB</p>
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Kafe</label>
-                    <input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label>
-                    <input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label>
-                    <input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" />
-                  </div>
-
+                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" /></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" /></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" /></div>
                   <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm">Simpan Pengaturan</button>
                 </form>
               </div>
@@ -964,110 +882,79 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 print:hidden">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
             <div className="flex justify-between items-start mb-5">
-              <div>
-                <h3 className="font-black text-lg text-slate-900">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Isi informasi menu baru</p>
-              </div>
+              <div><h3 className="font-black text-lg text-slate-900">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className="text-xs text-slate-500 mt-0.5">Isi informasi menu baru</p></div>
               <button onClick={() => setIsMenuModalOpen(false)} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">×</button>
             </div>
-
             <form onSubmit={handleSaveMenu} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label>
                 <div className="flex items-center gap-3">
-                  <div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-3xl border border-slate-200">
-                    {currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}
-                  </div>
-                  <div className="flex-1">
-                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">
-                      {uploading ? 'Mengupload...' : '📷 Pilih Foto'}
-                    </button>
-                  </div>
+                  <div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-3xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div>
+                  <div className="flex-1"><input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-lg text-xs">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Menu</label>
-                <input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Contoh: Nasi Goreng Spesial" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Harga (Rp)</label>
-                <input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="25000" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Kategori</label>
-                <select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900">
-                  <option value="makanan">Makanan</option>
-                  <option value="minuman">Minuman</option>
-                  <option value="cemilan">Cemilan</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Deskripsi</label>
-                <textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" rows="2" placeholder="Deskripsi singkat menu"></textarea>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button type="submit" className="flex-1 btn-primary py-2.5 rounded-xl text-sm">Simpan</button>
-                <button type="button" onClick={() => setIsMenuModalOpen(false)} className="btn-ghost px-6 py-2.5 rounded-xl text-sm">Batal</button>
-              </div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Contoh: Nasi Goreng Spesial" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="25000" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" rows="2" placeholder="Deskripsi singkat menu"></textarea></div>
+              <div className="flex gap-2 pt-2"><button type="submit" className="flex-1 btn-primary py-2.5 rounded-xl text-sm">Simpan</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className="btn-ghost px-6 py-2.5 rounded-xl text-sm">Batal</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ===== TOAST CONTAINER ===== */}
+      {kitchenModal.open && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-[80] print:hidden">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-black text-lg text-slate-900">🍳 Layar Dapur (KDS)</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Buka URL ini di tablet / TV dapur</p>
+              </div>
+              <button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">×</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1.5">URL</label>
+                <div className="flex gap-2">
+                  <input readOnly value={kitchenModal.url} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-xs bg-slate-50 font-mono" />
+                  <button onClick={() => { navigator.clipboard.writeText(kitchenModal.url); showToast('✅ URL disalin', 'success'); }} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold whitespace-nowrap">📋 Salin</button>
+                </div>
+              </div>
+              <div className="text-center">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(kitchenModal.url)}`} className="w-40 h-40 mx-auto rounded-lg border border-slate-200" alt="QR KDS" />
+                <p className="text-[10px] text-slate-500 mt-2">Scan QR dengan tablet dapur</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-amber-900">PIN: {kitchenModal.pin}</p>
+                <p className="text-[10px] text-amber-700 mt-1">PIN ini sudah termasuk di URL. Jangan bagikan ke pelanggan.</p>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed">💡 Chef hanya perlu buka URL di tablet dapur. Setelah sekali masuk, URL ini tersimpan di browser — besok tidak perlu scan lagi.</p>
+            </div>
+            <button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-full mt-4 btn-ghost py-2.5 rounded-xl text-sm font-bold">Tutup</button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed top-4 right-4 z-[100] space-y-2 w-80 max-w-[calc(100vw-2rem)] print:hidden pointer-events-none">
         {toasts.map(t => {
-          const c = {
-            success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' },
-            error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' },
-            warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' },
-            info: { border: 'border-orange-400', icon: '🔔', bar: 'bg-orange-500' },
-          }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
+          const c = { success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' }, error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' }, warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' }, info: { border: 'border-orange-400', icon: '🔔', bar: 'bg-orange-500' } }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
           return (
             <div key={t.id} className={`pointer-events-auto bg-white rounded-xl shadow-2xl border-2 ${c.border} overflow-hidden flex items-stretch`}>
               <div className={`${c.bar} w-1 shrink-0`}></div>
-              <div className="flex items-start gap-2.5 px-3 py-2.5 flex-1">
-                <span className="text-lg shrink-0">{c.icon}</span>
-                <p className="text-sm font-bold text-slate-900 flex-1">{t.message}</p>
-              </div>
+              <div className="flex items-start gap-2.5 px-3 py-2.5 flex-1"><span className="text-lg shrink-0">{c.icon}</span><p className="text-sm font-bold text-slate-900 flex-1">{t.message}</p></div>
             </div>
           );
         })}
       </div>
 
-      {/* ===== CONFIRM DIALOG ===== */}
       {confirmDialog.open && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-[90] print:hidden">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="font-black text-lg text-slate-900 mb-2">{confirmDialog.title}</h3>
             <p className="text-sm text-slate-600 mb-6 whitespace-pre-line">{confirmDialog.message}</p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false })}
-                className="flex-1 btn-ghost py-2.5 rounded-xl text-sm font-bold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={async () => {
-                  const cb = confirmDialog.onConfirm;
-                  setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false });
-                  if (cb) { try { await cb(); } catch (err) { showToast('Error: ' + err.message, 'error'); } }
-                }}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all ${
-                  confirmDialog.danger
-                    ? 'bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30'
-                    : 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/30'
-                }`}
-              >
-                Ya, Lanjutkan
-              </button>
+              <button onClick={() => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false })} className="flex-1 btn-ghost py-2.5 rounded-xl text-sm font-bold">Batal</button>
+              <button onClick={async () => { const cb = confirmDialog.onConfirm; setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false }); if (cb) { try { await cb(); } catch (err) { showToast('Error: ' + err.message, 'error'); } } }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all ${confirmDialog.danger ? 'bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30' : 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/30'}`}>Ya, Lanjutkan</button>
             </div>
           </div>
         </div>
