@@ -36,13 +36,90 @@ export default function DashboardPage() {
   const [reportPeriod, setReportPeriod] = useState('daily');
   const [reportNow, setReportNow] = useState(null);
   const [nowTick, setNowTick] = useState(0);
+
+  // Batch 1 states
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting');
+  const [toasts, setToasts] = useState([]);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
+
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const soundEnabledRef = useRef(true);
+  const audioUnlockedRef = useRef(false);
+  const prevOrderIdsRef = useRef(null);
   const router = useRouter();
 
   const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
 
-  // Tick waktu untuk badge "menunggu X menit" — update tiap 60 detik
+  // ===== HELPERS: Toast & Confirm =====
+  const showToast = (message, type = 'success') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
+
+  const askConfirm = (title, message, onConfirm, danger = false) => {
+    setConfirmDialog({ open: true, title, message, onConfirm, danger });
+  };
+
+  // ===== HELPERS: Audio (Web Audio API) =====
+  const playBeep = () => {
+    if (!soundEnabledRef.current) return;
+    if (!audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const playOne = (startTime) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + startTime);
+        osc.stop(ctx.currentTime + startTime + 0.18);
+      };
+      playOne(0);
+      playOne(0.22);
+    } catch (e) { /* silent */ }
+  };
+
+  const handleSoundToggle = () => {
+    if (!audioUnlockedRef.current) {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        audioCtxRef.current.resume();
+        audioUnlockedRef.current = true;
+        setAudioUnlocked(true);
+        soundEnabledRef.current = true;
+        setSoundEnabled(true);
+        playBeep();
+        showToast('🔊 Notifikasi suara aktif', 'success');
+      } catch (e) {
+        showToast('Browser tidak mendukung suara', 'error');
+      }
+    } else {
+      const newEnabled = !soundEnabledRef.current;
+      soundEnabledRef.current = newEnabled;
+      setSoundEnabled(newEnabled);
+      if (newEnabled) {
+        playBeep();
+        showToast('🔊 Suara aktif', 'info');
+      } else {
+        showToast('🔇 Suara dimatikan', 'info');
+      }
+    }
+  };
+
+  // ===== TICK: update badge waktu tiap 60 detik =====
   useEffect(() => {
     const update = () => setNowTick(Date.now());
     update();
@@ -50,6 +127,19 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
+  // ===== WINDOW: online/offline detection =====
+  useEffect(() => {
+    const onOffline = () => setRealtimeStatus('offline');
+    const onOnline = () => setRealtimeStatus('connecting');
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  // ===== MAIN SETUP: auth + realtime =====
   useEffect(() => {
     setTodayStr(new Date().toDateString());
     setReportNow(new Date());
@@ -71,17 +161,45 @@ export default function DashboardPage() {
         fetchMenus(tId); fetchTables(tId); fetchOrders(tId);
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') setRealtimeStatus('online');
+            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('offline');
+            else setRealtimeStatus('connecting');
+          });
       }
     };
     fetchData();
     return () => { isMounted = false; if (channel) supabase.removeChannel(channel); };
   }, [router]);
 
+  // ===== FETCH =====
   const fetchMenus = async (tId) => { const { data } = await supabase.from('menus').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }); if (data) setMenus(data); };
   const fetchTables = async (tId) => { const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId).order('table_number', { ascending: true }); if (data) setTables(data); };
-  const fetchOrders = async (tId) => { const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }); if (data) setOrders(data); };
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const fetchOrders = async (tId) => {
+    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+    if (data) {
+      const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).map(o => o.id));
+      const prevIds = prevOrderIdsRef.current;
+      if (prevIds !== null) {
+        const newOnes = [...activeIds].filter(id => !prevIds.has(id));
+        if (newOnes.length > 0) {
+          playBeep();
+          const firstNew = data.find(o => o.id === newOnes[0]);
+          if (firstNew) showToast(`🔔 Pesanan baru! Meja ${firstNew.table_number} - ${rp(firstNew.total_price)}`, 'info');
+        }
+      }
+      prevOrderIdsRef.current = activeIds;
+      setOrders(data);
+    }
+  };
+
+  // ===== HANDLERS =====
+  const handleLogout = () => {
+    askConfirm('Keluar dari Dashboard', 'Yakin ingin logout dari akun ini?', async () => {
+      await supabase.auth.signOut();
+      router.push('/login');
+    }, true);
+  };
 
   const handleImageUpload = async (e, isLogo = false) => {
     const file = e.target.files?.[0];
@@ -96,29 +214,77 @@ export default function DashboardPage() {
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       if (isLogo) setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
       else setCurrentMenu(prev => ({ ...prev, image_url: urlData.publicUrl }));
-    } catch (err) { alert('Gagal upload: ' + err.message); }
+      showToast('Foto berhasil diupload', 'success');
+    } catch (err) { showToast('Gagal upload: ' + err.message, 'error'); }
     if (isLogo) setUploadingLogo(false); else setUploading(false);
   };
 
   const handleSaveMenu = async (e) => {
     e.preventDefault();
+    const isEdit = !!currentMenu.id;
     const payload = { tenant_id: tenantId, name: currentMenu.name, category: currentMenu.category, price: parseFloat(currentMenu.price), description: currentMenu.desc, status: currentMenu.status, image_url: currentMenu.image_url };
-    if (currentMenu.id) await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id);
     else await supabase.from('menus').insert([payload]);
     setIsMenuModalOpen(false); fetchMenus(tenantId);
+    showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
   };
 
-  const handleDeleteMenu = async (id) => { if (confirm('Hapus menu ini?')) { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); } };
-  const handleUpdateOrderStatus = async (id, status) => { const updates = { status }; if (status === 'completed') updates.payment_status = 'paid'; await supabase.from('orders').update(updates).eq('id', id); fetchOrders(tenantId); };
-  const handleCancelOrder = async (id) => {
-    if (!confirm('Tolak pesanan ini?\n\nPesanan akan dibatalkan dan tidak diproses ke dapur.')) return;
-    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id);
+  const handleDeleteMenu = (id) => {
+    askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => {
+      await supabase.from('menus').delete().eq('id', id);
+      fetchMenus(tenantId);
+      showToast('Menu dihapus', 'success');
+    }, true);
+  };
+
+  const handleUpdateOrderStatus = async (id, status) => {
+    const updates = { status };
+    if (status === 'completed') updates.payment_status = 'paid';
+    await supabase.from('orders').update(updates).eq('id', id);
     fetchOrders(tenantId);
   };
-  const handleAddTable = async (e) => { e.preventDefault(); if (!newTableNum) return; await supabase.from('tables').insert([{ tenant_id: tenantId, table_number: newTableNum }]); setNewTableNum(''); fetchTables(tenantId); };
-  const handleDeleteTable = async (id) => { if (confirm('Hapus meja ini?')) { await supabase.from('tables').delete().eq('id', id); fetchTables(tenantId); } };
-  const handleSaveSettings = async (e) => { e.preventDefault(); await supabase.from('tenants').update({ name: settings.name, wa_number: settings.wa, address: settings.address, logo_url: settings.logo_url }).eq('id', tenantId); setCafeName(settings.name); alert('Pengaturan disimpan!'); };
 
+  const handleCancelOrder = (id) => {
+    askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan dan tidak diproses ke dapur. Lanjutkan?', async () => {
+      await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id);
+      fetchOrders(tenantId);
+      showToast('Pesanan ditolak', 'warning');
+    }, true);
+  };
+
+  const handleAddTable = async (e) => {
+    e.preventDefault();
+    if (!newTableNum) return;
+    await supabase.from('tables').insert([{ tenant_id: tenantId, table_number: newTableNum }]);
+    setNewTableNum('');
+    fetchTables(tenantId);
+    showToast('✅ Meja ditambahkan', 'success');
+  };
+
+  const handleDeleteTable = (id) => {
+    askConfirm('Hapus Meja', 'Meja dan QR code-nya akan dihapus. Lanjutkan?', async () => {
+      await supabase.from('tables').delete().eq('id', id);
+      fetchTables(tenantId);
+      showToast('Meja dihapus', 'success');
+    }, true);
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    await supabase.from('tenants').update({ name: settings.name, wa_number: settings.wa, address: settings.address, logo_url: settings.logo_url }).eq('id', tenantId);
+    setCafeName(settings.name);
+    showToast('✅ Pengaturan disimpan', 'success');
+  };
+
+  const toggleMenuStatus = async (menu) => {
+    const newStatus = menu.status === 'available' ? 'soldout' : 'available';
+    const { error } = await supabase.from('menus').update({ status: newStatus }).eq('id', menu.id);
+    if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
+    fetchMenus(tenantId);
+    showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
+  };
+
+  // ===== PRINT =====
   const printBill = (order) => {
     const win = window.open('', '', 'width=400,height=600');
     win.document.write(`
@@ -134,11 +300,11 @@ export default function DashboardPage() {
   };
 
   const printTableQR = (table) => {
-    if (!baseUrl) { alert('Halaman belum siap. Tunggu sebentar lalu coba lagi.'); return; }
+    if (!baseUrl) { showToast('Halaman belum siap, coba lagi', 'error'); return; }
     const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(orderUrl)}`;
     const win = window.open('', '', 'width=600,height=800');
-    if (!win) { alert('Popup diblokir browser. Izinkan popup untuk mencetak QR.'); return; }
+    if (!win) { showToast('Popup diblokir. Izinkan popup untuk cetak QR', 'error'); return; }
     win.document.write(`
       <html><head><title>QR Meja ${table.table_number}</title><style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -166,10 +332,10 @@ export default function DashboardPage() {
     setTimeout(() => { win.focus(); win.print(); }, 1000);
   };
 
+  // ===== COMPUTED =====
   const activeOrders = orders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status));
   const filteredOrders = queueFilter === 'active' ? activeOrders : queueFilter === 'done' ? orders.filter(o => ['completed', 'cancelled'].includes(o.status)) : orders;
 
-  // Sort: Aktif = FIFO (terlama atas), Selesai/Semua = LIFO (terbaru atas)
   const displayOrders = (() => {
     const arr = [...filteredOrders];
     if (queueFilter === 'active') arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -263,7 +429,6 @@ export default function DashboardPage() {
   };
   const getStatusLabel = (status) => ({ pending: 'Baru', cooking: 'Dimasak', ready: 'Siap', completed: 'Selesai', cancelled: 'Batal' }[status] || status);
 
-  // Badge waktu tunggu: abu (0-5m), kuning (5-15m), merah+kedip (15m+)
   const getTimeBadge = (createdAt) => {
     if (!nowTick) return null;
     const mins = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
@@ -333,11 +498,43 @@ export default function DashboardPage() {
             <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{pageTitle}</h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">{pageSubtitle}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[11px] font-bold text-emerald-700">Sistem Online</span>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
+              realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-200' :
+              realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-200' :
+              'bg-amber-50 border-amber-200'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' :
+                realtimeStatus === 'offline' ? 'bg-rose-500' :
+                'bg-amber-500 animate-pulse'
+              }`}></span>
+              <span className={`text-[11px] font-bold ${
+                realtimeStatus === 'online' ? 'text-emerald-700' :
+                realtimeStatus === 'offline' ? 'text-rose-700' :
+                'text-amber-700'
+              }`}>
+                {realtimeStatus === 'online' ? 'Sistem Online' : realtimeStatus === 'offline' ? 'Koneksi Terputus' : 'Menghubungkan...'}
+              </span>
             </div>
+            <button
+              onClick={handleSoundToggle}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-[11px] font-bold ${
+                !audioUnlocked
+                  ? 'bg-orange-500 hover:bg-orange-600 border-orange-600 text-white shadow-md shadow-orange-500/30'
+                  : soundEnabled
+                    ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500'
+              }`}
+            >
+              {!audioUnlocked ? (
+                <><span>🔕</span><span className="hidden sm:inline">Aktifkan Suara</span></>
+              ) : soundEnabled ? (
+                <><span>🔊</span><span className="hidden sm:inline">Suara Aktif</span></>
+              ) : (
+                <><span>🔇</span><span className="hidden sm:inline">Suara Mati</span></>
+              )}
+            </button>
           </div>
         </header>
 
@@ -478,7 +675,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="font-black text-slate-900">Daftar Menu</h3>
-                    <p className="text-xs text-slate-500">{menus.length} menu terdaftar</p>
+                    <p className="text-xs text-slate-500">{menus.length} menu terdaftar · klik badge di foto untuk toggle cepat</p>
                   </div>
                   <button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="btn-primary px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5">
                     <Icons.Plus /> Tambah Menu
@@ -494,6 +691,18 @@ export default function DashboardPage() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>
                         )}
+                        <div className="absolute top-3 left-3 z-10">
+                          <button
+                            onClick={() => toggleMenuStatus(menu)}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg transition-all backdrop-blur-md ${
+                              menu.status === 'available'
+                                ? 'bg-rose-600/90 hover:bg-rose-700 text-white'
+                                : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'
+                            }`}
+                          >
+                            {menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}
+                          </button>
+                        </div>
                         <div className="absolute top-3 right-3">
                           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${menu.status === 'available' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'}`}>
                             {menu.status === 'available' ? 'Tersedia' : 'Habis'}
@@ -807,6 +1016,59 @@ export default function DashboardPage() {
                 <button type="button" onClick={() => setIsMenuModalOpen(false)} className="btn-ghost px-6 py-2.5 rounded-xl text-sm">Batal</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TOAST CONTAINER ===== */}
+      <div className="fixed top-4 right-4 z-[100] space-y-2 w-80 max-w-[calc(100vw-2rem)] print:hidden pointer-events-none">
+        {toasts.map(t => {
+          const c = {
+            success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' },
+            error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' },
+            warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' },
+            info: { border: 'border-orange-400', icon: '🔔', bar: 'bg-orange-500' },
+          }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
+          return (
+            <div key={t.id} className={`pointer-events-auto bg-white rounded-xl shadow-2xl border-2 ${c.border} overflow-hidden flex items-stretch`}>
+              <div className={`${c.bar} w-1 shrink-0`}></div>
+              <div className="flex items-start gap-2.5 px-3 py-2.5 flex-1">
+                <span className="text-lg shrink-0">{c.icon}</span>
+                <p className="text-sm font-bold text-slate-900 flex-1">{t.message}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ===== CONFIRM DIALOG ===== */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-[90] print:hidden">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <h3 className="font-black text-lg text-slate-900 mb-2">{confirmDialog.title}</h3>
+            <p className="text-sm text-slate-600 mb-6 whitespace-pre-line">{confirmDialog.message}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false })}
+                className="flex-1 btn-ghost py-2.5 rounded-xl text-sm font-bold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  const cb = confirmDialog.onConfirm;
+                  setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false });
+                  if (cb) { try { await cb(); } catch (err) { showToast('Error: ' + err.message, 'error'); } }
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all ${
+                  confirmDialog.danger
+                    ? 'bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30'
+                    : 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/30'
+                }`}
+              >
+                Ya, Lanjutkan
+              </button>
+            </div>
           </div>
         </div>
       )}
