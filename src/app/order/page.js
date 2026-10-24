@@ -3,7 +3,6 @@ import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
 
-// Fungsi untuk mendeteksi warna dominan dari gambar banner
 const extractDominantColor = (imgUrl) => {
   try {
     const img = new Image();
@@ -217,10 +216,12 @@ function OrderContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10"></div>
 
         <div className="relative px-6 pt-10 pb-12 z-10">
-          <div className="flex items-center justify-between mb-8">
-            <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider text-white border border-white/20">✦ NEXAFLOW</div>
-            <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 text-white border border-white/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Meja {tableNumber}
+          
+          {/* BAGIAN ATAS: HANYA MENAMPILKAN MEJA */}
+          <div className="flex items-center justify-end mb-6">
+            <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 text-white border border-white/20 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 
+              Anda di Meja {tableNumber}
             </div>
           </div>
 
@@ -451,16 +452,23 @@ function OrderContent() {
         )}
       </div>
 
-      {/* FOOTER */}
-      <div className="text-center mt-8 pb-32">
-        <p className="text-[11px] font-medium text-slate-400">
-          Powered by <span className="text-[var(--primary-color)] font-bold">Nexa Flow</span>
-        </p>
+      {/* FOOTER & BRANDING DEVELOPER */}
+      <div className="text-center mt-10 pb-32 space-y-4">
         {cafe.wa_number && (
-          <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-3 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100 shadow-sm transition-all hover:bg-emerald-100">
+          <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-5 py-2.5 rounded-full border border-emerald-100 shadow-sm transition-all hover:bg-emerald-100">
             💬 Hubungi Kasir via WA
           </a>
         )}
+
+        {/* Brand NexaFlow & Developer */}
+        <div className="pt-2 flex flex-col items-center justify-center gap-1.5">
+          <p className="text-[11px] font-medium text-slate-400">
+            Powered by <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-slate-800 font-bold hover:text-[var(--primary-color)] transition-colors">NexaFlow</a>
+          </p>
+          <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[9px] font-semibold text-slate-400/80 hover:text-slate-600 transition-colors bg-slate-100 px-2.5 py-1 rounded-md">
+            Ingin aplikasi seperti ini? WA Developer: 0813-8974-4957
+          </a>
+        </div>
       </div>
 
       {/* FLOATING BOTTOM NAV with Safe Area */}
