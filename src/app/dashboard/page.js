@@ -232,7 +232,6 @@ export default function DashboardPage() {
           qris_string: userData.tenants.qris_string || ''
         });
         
-        // Parallel fetch untuk mempercepat loading
         await Promise.all([
           fetchMenus(tId), 
           fetchTables(tId), 
@@ -283,21 +282,70 @@ export default function DashboardPage() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
+  // FUNGSI BARU: Kompres gambar otomatis (Support semua ukuran & iPhone HEIC)
   const handleImageUpload = async (e, isLogo = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     if (isLogo) setUploadingLogo(true); else setUploading(true);
+
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${tenantId}-${Date.now()}.${fileExt}`;
+      // 1. Proses Kompresi via Canvas
+      const compressedFile = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_SIZE = 800; // Ukuran maksimal gambar (px)
+
+            // Hitung rasio aspek
+            if (width > height) {
+              if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+            } else {
+              if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert ke Blob JPG (kualitas 80%)
+            canvas.toBlob((blob) => {
+              const newFile = new File([blob], `img-${Date.now()}.jpg`, { type: 'image/jpeg' });
+              resolve(newFile);
+            }, 'image/jpeg', 0.8);
+          };
+          img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+      });
+
+      // 2. Upload file yang sudah dikompres ke Supabase
+      const fileName = `${tenantId}-${Date.now()}.jpg`;
       const bucket = isLogo ? 'cafe-logos' : 'menu-images';
-      const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: '3600', upsert: false });
+      
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, compressedFile, { cacheControl: '3600', upsert: false });
+
       if (uploadError) throw uploadError;
+      
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+      
       if (isLogo) setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
       else setCurrentMenu(prev => ({ ...prev, image_url: urlData.publicUrl }));
-      showToast('Foto berhasil diupload', 'success');
-    } catch (err) { showToast('Gagal upload: ' + err.message, 'error'); }
+      
+      showToast('Foto berhasil dikompres & diupload', 'success');
+    } catch (err) { 
+      showToast('Gagal upload: ' + err.message, 'error'); 
+    }
+    
     if (isLogo) setUploadingLogo(false); else setUploading(false);
   };
 
@@ -360,7 +408,6 @@ export default function DashboardPage() {
     showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
   };
 
-  // ===== PRINT BILL + QRIS =====
   const printBillWithQRIS = (order) => {
     if (!settings.qris_string) {
       showToast('QRIS DANA belum diatur. Buka menu Pengaturan.', 'error');
@@ -693,7 +740,6 @@ export default function DashboardPage() {
     return { mins, cls: 'bg-rose-50 border-rose-300 text-rose-700', pulse: true };
   };
 
-  // TAMPILAN LOADING (Mencegah layar kosong saat loading awal)
   if (!tenantId) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">
