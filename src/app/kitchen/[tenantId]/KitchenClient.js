@@ -31,9 +31,8 @@ export default function KitchenClient({ tenantId }) {
   const [activeTab, setActiveTab] = useState('new');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Batch 2.5 states
-  const [cancelBanner, setCancelBanner] = useState(null); // { tableNumber, id }
-  const [undoToast, setUndoToast] = useState(null); // { orderId, tableNumber, previousStatus }
+  const [cancelBanner, setCancelBanner] = useState(null);
+  const [undoToast, setUndoToast] = useState(null);
   const [wakeLockActive, setWakeLockActive] = useState(false);
 
   const audioCtxRef = useRef(null);
@@ -45,7 +44,6 @@ export default function KitchenClient({ tenantId }) {
   const undoTimerRef = useRef(null);
   const cancelBannerTimerRef = useRef(null);
 
-  // ===== Tick waktu =====
   useEffect(() => {
     const update = () => setNowTick(Date.now());
     update();
@@ -53,14 +51,12 @@ export default function KitchenClient({ tenantId }) {
     return () => clearInterval(id);
   }, []);
 
-  // ===== Fullscreen listener =====
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  // ===== Cleanup =====
   useEffect(() => {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
@@ -70,7 +66,6 @@ export default function KitchenClient({ tenantId }) {
     };
   }, []);
 
-  // ===== WAKE LOCK (cegah layar mati) =====
   const requestWakeLock = async () => {
     try {
       if (!('wakeLock' in navigator)) return false;
@@ -82,9 +77,7 @@ export default function KitchenClient({ tenantId }) {
         wakeLockRef.current = null;
       });
       return true;
-    } catch (e) {
-      return false;
-    }
+    } catch (e) { return false; }
   };
 
   const releaseWakeLock = async () => {
@@ -95,21 +88,14 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  // Aktifkan wake lock setelah ready + handle visibility change
   useEffect(() => {
     if (authMode !== 'ready') return;
     requestWakeLock();
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') requestWakeLock();
-    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') requestWakeLock(); };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      releaseWakeLock();
-    };
+    return () => { document.removeEventListener('visibilitychange', onVisibility); releaseWakeLock(); };
   }, [authMode]);
 
-  // ===== AUDIO =====
   const playBeep = (force = false) => {
     if (!force && !soundEnabledRef.current) return;
     if (!audioCtxRef.current) return;
@@ -132,7 +118,6 @@ export default function KitchenClient({ tenantId }) {
     } catch {}
   };
 
-  // Bunyi rendah untuk order dibatalkan
   const playCancelBeep = (force = false) => {
     if (!force && !soundEnabledRef.current) return;
     if (!audioCtxRef.current) return;
@@ -176,12 +161,10 @@ export default function KitchenClient({ tenantId }) {
     if (newVal) playBeep(true);
   };
 
-  // ===== FETCH =====
   const fetchOrders = async () => {
     if (!tenantId) return;
     const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true });
     if (data) {
-      // Deteksi order baru (untuk beep)
       const activeIds = new Set(data.filter(o => ['pending', 'cooking'].includes(o.status)).map(o => o.id));
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
@@ -190,7 +173,6 @@ export default function KitchenClient({ tenantId }) {
       }
       prevOrderIdsRef.current = activeIds;
 
-      // Deteksi order dibatalkan (pending/cooking → cancelled)
       const prevMap = prevOrderStatusMapRef.current;
       const newMap = new Map();
       data.forEach(o => {
@@ -225,7 +207,6 @@ export default function KitchenClient({ tenantId }) {
       });
   };
 
-  // ===== VERIFY PIN =====
   const verifyPin = async (pin) => {
     if (!tenantId || !pin) return false;
     try {
@@ -239,7 +220,6 @@ export default function KitchenClient({ tenantId }) {
     return false;
   };
 
-  // ===== INIT AUTH =====
   useEffect(() => {
     if (!tenantId) return;
     const init = async () => {
@@ -275,7 +255,6 @@ export default function KitchenClient({ tenantId }) {
     init();
   }, [tenantId]);
 
-  // ===== SUBMIT PIN =====
   const submitPin = async () => {
     if (pinInput.length !== 4) return;
     setVerifying(true);
@@ -293,13 +272,11 @@ export default function KitchenClient({ tenantId }) {
     setVerifying(false);
   };
 
-  // ===== ACTIONS =====
   const markCooking = async (orderId) => {
     await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
     fetchOrders();
   };
 
-  // Mark SIAP + undo toast (5 detik)
   const markReady = async (order) => {
     const previousStatus = order.status;
     await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
@@ -333,7 +310,6 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  // ===== COMPUTED =====
   const pendingOrders = orders.filter(o => o.status === 'pending').sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const cookingOrders = orders.filter(o => o.status === 'cooking').sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const displayOrders = activeTab === 'new' ? pendingOrders : activeTab === 'cooking' ? cookingOrders : [...pendingOrders, ...cookingOrders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -342,36 +318,34 @@ export default function KitchenClient({ tenantId }) {
     if (!nowTick) return null;
     const mins = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
     if (mins < 0) return null;
-    if (mins < 5) return { mins, cls: 'bg-slate-700 text-slate-200', pulse: false };
-    if (mins < 15) return { mins, cls: 'bg-amber-500 text-white', pulse: false };
-    return { mins, cls: 'bg-rose-500 text-white', pulse: true };
+    if (mins < 5) return { mins, cls: 'bg-slate-700/50 text-slate-300', pulse: false };
+    if (mins < 15) return { mins, cls: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', pulse: false };
+    return { mins, cls: 'bg-rose-500/20 text-rose-400 border border-rose-500/30', pulse: true };
   };
 
   const clock = nowTick ? new Date(nowTick).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
-  // ===== RENDER: Loading =====
   if (authMode === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="font-bold">Memuat layar dapur...</p>
+          <div className="w-12 h-12 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="font-bold text-slate-400">Memuat layar dapur...</p>
         </div>
       </div>
     );
   }
 
-  // ===== RENDER: PIN =====
   if (authMode === 'pin') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 text-white">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 max-w-md w-full shadow-2xl">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-white">
+        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 sm:p-12 max-w-md w-full shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30">
+            <div className="w-16 h-16 bg-orange-500/20 border border-orange-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-400 shadow-sm">
               <Icons.Lock />
             </div>
-            <h1 className="text-2xl font-black mb-2">Layar Dapur</h1>
-            <p className="text-sm text-slate-400">Masukkan PIN 4 digit</p>
+            <h1 className="text-2xl font-black mb-2 text-slate-100">Layar Dapur</h1>
+            <p className="text-sm text-slate-400 font-medium">Masukkan PIN 4 digit</p>
           </div>
           <input
             type="tel"
@@ -384,7 +358,7 @@ export default function KitchenClient({ tenantId }) {
               if (val.length === 4) setTimeout(() => submitPin(), 150);
             }}
             autoFocus
-            className="w-full bg-slate-950 border-2 border-slate-700 focus:border-orange-500 rounded-2xl text-center text-5xl font-black py-6 tracking-[0.5em] text-white outline-none transition-all"
+            className="w-full bg-slate-900/50 border-2 border-slate-700 focus:border-orange-500 rounded-2xl text-center text-5xl font-black py-6 tracking-[0.5em] text-white outline-none transition-all"
             placeholder="••••"
           />
           {pinError && <p className="text-rose-400 text-sm font-bold text-center mt-3">{pinError}</p>}
@@ -392,7 +366,7 @@ export default function KitchenClient({ tenantId }) {
           <button
             onClick={submitPin}
             disabled={pinInput.length !== 4 || verifying}
-            className="w-full mt-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl text-lg shadow-lg shadow-orange-500/30 transition-all"
+            className="w-full mt-6 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl text-lg shadow-md shadow-orange-500/20 transition-all"
           >
             {verifying ? 'Memverifikasi...' : 'Masuk'}
           </button>
@@ -401,19 +375,17 @@ export default function KitchenClient({ tenantId }) {
     );
   }
 
-  // ===== RENDER: KDS =====
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col relative">
-      {/* Banner order dibatalkan (mengambang) */}
+    <div className="min-h-screen bg-slate-900 text-slate-200 flex flex-col relative">
       {cancelBanner && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-2xl bg-rose-600 text-white px-6 py-5 rounded-2xl shadow-[0_8px_32px_rgba(244,63,94,0.6)] border-4 border-rose-400 animate-pulse">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-2xl bg-rose-600 text-white px-6 py-5 rounded-3xl shadow-[0_8px_32px_rgba(244,63,94,0.4)] border border-rose-500 animate-pulse">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
               <Icons.Alert />
             </div>
             <div className="flex-1">
               <p className="text-2xl sm:text-3xl font-black leading-tight">⚠️ MEJA {cancelBanner.tableNumber} DIBATALKAN</p>
-              <p className="text-sm font-bold mt-1 opacity-90">JANGAN DIMASAK — Order sudah dibatalkan kasir</p>
+              <p className="text-sm font-medium mt-1 opacity-90">JANGAN DIMASAK — Order sudah dibatalkan kasir</p>
             </div>
             <button
               onClick={() => setCancelBanner(null)}
@@ -425,20 +397,19 @@ export default function KitchenClient({ tenantId }) {
         </div>
       )}
 
-      {/* Toast Undo SIAP */}
       {undoToast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-md bg-slate-800 border-2 border-emerald-500 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-md bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-xl overflow-hidden">
           <div className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center shrink-0">
               <Icons.Check />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-black text-white">Meja {undoToast.tableNumber} ditandai SIAP</p>
-              <p className="text-xs text-slate-400">Tap "Batalkan" jika salah tap</p>
+              <p className="text-sm font-bold text-slate-100">Meja {undoToast.tableNumber} ditandai SIAP</p>
+              <p className="text-xs text-slate-400 font-medium">Tap "Batalkan" jika salah tap</p>
             </div>
             <button
               onClick={undoMarkReady}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-sm shrink-0 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm shrink-0 transition-all active:scale-95 shadow-sm"
             >
               <Icons.Undo /> Batalkan
             </button>
@@ -449,31 +420,31 @@ export default function KitchenClient({ tenantId }) {
         </div>
       )}
 
-      <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
+      <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           {tenant?.logo_url ? (
-            <img src={tenant.logo_url} className="w-10 h-10 rounded-xl object-cover ring-2 ring-orange-500/30 shrink-0" alt="" />
+            <img src={tenant.logo_url} className="w-10 h-10 rounded-xl object-cover ring-2 ring-orange-500/20 shrink-0" alt="" />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center font-black text-white shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center font-black text-orange-400 shrink-0">
               {(tenant?.name || 'K').charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-base font-black truncate">{tenant?.name || 'Dapur'}</h1>
+            <h1 className="text-base font-black truncate text-slate-100">{tenant?.name || 'Dapur'}</h1>
             <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Kitchen Display</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {wakeLockActive && (
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold" title="Layar tidak akan mati">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold" title="Layar tidak akan mati">
               <Icons.Sun /> Layar Aktif
             </div>
           )}
-          <span className="hidden md:block text-3xl font-black tabular-nums">{clock}</span>
+          <span className="hidden md:block text-3xl font-black tabular-nums text-slate-100">{clock}</span>
           <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-bold ${
-            realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-            realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' :
-            'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+            realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+            'bg-amber-500/10 border-amber-500/20 text-amber-400'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
               realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' :
@@ -488,13 +459,13 @@ export default function KitchenClient({ tenantId }) {
             onClick={handleSoundToggle}
             className={`p-2.5 rounded-xl border transition-all ${
               audioUnlocked && soundEnabled
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
                 : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
             }`}
           >
             {audioUnlocked && soundEnabled ? <Icons.Volume /> : <Icons.VolumeOff />}
           </button>
-          <button onClick={toggleFullscreen} className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
+          <button onClick={toggleFullscreen} className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-all">
             <Icons.Expand />
           </button>
           <button onClick={handleLogout} className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 transition-all">
@@ -519,7 +490,7 @@ export default function KitchenClient({ tenantId }) {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
-              activeTab === tab.key ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              activeTab === tab.key ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             {tab.label}
@@ -531,11 +502,11 @@ export default function KitchenClient({ tenantId }) {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {displayOrders.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4">{activeTab === 'new' ? '📋' : activeTab === 'cooking' ? '🍳' : '✨'}</div>
-            <p className="text-xl font-black mb-1">
+            <div className="text-6xl mb-4 opacity-50">{activeTab === 'new' ? '📋' : activeTab === 'cooking' ? '🍳' : '✨'}</div>
+            <p className="text-xl font-black mb-1 text-slate-300">
               {activeTab === 'new' ? 'Belum ada pesanan baru' : activeTab === 'cooking' ? 'Tidak ada yang sedang dimasak' : 'Semua bersih!'}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 font-medium">
               {activeTab === 'new' ? 'Pesanan baru akan muncul otomatis' : 'Pesanan sedang dimasak akan tampil di sini'}
             </p>
           </div>
@@ -546,46 +517,54 @@ export default function KitchenClient({ tenantId }) {
               const isCooking = order.status === 'cooking';
               const totalItems = (order.items || []).reduce((s, i) => s + (i.qty || 0), 0);
               return (
-                <div key={order.id} className={`rounded-2xl overflow-hidden flex flex-col ${
-                  badge?.pulse ? 'bg-slate-800 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]' : 'bg-slate-800 border-2 border-slate-700'
+                <div key={order.id} className={`rounded-3xl overflow-hidden flex flex-col border transition-all ${
+                  badge?.pulse ? 'bg-slate-800 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.2)]' : 'bg-slate-800 border-slate-700'
                 }`}>
-                  <div className={`px-4 py-3 flex items-center justify-between ${isCooking ? 'bg-orange-600' : 'bg-amber-500'}`}>
+                  <div className={`px-5 py-3 flex items-center justify-between ${isCooking ? 'bg-orange-500/10 border-b border-orange-500/20' : 'bg-amber-500/10 border-b border-amber-500/20'}`}>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{isCooking ? 'Dimasak' : 'Baru'}</p>
-                      <p className="text-2xl font-black leading-tight text-white">MEJA {order.table_number}</p>
-                      <p className="text-lg font-black text-white/95 mt-0.5">{totalItems} ITEM</p>
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${isCooking ? 'text-orange-400' : 'text-amber-400'}`}>{isCooking ? 'Dimasak' : 'Baru'}</p>
+                      <p className="text-2xl font-black leading-tight text-slate-100">MEJA {order.table_number}</p>
+                      <p className="text-sm font-bold text-slate-300 mt-0.5 truncate max-w-[140px]">{order.customer_name || 'Tamu'}</p>
+                      <p className="text-xs font-semibold text-slate-400 mt-0.5">{totalItems} ITEM</p>
                     </div>
                     <div className="text-right">
                       {badge && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg font-black text-xs ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-black text-xs ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
                           <Icons.Clock /> {badge.mins}m
                         </span>
                       )}
-                      <p className="text-[10px] font-bold opacity-70 mt-1">#{order.id.slice(0, 6).toUpperCase()}</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1">#{order.id.slice(0, 6).toUpperCase()}</p>
                     </div>
                   </div>
-                  <div className="flex-1 p-4 space-y-3">
+                  
+                  {order.order_note && (
+                    <div className="bg-amber-500/10 border-l-4 border-amber-500 px-4 py-2">
+                      <p className="text-xs font-bold text-amber-400">📝 {order.order_note}</p>
+                    </div>
+                  )}
+
+                  <div className="flex-1 p-5 space-y-4">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-base font-black shrink-0">{item.qty}</span>
+                      <div key={idx} className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center text-base font-black shrink-0 text-slate-200">{item.qty}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-lg font-black leading-tight">{item.name}</p>
+                          <p className="text-lg font-bold leading-tight text-slate-100">{item.name}</p>
                           {item.note && (
-                            <div className="mt-1.5 bg-amber-500/25 border-l-4 border-amber-400 px-2.5 py-1.5 rounded-r">
-                              <p className="text-sm font-black text-amber-200 leading-snug">📝 {item.note}</p>
+                            <div className="mt-1.5 bg-amber-500/15 border border-amber-500/20 px-2.5 py-1.5 rounded-lg">
+                              <p className="text-sm font-bold text-amber-300 leading-snug">📝 {item.note}</p>
                             </div>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="p-3 pt-0">
+                  <div className="p-4 pt-0">
                     {isCooking ? (
-                      <button onClick={() => markReady(order)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl text-lg shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markReady(order)} className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-black py-4 rounded-xl text-lg shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Check /> SIAP
                       </button>
                     ) : (
-                      <button onClick={() => markCooking(order.id)} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-xl text-lg shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markCooking(order.id)} className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 font-black py-4 rounded-xl text-lg shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Fire /> MULAI MASAK
                       </button>
                     )}
