@@ -13,6 +13,7 @@ const Icons = {
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
 };
 
 export default function DashboardPage() {
@@ -34,11 +35,20 @@ export default function DashboardPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [reportPeriod, setReportPeriod] = useState('daily');
   const [reportNow, setReportNow] = useState(null);
+  const [nowTick, setNowTick] = useState(0);
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const router = useRouter();
 
   const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+
+  // Tick waktu untuk badge "menunggu X menit" — update tiap 60 detik
+  useEffect(() => {
+    const update = () => setNowTick(Date.now());
+    update();
+    const id = setInterval(update, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setTodayStr(new Date().toDateString());
@@ -158,6 +168,15 @@ export default function DashboardPage() {
 
   const activeOrders = orders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status));
   const filteredOrders = queueFilter === 'active' ? activeOrders : queueFilter === 'done' ? orders.filter(o => ['completed', 'cancelled'].includes(o.status)) : orders;
+
+  // Sort: Aktif = FIFO (terlama atas), Selesai/Semua = LIFO (terbaru atas)
+  const displayOrders = (() => {
+    const arr = [...filteredOrders];
+    if (queueFilter === 'active') arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    else arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return arr;
+  })();
+
   const todayOrders = todayStr ? orders.filter(o => new Date(o.created_at).toDateString() === todayStr) : [];
   const stats = {
     total: todayOrders.length,
@@ -243,6 +262,16 @@ export default function DashboardPage() {
     return map[status] || 'status-completed';
   };
   const getStatusLabel = (status) => ({ pending: 'Baru', cooking: 'Dimasak', ready: 'Siap', completed: 'Selesai', cancelled: 'Batal' }[status] || status);
+
+  // Badge waktu tunggu: abu (0-5m), kuning (5-15m), merah+kedip (15m+)
+  const getTimeBadge = (createdAt) => {
+    if (!nowTick) return null;
+    const mins = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
+    if (mins < 0) return null;
+    if (mins < 5) return { mins, cls: 'bg-slate-100 border-slate-200 text-slate-600', pulse: false };
+    if (mins < 15) return { mins, cls: 'bg-amber-50 border-amber-300 text-amber-700', pulse: false };
+    return { mins, cls: 'bg-rose-50 border-rose-300 text-rose-700', pulse: true };
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
@@ -355,13 +384,20 @@ export default function DashboardPage() {
 
             {activeTab === 'queue' && (
               <div className="space-y-4 print:hidden">
-                <div className="flex items-center gap-2 bg-white rounded-xl p-1 w-fit border border-slate-200 shadow-sm">
-                  {[{k:'active',l:'Aktif'},{k:'done',l:'Selesai'},{k:'all',l:'Semua'}].map(({k,l}) => (
-                    <button key={k} onClick={() => setQueueFilter(k)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${queueFilter === k ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{l}</button>
-                  ))}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-xl p-1 w-fit border border-slate-200 shadow-sm">
+                    {[{k:'active',l:'Aktif'},{k:'done',l:'Selesai'},{k:'all',l:'Semua'}].map(({k,l}) => (
+                      <button key={k} onClick={() => setQueueFilter(k)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${queueFilter === k ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{l}</button>
+                    ))}
+                  </div>
+                  {queueFilter === 'active' && (
+                    <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1.5">
+                      <Icons.Clock /> Urut dari yang paling lama menunggu
+                    </p>
+                  )}
                 </div>
 
-                {filteredOrders.length === 0 ? (
+                {displayOrders.length === 0 ? (
                   <div className="card-subtle rounded-2xl p-16 text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center text-3xl">📋</div>
                     <p className="font-bold text-slate-900">Tidak ada antrian pesanan</p>
@@ -369,59 +405,69 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredOrders.map(order => (
-                      <div key={order.id} className="card-elevated rounded-2xl overflow-hidden">
-                        <div className="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja</p>
-                            <p className="text-2xl font-black text-slate-900 leading-tight">{order.table_number}</p>
-                          </div>
-                          <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
-                        </div>
-
-                        <div className="px-5 py-4 space-y-3">
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                            <span>#{order.id.slice(0, 8).toUpperCase()}</span>
-                            <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
-                          </div>
-
-                          <div className="space-y-2 pt-1">
-                            {order.items.map((item, idx) => (
-                              <div key={idx}>
-                                <div className="flex justify-between text-sm">
-                                  <span className="font-bold text-slate-700">{item.qty}× {item.name}</span>
-                                  <span className="font-bold text-slate-900">{rp(item.price * item.qty)}</span>
-                                </div>
-                                {item.note && (
-                                  <p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
-                            <span className="text-xs font-bold text-slate-500">Total</span>
-                            <span className="text-lg font-black text-orange-600">{rp(order.total_price)}</span>
-                          </div>
-
-                          {order.status !== 'completed' && order.status !== 'cancelled' && (
-                            <div className="space-y-2 pt-1">
-                              <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2 rounded-lg text-xs transition-all">Masak</button>
-                                <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-lg text-xs transition-all">Sajikan</button>
-                              </div>
-                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full btn-dark py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">Selesai / Lunas</button>
-                              <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all">
-                                <Icons.X /> Tolak Pesanan
-                              </button>
+                    {displayOrders.map(order => {
+                      const badge = ['pending', 'cooking', 'ready'].includes(order.status) ? getTimeBadge(order.created_at) : null;
+                      return (
+                        <div key={order.id} className="card-elevated rounded-2xl overflow-hidden">
+                          <div className="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja</p>
+                              <p className="text-2xl font-black text-slate-900 leading-tight">{order.table_number}</p>
                             </div>
-                          )}
-                          <button onClick={() => printBill(order)} className="w-full btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
-                            <Icons.Print /> Cetak Struk
-                          </button>
+                            <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
+                          </div>
+
+                          <div className="px-5 py-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 font-semibold">
+                              <span>#{order.id.slice(0, 8).toUpperCase()}</span>
+                              <div className="flex items-center gap-1.5">
+                                {badge && (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-black ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
+                                    <Icons.Clock /> {badge.mins}m
+                                  </span>
+                                )}
+                                <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 pt-1">
+                              {order.items.map((item, idx) => (
+                                <div key={idx}>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="font-bold text-slate-700">{item.qty}× {item.name}</span>
+                                    <span className="font-bold text-slate-900">{rp(item.price * item.qty)}</span>
+                                  </div>
+                                  {item.note && (
+                                    <p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-500">Total</span>
+                              <span className="text-lg font-black text-orange-600">{rp(order.total_price)}</span>
+                            </div>
+
+                            {order.status !== 'completed' && order.status !== 'cancelled' && (
+                              <div className="space-y-2 pt-1">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2 rounded-lg text-xs transition-all">Masak</button>
+                                  <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-lg text-xs transition-all">Sajikan</button>
+                                </div>
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full btn-dark py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">Selesai / Lunas</button>
+                                <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all">
+                                  <Icons.X /> Tolak Pesanan
+                                </button>
+                              </div>
+                            )}
+                            <button onClick={() => printBill(order)} className="w-full btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
+                              <Icons.Print /> Cetak Struk
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
