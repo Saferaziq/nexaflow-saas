@@ -517,28 +517,28 @@ export default function KitchenClient({ tenantId }) {
               const isCooking = order.status === 'cooking';
               const totalItems = (order.items || []).reduce((s, i) => s + (i.qty || 0), 0);
               return (
-                <div key={order.id} className={`rounded-3xl overflow-hidden flex flex-col border transition-all ${
-                  badge?.pulse ? 'bg-slate-800 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.2)]' : 'bg-slate-800 border-slate-700'
+                <div key={order.id} className={`rounded-[2rem] overflow-hidden flex flex-col border transition-all ${
+                  badge?.pulse ? 'bg-slate-800 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.2)]' : 'bg-slate-800 border-slate-700 shadow-xl'
                 }`}>
-                  <div className={`px-5 py-3 flex items-center justify-between ${isCooking ? 'bg-orange-500/10 border-b border-orange-500/20' : 'bg-amber-500/10 border-b border-amber-500/20'}`}>
+                  <div className={`px-5 py-4 flex items-center justify-between ${isCooking ? 'bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/20' : 'bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/20'}`}>
                     <div>
                       <p className={`text-[10px] font-black uppercase tracking-widest ${isCooking ? 'text-orange-400' : 'text-amber-400'}`}>{isCooking ? 'Dimasak' : 'Baru'}</p>
-                      <p className="text-2xl font-black leading-tight text-slate-100">MEJA {order.table_number}</p>
-                      <p className="text-sm font-bold text-slate-300 mt-0.5 truncate max-w-[140px]">{order.customer_name || 'Tamu'}</p>
+                      <p className="text-3xl font-black leading-tight text-slate-100">MEJA {order.table_number}</p>
+                      <p className="text-sm font-bold text-slate-300 mt-1 truncate max-w-[140px]">{order.customer_name || 'Tamu'}</p>
                       <p className="text-xs font-semibold text-slate-400 mt-0.5">{totalItems} ITEM</p>
                     </div>
                     <div className="text-right">
                       {badge && (
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-black text-xs ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
                           <Icons.Clock /> {badge.mins}m
                         </span>
                       )}
-                      <p className="text-[10px] font-bold text-slate-500 mt-1">#{order.id.slice(0, 6).toUpperCase()}</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-2">#{order.id.slice(0, 6).toUpperCase()}</p>
                     </div>
                   </div>
                   
                   {order.order_note && (
-                    <div className="bg-amber-500/10 border-l-4 border-amber-500 px-4 py-2">
+                    <div className="bg-amber-500/10 border-l-4 border-amber-500 px-5 py-3">
                       <p className="text-xs font-bold text-amber-400">📝 {order.order_note}</p>
                     </div>
                   )}
@@ -546,11 +546,11 @@ export default function KitchenClient({ tenantId }) {
                   <div className="flex-1 p-5 space-y-4">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
-                        <span className="w-8 h-8 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center text-base font-black shrink-0 text-slate-200">{item.qty}</span>
-                        <div className="flex-1 min-w-0">
+                        <span className="w-10 h-10 rounded-xl bg-slate-700/50 border border-slate-600 flex items-center justify-center text-lg font-black shrink-0 text-slate-200 shadow-inner">{item.qty}</span>
+                        <div className="flex-1 min-w-0 pt-1">
                           <p className="text-lg font-bold leading-tight text-slate-100">{item.name}</p>
                           {item.note && (
-                            <div className="mt-1.5 bg-amber-500/15 border border-amber-500/20 px-2.5 py-1.5 rounded-lg">
+                            <div className="mt-2 bg-amber-500/15 border border-amber-500/20 px-3 py-2 rounded-lg">
                               <p className="text-sm font-bold text-amber-300 leading-snug">📝 {item.note}</p>
                             </div>
                           )}
@@ -560,11 +560,11 @@ export default function KitchenClient({ tenantId }) {
                   </div>
                   <div className="p-4 pt-0">
                     {isCooking ? (
-                      <button onClick={() => markReady(order)} className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-black py-4 rounded-xl text-lg shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markReady(order)} className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-black py-4 rounded-2xl text-lg shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Check /> SIAP
                       </button>
                     ) : (
-                      <button onClick={() => markCooking(order.id)} className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 font-black py-4 rounded-xl text-lg shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markCooking(order.id)} className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 font-black py-4 rounded-2xl text-lg shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Fire /> MULAI MASAK
                       </button>
                     )}

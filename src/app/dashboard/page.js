@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation';
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 const Icons = {
-  Clipboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,
-  Utensils: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>,
-  Grid: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
-  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+  Clipboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,
+  Utensils: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>,
+  Grid: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
   Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Print: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
+  Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
   Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -755,357 +756,465 @@ export default function DashboardPage() {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className="text-xl font-black text-slate-800">Memuat Dashboard...</h2>
-          <p className="text-sm font-bold text-slate-500 mt-1">Menyiapkan data pesanan & menu</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <div className="min-h-screen bg-slate-50 font-sans">
       
-      {/* SIDEBAR - LIGHT & ELEGANT */}
-      <aside className="w-64 bg-white flex-col justify-between hidden md:flex h-screen sticky top-0 print:hidden border-r border-slate-100 shadow-[2px_0_10px_rgba(0,0,0,0.02)] z-20">
-        <div className="flex flex-col h-full">
-          <div className="px-5 py-6 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              {settings.logo_url ? <img src={settings.logo_url} className="w-10 h-10 rounded-xl object-cover ring-2 ring-orange-100 shadow-sm" alt="Logo" /> : <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-orange-500/20">N</div>}
-              <div><h1 className="text-base font-black text-slate-800 tracking-tight leading-none">NexaFlow</h1><p className="text-[10px] font-bold text-orange-500 mt-1 tracking-widest uppercase">SaaS Resto</p></div>
-            </div>
-          </div>
-          <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-            <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu Utama</p>
-            {[
-              { key: 'queue', label: 'Antrian Pesanan', Icon: Icons.Clipboard, badge: activeOrders.length },
-              { key: 'menu', label: 'Kelola Menu', Icon: Icons.Utensils },
-              { key: 'tables', label: 'Meja & QR', Icon: Icons.Grid },
-              { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
-              { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
-            ].map(({ key, label, Icon, badge }) => (
-              <button key={key} onClick={() => setActiveTab(key)} className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 ${activeTab === key ? 'bg-orange-50 text-orange-600' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
-                <span className={activeTab === key ? 'text-orange-500' : 'text-slate-400 group-hover:text-slate-600'}><Icon /></span>
-                <span className="flex-1 text-left">{label}</span>
-                {badge > 0 && <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">{badge}</span>}
-              </button>
-            ))}
-          </nav>
-          <div className="p-4 border-t border-slate-100">
-            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-xs">{cafeName.charAt(0).toUpperCase()}</div>
-                <div className="flex-1 min-w-0"><p className="text-xs font-bold text-slate-800 truncate">{cafeName}</p><p className="text-[10px] text-slate-500 font-medium truncate">{userEmail}</p></div>
+      {/* HEADER TOP NAVIGATION */}
+      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex justify-between items-center h-20">
+            
+            {/* Logo & Brand */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                <span className="text-white font-black text-lg">N</span>
               </div>
-              <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-500 hover:text-rose-500 font-bold py-2 rounded-xl text-xs transition-all shadow-sm"><Icons.Logout /> <span>Logout</span></button>
+              <div>
+                <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none">NexaFlow</h1>
+                <p className="text-[10px] font-bold text-orange-500 tracking-widest uppercase mt-0.5">Kasir</p>
+              </div>
+            </div>
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-1">
+              {[
+                { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },
+                { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
+                { key: 'tables', label: 'Meja', Icon: Icons.Grid },
+                { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
+                { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
+              ].map(({ key, label, Icon, badge }) => (
+                <button key={key} onClick={() => setActiveTab(key)} className={`relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 ${activeTab === key ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+                  <Icon />
+                  <span>{label}</span>
+                  {badge > 0 && <span className="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">{badge}</span>}
+                </button>
+              ))}
+            </nav>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-3">
+              <button onClick={openKitchenLink} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/20 transition-all text-xs font-bold">
+                🍳 <span className="hidden lg:inline">Layar Dapur</span>
+              </button>
+              <div className={`hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl border ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-200' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}`}>
+                <span className={`w-2 h-2 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
+                <span className={`text-[11px] font-bold ${realtimeStatus === 'online' ? 'text-emerald-700' : realtimeStatus === 'offline' ? 'text-rose-700' : 'text-amber-700'}`}>{realtimeStatus === 'online' ? 'Online' : 'Offline'}</span>
+              </div>
+              <button onClick={handleSoundToggle} className={`p-2.5 rounded-2xl border transition-all ${!audioUnlocked ? 'bg-orange-500 border-orange-600 text-white shadow-md shadow-orange-500/30' : soundEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+                {!audioUnlocked ? <span className="text-xs font-bold">🔕 ON</span> : soundEnabled ? <span className="text-lg">🔊</span> : <span className="text-lg">🔇</span>}
+              </button>
+              <button onClick={toggleFullscreen} className="p-2.5 rounded-2xl border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm">
+                {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
+              </button>
+              <button onClick={handleLogout} className="p-2.5 rounded-2xl border bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-500 hover:text-rose-500 transition-all shadow-sm">
+                <Icons.Logout />
+              </button>
             </div>
           </div>
         </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 flex justify-between items-center shrink-0 z-10 print:hidden">
-          <div><h2 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{pageTitle}</h2><p className="text-xs text-slate-500 font-medium mt-0.5">{pageSubtitle}</p></div>
-          <div className="flex items-center gap-2">
-            <button onClick={openKitchenLink} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-slate-900 hover:bg-slate-800 border-slate-800 text-white shadow-sm transition-all text-[11px] font-bold" title="Buka layar dapur (KDS)">🍳 <span className="hidden sm:inline">Layar Dapur</span></button>
-            
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-200' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
-              <span className={`text-[11px] font-bold ${realtimeStatus === 'online' ? 'text-emerald-700' : realtimeStatus === 'offline' ? 'text-rose-700' : 'text-amber-700'}`}>{realtimeStatus === 'online' ? 'Sistem Online' : realtimeStatus === 'offline' ? 'Koneksi Terputus' : 'Menghubungkan...'}</span>
-            </div>
-            
-            <button onClick={handleSoundToggle} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-[11px] font-bold ${!audioUnlocked ? 'bg-orange-500 hover:bg-orange-600 border-orange-600 text-white shadow-sm shadow-orange-500/30' : soundEnabled ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500'}`}>
-              {!audioUnlocked ? (<><span>🔕</span><span className="hidden sm:inline">Aktifkan Suara</span></>) : soundEnabled ? (<><span>🔊</span><span className="hidden sm:inline">Suara Aktif</span></>) : (<><span>🔇</span><span className="hidden sm:inline">Suara Mati</span></>)}
-            </button>
-
-            <button onClick={toggleFullscreen} className="p-1.5 px-2.5 rounded-full border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm" title="Layar Penuh">
-              {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
-            </button>
+        
+        {/* Mobile Nav Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-100 bg-white p-4 space-y-2 absolute w-full shadow-xl">
+            {[
+              { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },
+              { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
+              { key: 'tables', label: 'Meja', Icon: Icons.Grid },
+              { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
+              { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
+            ].map(({ key, label, Icon, badge }) => (
+              <button key={key} onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === key ? 'bg-orange-50 text-orange-600' : 'text-slate-600'}`}>
+                <Icon /> {label}
+                {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
+              </button>
+            ))}
           </div>
-        </header>
+        )}
+      </header>
 
-        <div className="flex-1 overflow-y-auto p-6 print:p-0">
-          <div className="max-w-6xl mx-auto space-y-6 print:space-y-0">
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
-              <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><div className="flex items-start justify-between mb-3"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pesanan</p><div className="icon-box w-8 h-8 bg-slate-50 border-slate-100 text-slate-600 rounded-xl flex items-center justify-center"><Icons.Clipboard /></div></div><h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</h3><p className="text-[11px] text-slate-500 font-semibold mt-1">Hari ini</p></div>
-              <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><div className="flex items-start justify-between mb-3"><p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Dimasak</p><div className="icon-box w-8 h-8 bg-amber-50 border-amber-100 text-amber-600 rounded-xl flex items-center justify-center">👨‍🍳</div></div><h3 className="text-3xl font-black text-amber-600 tracking-tight">{stats.cooking}</h3><p className="text-[11px] text-slate-500 font-semibold mt-1">Sedang diproses</p></div>
-              <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><div className="flex items-start justify-between mb-3"><p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Siap Saji</p><div className="icon-box w-8 h-8 bg-emerald-50 border-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">🍽️</div></div><h3 className="text-3xl font-black text-emerald-600 tracking-tight">{stats.ready}</h3><p className="text-[11px] text-slate-500 font-semibold mt-1">Menunggu diantar</p></div>
-              <div className="rounded-3xl p-5 bg-gradient-to-br from-orange-500 to-orange-400 border border-orange-400 shadow-md shadow-orange-500/20"><div className="flex items-start justify-between mb-3"><p className="text-[10px] font-bold text-white/90 uppercase tracking-widest">Omset Hari Ini</p><div className="icon-box w-8 h-8 bg-white/20 border-white/30 text-white rounded-xl flex items-center justify-center">💰</div></div><h3 className="text-2xl font-black text-white tracking-tight">{rp(stats.revenue)}</h3><p className="text-[11px] text-white/80 font-semibold mt-1">Total pendapatan</p></div>
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* STATS CARDS (Moved to Top) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shadow-sm"><Icons.Clipboard /></div>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Pesanan</p>
             </div>
+            <h3 className="text-4xl font-black text-slate-800 tracking-tight">{stats.total}</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">Hari ini</p>
+          </div>
+          
+          <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm text-xl">👨‍🍳</div>
+              <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest">Dimasak</p>
+            </div>
+            <h3 className="text-4xl font-black text-amber-600 tracking-tight">{stats.cooking}</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">Sedang diproses</p>
+          </div>
+          
+          <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm text-xl">🍽️</div>
+              <p className="text-[11px] font-bold text-emerald-500 uppercase tracking-widest">Siap Saji</p>
+            </div>
+            <h3 className="text-4xl font-black text-emerald-600 tracking-tight">{stats.ready}</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">Menunggu diantar</p>
+          </div>
 
-            {activeTab === 'queue' && (
-              <div className="space-y-4 print:hidden">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1 bg-slate-100/50 rounded-xl p-1 w-fit border border-slate-200 shadow-sm">
-                    {[{k:'active',l:'Aktif'},{k:'done',l:'Selesai'},{k:'all',l:'Semua'}].map(({k,l}) => (<button key={k} onClick={() => setQueueFilter(k)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${queueFilter === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
-                  </div>
-                  {queueFilter === 'active' && <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5"><Icons.Clock /> Urut dari yang paling lama menunggu</p>}
+          <div className="rounded-[2rem] p-6 bg-gradient-to-br from-orange-500 to-orange-600 shadow-[0_8px_30px_rgb(234,88,12,0.3)] relative overflow-hidden group text-white">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-sm text-xl backdrop-blur-sm">💰</div>
+              <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest">Omset Hari Ini</p>
+            </div>
+            <h3 className="text-3xl font-black tracking-tight">{rp(stats.revenue)}</h3>
+            <p className="text-xs text-white/80 font-medium mt-1">Total pendapatan</p>
+          </div>
+        </div>
+
+        {/* CONTENT AREA */}
+        <div className="bg-transparent mt-6">
+          {activeTab === 'queue' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1 bg-slate-100/50 rounded-2xl p-1 w-fit border border-slate-200 shadow-sm">
+                  {[{k:'active',l:'Aktif'},{k:'done',l:'Selesai'},{k:'all',l:'Semua'}].map(({k,l}) => (<button key={k} onClick={() => setQueueFilter(k)} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${queueFilter === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
                 </div>
-                {displayOrders.length === 0 ? (
-                  <div className="card-subtle rounded-3xl p-16 text-center border border-slate-100 bg-white shadow-sm"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl">📋</div><p className="font-bold text-slate-800">Tidak ada antrian pesanan</p><p className="text-sm text-slate-500 mt-1">Pesanan baru akan muncul otomatis</p></div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayOrders.map(order => {
-                      const badge = ['pending', 'cooking', 'ready'].includes(order.status) ? getTimeBadge(order.created_at) : null;
-                      return (
-                        <div key={order.id} className="card-elevated rounded-3xl overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow">
-                          <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                            <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja {order.table_number}</p>
-                              <p className="text-2xl font-black text-slate-800 leading-tight truncate max-w-[150px]">{order.customer_name || 'Tamu'}</p>
-                            </div>
-                            <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
-                          </div>
-                          <div className="px-5 py-4 space-y-3">
-                            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 font-medium">
-                              <span>#{order.id.slice(0, 8).toUpperCase()}</span>
-                              <div className="flex items-center gap-1.5">
-                                {badge && (<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-black ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}><Icons.Clock /> {badge.mins}m</span>)}
-                                <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
-                              </div>
-                            </div>
-                            
-                            {order.order_note && (
-                              <div className="bg-amber-50 border-l-4 border-amber-400 p-2 rounded-r text-xs font-bold text-amber-800">
-                                📝 Catatan: {order.order_note}
-                              </div>
-                            )}
+                {queueFilter === 'active' && <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5"><Icons.Clock /> Urut dari yang paling lama menunggu</p>}
+              </div>
 
-                            <div className="space-y-2 pt-1">
-                              {order.items.map((item, idx) => (<div key={idx}><div className="flex justify-between text-sm"><span className="font-bold text-slate-700">{item.qty}× {item.name}</span><span className="font-bold text-slate-900">{rp(item.price * item.qty)}</span></div>{item.note && (<p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>)}</div>))}
+              {displayOrders.length === 0 ? (
+                <div className="bg-white rounded-[2rem] p-20 text-center border border-slate-100 shadow-sm">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-4xl shadow-inner border border-slate-100">📋</div>
+                  <p className="font-bold text-slate-800 text-lg">Tidak ada antrian pesanan</p>
+                  <p className="text-sm text-slate-500 mt-1">Pesanan baru akan muncul otomatis</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {displayOrders.map(order => {
+                    const badge = ['pending', 'cooking', 'ready'].includes(order.status) ? getTimeBadge(order.created_at) : null;
+                    return (
+                      <div key={order.id} className="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                        
+                        {/* Card Header */}
+                        <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja {order.table_number}</p>
+                            <p className="text-2xl font-black text-slate-800 leading-tight truncate max-w-[150px]">{order.customer_name || 'Tamu'}</p>
+                          </div>
+                          <span className={`status-pill shadow-sm ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
+                        </div>
+                        
+                        {/* Card Body */}
+                        <div className="px-6 py-5 space-y-4 flex-1 flex flex-col">
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 font-semibold">
+                            <span>#{order.id.slice(0, 8).toUpperCase()}</span>
+                            <div className="flex items-center gap-2">
+                              {badge && (<span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black shadow-sm ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}><Icons.Clock /> {badge.mins}m</span>)}
+                              <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
                             </div>
-                            <div className="pt-3 border-t border-slate-100 flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Total</span><span className="text-lg font-black text-orange-600">{rp(order.total_price)}</span></div>
-                            
-                            {order.status !== 'completed' && order.status !== 'cancelled' && (
-                              <div className="space-y-2 pt-1">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2 rounded-xl text-xs transition-all">Masak</button>
-                                  <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-xl text-xs transition-all">Sajikan</button>
+                          </div>
+                          
+                          {order.order_note && (
+                            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-xl text-xs font-bold text-amber-800 shadow-sm">
+                              📝 Catatan: {order.order_note}
+                            </div>
+                          )}
+
+                          <div className="space-y-3 pt-1 flex-1">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-start gap-3">
+                                <div className="flex-1">
+                                  <span className="font-bold text-slate-700 text-sm">{item.qty}× {item.name}</span>
+                                  {item.note && (<p className="text-[11px] text-orange-600 font-bold mt-1 italic bg-orange-50 inline-block px-2 py-0.5 rounded">↳ "{item.note}"</p>)}
                                 </div>
-                                <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full btn-dark py-2 rounded-xl text-xs flex items-center justify-center gap-1.5">Selesai / Lunas</button>
-                                <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all"><Icons.X /> Tolak Pesanan</button>
-                              </div>
-                            )}
-                            
-                            <div className="pt-2">
-                              <button onClick={() => printBillWithQRIS(order)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm">
-                                <Icons.Print /> Cetak Bill & QRIS
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'menu' && (
-              <div className="space-y-4 print:hidden">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div><h3 className="font-black text-slate-800">Daftar Menu</h3><p className="text-xs text-slate-500">{filteredMenus.length} dari {menus.length} menu</p></div>
-                  <button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="btn-primary px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm"><Icons.Plus /> Tambah Menu</button>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></span>
-                    <input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" />
-                  </div>
-                  <div className="flex items-center gap-1 bg-slate-100/50 rounded-xl p-1 border border-slate-200 shadow-sm">
-                    {[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${menuCategoryFilter === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
-                  </div>
-                </div>
-                {filteredMenus.length === 0 ? (
-                  <div className="card-subtle rounded-3xl p-16 text-center border border-slate-100 bg-white shadow-sm"><div className="text-4xl mb-3">🔍</div><p className="font-bold text-slate-800">Tidak ada menu</p></div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredMenus.map(menu => (
-                      <div key={menu.id} className="card-elevated rounded-3xl overflow-hidden flex flex-col border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow">
-                        <div className="h-44 bg-slate-100 relative overflow-hidden">
-                          {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
-                          <div className="absolute top-3 left-3 z-10"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm transition-all backdrop-blur-md ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button></div>
-                          <div className="absolute top-3 right-3"><span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${menu.status === 'available' ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30' : 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div>
-                          <div className="absolute bottom-3 left-3"><span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white uppercase tracking-wider">{menu.category}</span></div>
-                        </div>
-                        <div className="p-5 flex-1 flex flex-col justify-between">
-                          <div><h4 className="font-black text-slate-800">{menu.name}</h4><p className="text-xs text-slate-500 font-medium line-clamp-2 mt-1 min-h-[2rem]">{menu.description || 'Tidak ada deskripsi'}</p><p className="font-black text-orange-600 text-lg mt-2">{rp(menu.price)}</p></div>
-                          <div className="flex gap-2 mt-4">
-                            <button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '' }); setIsMenuModalOpen(true); }} className="flex-1 btn-ghost py-2 rounded-xl text-xs">Edit</button>
-                            <button onClick={() => handleDeleteMenu(menu.id)} className="flex-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-xl text-xs transition-all">Hapus</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'tables' && (
-              <div className="card-elevated rounded-3xl p-6 border border-slate-100 bg-white shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                  <div><h3 className="font-black text-slate-800">QR Code Meja</h3><p className="text-xs text-slate-500">{tables.length} meja terdaftar · Klik "Cetak QR" untuk cetak per meja</p></div>
-                  <form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto">
-                    <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 rounded-xl px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold" />
-                    <button type="submit" className="btn-primary px-4 py-2 rounded-xl text-xs shadow-sm">Tambah</button>
-                  </form>
-                </div>
-                {tables.length === 0 ? (
-                  <div className="text-center py-16"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl">🪑</div><p className="font-bold text-slate-800">Belum ada meja</p></div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {tables.map(t => (
-                      <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center group hover:bg-white hover:border-slate-300 hover:shadow-md transition-all">
-                        <p className="font-black text-slate-800 text-sm mb-3">Meja {t.table_number}</p>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/order?tenant=${tenantId}&table=${t.table_number}`)}`} className="w-full rounded-xl mb-3 shadow-sm" alt="QR" />
-                        <div className="flex gap-1.5"><button onClick={() => printTableQR(t)} className="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all"><Icons.Print /> Cetak QR</button><button onClick={() => handleDeleteTable(t.id)} className="text-[10px] text-rose-500 hover:text-rose-700 font-bold hover:underline px-2">Hapus</button></div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'reports' && (
-              <div className="space-y-6">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-1 bg-slate-100/50 rounded-xl p-1 border border-slate-200 shadow-sm">
-                      <button onClick={() => setReportMode('daily')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportMode === 'daily' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>📅 Harian</button>
-                      <button onClick={() => setReportMode('monthly')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportMode === 'monthly' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>📊 Bulanan</button>
-                      <button onClick={() => setReportMode('custom')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportMode === 'custom' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>📆 Custom</button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => exportCSV(reportOrders, reportLabel)} disabled={!reportNow || reportOrders.length === 0} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all"><Icons.Download /> Export CSV</button>
-                    <button onClick={() => printReport(reportStats, topMenus, reportLabel)} disabled={!reportNow} className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-sm transition-all"><Icons.Print /> Print</button>
-                  </div>
-                </div>
-
-                {reportNow && (
-                  <div className="card-elevated rounded-3xl p-4 border border-slate-100 bg-white shadow-sm">
-                    {reportMode === 'daily' && (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><Icons.Calendar /> Pilih Tanggal:</label>
-                        <input type="date" value={reportDateStr} onChange={e => setReportDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
-                      </div>
-                    )}
-                    {reportMode === 'monthly' && (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><Icons.Calendar /> Pilih Bulan:</label>
-                        <select value={reportMonth} onChange={e => setReportMonth(Number(e.target.value))} className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
-                        <select value={reportYear} onChange={e => setReportYear(Number(e.target.value))} className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">{reportNow && Array.from({ length: reportNow.getFullYear() - 2023 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}</select>
-                      </div>
-                    )}
-                    {reportMode === 'custom' && (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><Icons.Calendar /> Dari:</label>
-                        <input type="date" value={reportStartDateStr} onChange={e => setReportStartDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
-                        <label className="text-xs font-bold text-slate-600">Sampai:</label>
-                        <input type="date" value={reportEndDateStr} onChange={e => setReportEndDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
-                      </div>
-                    )}
-                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode:</p>
-                      <p className="text-sm font-black text-slate-800">{reportLabel}</p>
-                    </div>
-                  </div>
-                )}
-
-                {!reportNow ? (
-                  <div className="card-subtle rounded-3xl p-16 text-center border border-slate-100 bg-white"><p className="font-bold text-slate-800">Memuat laporan...</p></div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pesanan</p><h3 className="text-3xl font-black text-slate-800">{reportStats.totalOrders}</h3><p className="text-[11px] text-slate-500 font-medium mt-1">{reportStats.paidCount} lunas</p></div>
-                      <div className="rounded-3xl p-5 bg-gradient-to-br from-slate-800 to-slate-900 shadow-md"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Omset</p><h3 className="text-2xl font-black text-white">{rp(reportStats.revenue)}</h3><p className="text-[11px] text-slate-400 font-medium mt-1">Dari pesanan lunas</p></div>
-                      <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Rata-rata / Order</p><h3 className="text-2xl font-black text-slate-800">{rp(reportStats.avgOrder)}</h3><p className="text-[11px] text-slate-500 font-medium mt-1">Per transaksi lunas</p></div>
-                      <div className="card-elevated rounded-3xl p-5 border border-slate-100 bg-white shadow-sm"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Item Terjual</p><h3 className="text-3xl font-black text-slate-800">{reportStats.totalItems}</h3><p className="text-[11px] text-slate-500 font-medium mt-1">Total porsi</p></div>
-                    </div>
-
-                    <div className="card-elevated rounded-3xl p-6 border border-slate-100 bg-white shadow-sm">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                        <div className="flex items-center gap-2 text-slate-800"><Icons.TrendUp /><h3 className="font-black">Grafik Omzet {chartDays} Hari Terakhir</h3></div>
-                        <div className="flex items-center gap-1 bg-slate-100/50 rounded-lg p-1 border border-slate-200">
-                          <button onClick={() => setChartDays(7)} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${chartDays === 7 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>7 Hari</button>
-                          <button onClick={() => setChartDays(30)} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${chartDays === 30 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>30 Hari</button>
-                        </div>
-                      </div>
-                      {chartData.length > 0 && chartData.every(c => c.revenue === 0) ? (
-                        <div className="text-center py-10"><p className="text-3xl mb-2">📈</p><p className="text-sm font-bold text-slate-800">Belum ada omzet</p></div>
-                      ) : (
-                        <>
-                          <div className="h-52 flex items-end gap-1 px-2">
-                            {chartData.map((d, i) => (
-                              <div key={i} className="flex-1 h-full flex flex-col">
-                                <div className="flex-1 relative">
-                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-400 to-orange-300 rounded-t-md hover:from-orange-500 hover:to-orange-400 transition-all cursor-default" style={{ height: `${(d.revenue / maxChartRev) * 100}%`, minHeight: d.revenue > 0 ? '3px' : '0' }} title={`${d.label}: ${rp(d.revenue)} (${d.orders} order)`}></div>
-                                </div>
-                                <p className="text-[8px] text-slate-400 mt-1 text-center truncate">{d.label}</p>
+                                <span className="font-bold text-slate-900 text-sm whitespace-nowrap">{rp(item.price * item.qty)}</span>
                               </div>
                             ))}
                           </div>
-                          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs">
-                            <span className="font-bold text-slate-500">Total: <span className="text-orange-600 font-black">{rp(totalChartRev)}</span></span>
-                            <span className="font-bold text-slate-500">Max hari: <span className="text-slate-800 font-black">{rp(maxChartRev)}</span></span>
-                          </div>
-                        </>
-                      )}
-                    </div>
 
-                    <div className="card-elevated rounded-3xl p-6 border border-slate-100 bg-white shadow-sm">
-                      <h3 className="font-black text-slate-800 mb-4">Status Pesanan</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                          <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-500">Total Tagihan</span>
+                            <span className="text-xl font-black text-orange-600">{rp(order.total_price)}</span>
+                          </div>
+                          
+                          {/* Actions */}
+                          {order.status !== 'completed' && order.status !== 'cancelled' && (
+                            <div className="space-y-2 pt-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'cooking')} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm">Masak</button>
+                                <button onClick={() => handleUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm">Sajikan</button>
+                              </div>
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition-all">Selesai / Lunas</button>
+                              <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95"><Icons.X /> Tolak Pesanan</button>
+                            </div>
+                          )}
+                          
+                          <div className="pt-2 mt-auto">
+                            <button onClick={() => printBillWithQRIS(order)} className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/30 active:scale-95">
+                              <Icons.Print /> Cetak Bill & QRIS
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'menu' && (
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div><h3 className="font-black text-xl text-slate-800">Daftar Menu</h3><p className="text-xs text-slate-500 mt-1">{filteredMenus.length} dari {menus.length} menu</p></div>
+                <button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-orange-500 to-orange-400 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-orange-500/30 active:scale-95 transition-all"><Icons.Plus /> Tambah Menu</button>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></span>
+                  <input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className="w-full pl-10 pr-4 py-2.5 border-none bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-800" />
+                </div>
+                <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 overflow-x-auto">
+                  {[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${menuCategoryFilter === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{l}</button>))}
+                </div>
+              </div>
+
+              {filteredMenus.length === 0 ? (
+                <div className="bg-white rounded-[2rem] p-20 text-center shadow-sm border border-slate-100"><div className="text-5xl mb-3 opacity-50">🔍</div><p className="font-bold text-slate-800 text-lg">Tidak ada menu</p></div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredMenus.map(menu => (
+                    <div key={menu.id} className="bg-white rounded-[2rem] overflow-hidden flex flex-col border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-transform duration-300">
+                      <div className="h-48 bg-slate-100 relative overflow-hidden">
+                        {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
+                        <div className="absolute top-4 left-4 z-10"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button></div>
+                        <div className="absolute top-4 right-4"><span className={`text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-sm ${menu.status === 'available' ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-rose-500 text-white shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div>
+                      </div>
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">{menu.category}</span>
+                          <h4 className="font-black text-slate-800 text-lg mt-1">{menu.name}</h4>
+                          <p className="text-xs text-slate-500 font-medium line-clamp-2 mt-1 min-h-[2rem]">{menu.description || 'Tidak ada deskripsi'}</p>
+                          <p className="font-black text-orange-600 text-xl mt-3">{rp(menu.price)}</p>
+                        </div>
+                        <div className="flex gap-2 mt-5">
+                          <button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '' }); setIsMenuModalOpen(true); }} className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors">Edit</button>
+                          <button onClick={() => handleDeleteMenu(menu.id)} className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-2.5 rounded-xl text-xs transition-colors">Hapus</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'tables' && (
+            <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+                <div><h3 className="font-black text-xl text-slate-800">QR Code Meja</h3><p className="text-xs text-slate-500 mt-1">{tables.length} meja terdaftar · Klik "Cetak QR" untuk cetak per meja</p></div>
+                <form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto">
+                  <input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className="border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-slate-800" />
+                  <button type="submit" className="bg-slate-900 text-white hover:bg-slate-800 px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors">Tambah</button>
+                </form>
+              </div>
+              {tables.length === 0 ? (
+                <div className="text-center py-20"><div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-slate-50 flex items-center justify-center text-4xl border border-slate-100 shadow-inner">🪑</div><p className="font-bold text-slate-800 text-lg">Belum ada meja</p></div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                  {tables.map(t => (
+                    <div key={t.id} className="bg-slate-50 border border-slate-100 rounded-3xl p-5 text-center group hover:bg-white hover:shadow-lg transition-all duration-300">
+                      <p className="font-black text-slate-800 text-lg mb-4">Meja {t.table_number}</p>
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/order?tenant=${tenantId}&table=${t.table_number}`)}`} className="w-full rounded-2xl mb-4 shadow-sm border border-slate-200" alt="QR" />
+                      <div className="flex gap-2">
+                        <button onClick={() => printTableQR(t)} className="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md"><Icons.Print /> Cetak QR</button>
+                        <button onClick={() => handleDeleteTable(t.id)} className="text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl px-3 font-bold transition-colors">Hapus</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <div className="space-y-6">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm">
+                    <button onClick={() => setReportMode('daily')} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${reportMode === 'daily' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}>📅 Harian</button>
+                    <button onClick={() => setReportMode('monthly')} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${reportMode === 'monthly' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}>📊 Bulanan</button>
+                    <button onClick={() => setReportMode('custom')} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${reportMode === 'custom' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}>📆 Custom</button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => exportCSV(reportOrders, reportLabel)} disabled={!reportNow || reportOrders.length === 0} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 transition-all"><Icons.Download /> Export CSV</button>
+                  <button onClick={() => printReport(reportStats, topMenus, reportLabel)} disabled={!reportNow} className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md transition-all"><Icons.Print /> Print</button>
+                </div>
+              </div>
+
+              {reportNow && (
+                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+                  {reportMode === 'daily' && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <label className="text-xs font-bold text-slate-600 flex items-center gap-2"><Icons.Calendar /> Pilih Tanggal:</label>
+                      <input type="date" value={reportDateStr} onChange={e => setReportDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                    </div>
+                  )}
+                  {reportMode === 'monthly' && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <label className="text-xs font-bold text-slate-600 flex items-center gap-2"><Icons.Calendar /> Pilih Bulan:</label>
+                      <select value={reportMonth} onChange={e => setReportMonth(Number(e.target.value))} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 bg-white focus:outline-none">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
+                      <select value={reportYear} onChange={e => setReportYear(Number(e.target.value))} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 bg-white focus:outline-none">{reportNow && Array.from({ length: reportNow.getFullYear() - 2023 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}</select>
+                    </div>
+                  )}
+                  {reportMode === 'custom' && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <label className="text-xs font-bold text-slate-600 flex items-center gap-2"><Icons.Calendar /> Dari:</label>
+                      <input type="date" value={reportStartDateStr} onChange={e => setReportStartDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 focus:outline-none" />
+                      <label className="text-xs font-bold text-slate-600">Sampai:</label>
+                      <input type="date" value={reportEndDateStr} onChange={e => setReportEndDateStr(e.target.value)} max={reportNow.toISOString().slice(0, 10)} className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 focus:outline-none" />
+                    </div>
+                  )}
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode:</p>
+                    <p className="text-sm font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block">{reportLabel}</p>
+                  </div>
+                </div>
+              )}
+
+              {!reportNow ? (
+                <div className="bg-white rounded-[2rem] p-16 text-center shadow-sm"><p className="font-bold text-slate-800">Memuat laporan...</p></div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pesanan</p><h3 className="text-4xl font-black text-slate-800">{reportStats.totalOrders}</h3><p className="text-xs text-slate-500 font-medium mt-1">{reportStats.paidCount} lunas</p></div>
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-6 shadow-lg text-white"><p className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-2">Total Omset</p><h3 className="text-3xl font-black">{rp(reportStats.revenue)}</h3><p className="text-xs text-slate-400 font-medium mt-1">Dari pesanan lunas</p></div>
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Rata-rata / Order</p><h3 className="text-3xl font-black text-slate-800">{rp(reportStats.avgOrder)}</h3><p className="text-xs text-slate-500 font-medium mt-1">Per transaksi lunas</p></div>
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Item Terjual</p><h3 className="text-4xl font-black text-slate-800">{reportStats.totalItems}</h3><p className="text-xs text-slate-500 font-medium mt-1">Total porsi</p></div>
+                  </div>
+
+                  <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                      <div className="flex items-center gap-3 text-slate-800"><Icons.TrendUp /><h3 className="font-black text-lg">Grafik Omzet {chartDays} Hari Terakhir</h3></div>
+                      <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
+                        <button onClick={() => setChartDays(7)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${chartDays === 7 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>7 Hari</button>
+                        <button onClick={() => setChartDays(30)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${chartDays === 30 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>30 Hari</button>
+                      </div>
+                    </div>
+                    {chartData.length > 0 && chartData.every(c => c.revenue === 0) ? (
+                      <div className="text-center py-16"><p className="text-5xl mb-3">📈</p><p className="text-sm font-bold text-slate-800">Belum ada omzet</p></div>
+                    ) : (
+                      <>
+                        <div className="h-64 flex items-end gap-2 px-2">
+                          {chartData.map((d, i) => (
+                            <div key={i} className="flex-1 h-full flex flex-col">
+                              <div className="flex-1 relative group">
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-500 to-orange-300 rounded-t-lg transition-all cursor-default shadow-sm group-hover:from-orange-600 group-hover:to-orange-400" style={{ height: `${(d.revenue / maxChartRev) * 100}%`, minHeight: d.revenue > 0 ? '4px' : '0' }} title={`${d.label}: ${rp(d.revenue)} (${d.orders} order)`}></div>
+                              </div>
+                              <p className="text-[10px] font-bold text-slate-400 mt-2 text-center truncate">{d.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-6 pt-6 border-t border-slate-100 flex justify-between text-sm">
+                          <span className="font-bold text-slate-500">Total: <span className="text-orange-600 font-black text-lg ml-1">{rp(totalChartRev)}</span></span>
+                          <span className="font-bold text-slate-500">Max hari: <span className="text-slate-800 font-black text-lg ml-1">{rp(maxChartRev)}</span></span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                      <h3 className="font-black text-slate-800 mb-6 text-lg">Status Pesanan</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         {[{key:'pending',label:'Baru'},{key:'cooking',label:'Dimasak'},{key:'ready',label:'Siap'},{key:'completed',label:'Selesai'},{key:'cancelled',label:'Batal'}].map(({key,label}) => {
                           const c = statusColors[key];
-                          return (<div key={key} className={`p-4 rounded-2xl border ${c.bg} ${c.border}`}><p className={`text-[10px] font-bold uppercase tracking-widest ${c.text}`}>{label}</p><p className={`text-2xl font-black ${c.text}`}>{reportStats.statusCount[key] || 0}</p></div>);
+                          return (<div key={key} className={`p-5 rounded-2xl border ${c.bg} ${c.border} text-center shadow-sm`}><p className={`text-[10px] font-bold uppercase tracking-widest ${c.text} mb-1`}>{label}</p><p className={`text-3xl font-black ${c.text}`}>{reportStats.statusCount[key] || 0}</p></div>);
                         })}
                       </div>
                     </div>
 
-                    <div className="card-elevated rounded-3xl p-6 border border-slate-100 bg-white shadow-sm">
-                      <h3 className="font-black text-slate-800 mb-4">🔥 Menu Terlaris</h3>
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                      <h3 className="font-black text-slate-800 mb-6 text-lg">🔥 Menu Terlaris</h3>
                       {topMenus.length === 0 ? (
-                        <div className="text-center py-10"><p className="text-4xl mb-2">📊</p><p className="text-sm font-bold text-slate-800">Belum ada penjualan</p></div>
+                        <div className="text-center py-10"><p className="text-5xl mb-3">📊</p><p className="text-sm font-bold text-slate-800">Belum ada penjualan</p></div>
                       ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                           {topMenus.map(([name, data], idx) => {
                             const maxQty = topMenus[0][1].qty;
                             const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0;
                             const rankBg = idx === 0 ? 'bg-amber-100 text-amber-700' : idx === 1 ? 'bg-slate-200 text-slate-700' : idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-500';
-                            return (<div key={name}><div className="flex justify-between items-center mb-1.5"><div className="flex items-center gap-2.5 min-w-0"><span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${rankBg}`}>{idx + 1}</span><span className="font-bold text-sm text-slate-800 truncate">{name}</span></div><span className="text-xs font-bold text-slate-600 whitespace-nowrap ml-2">{data.qty}× · {rp(data.revenue)}</span></div><div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all" style={{ width: `${pct}%` }}></div></div></div>);
+                            return (
+                              <div key={name}>
+                                <div className="flex justify-between items-center mb-2">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm ${rankBg}`}>{idx + 1}</span>
+                                    <span className="font-bold text-sm text-slate-800 truncate">{name}</span>
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-600 whitespace-nowrap ml-2 bg-slate-50 px-2 py-1 rounded-lg">{data.qty}× · {rp(data.revenue)}</span>
+                                </div>
+                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all" style={{ width: `${pct}%` }}></div></div>
+                              </div>
+                            );
                           })}
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    {showDailyBreakdown && (
-                      <div className="card-elevated rounded-3xl p-6 border border-slate-100 bg-white shadow-sm">
-                        <h3 className="font-black text-slate-800 mb-4">📅 Rincian Per Hari</h3>
-                        {activeDays.length === 0 ? (
-                          <div className="text-center py-10"><p className="text-4xl mb-2">🗓️</p><p className="text-sm font-bold text-slate-800">Belum ada pesanan di periode ini</p></div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead><tr className="border-b-2 border-slate-100"><th className="text-left py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal</th><th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pesanan</th><th className="text-right py-2 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Omset</th></tr></thead>
-                              <tbody>{activeDays.map(d => (<tr key={d.date.toISOString()} className="border-b border-slate-50 hover:bg-slate-50/50"><td className="py-2 px-2 font-bold text-slate-700">{d.date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td><td className="text-right py-2 px-2 font-semibold text-slate-600">{d.orders}</td><td className="text-right py-2 px-2 font-black text-orange-600">{rp(d.revenue)}</td></tr>))}</tbody>
-                              <tfoot><tr className="border-t-2 border-slate-800"><td className="py-3 px-2 font-black text-slate-800">TOTAL</td><td className="text-right py-3 px-2 font-black text-slate-800">{reportStats.totalOrders}</td><td className="text-right py-3 px-2 font-black text-orange-600">{rp(reportStats.revenue)}</td></tr></tfoot>
-                            </table>
-                          </div>
-                        )}
+                  {showDailyBreakdown && (
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                      <h3 className="font-black text-slate-800 mb-6 text-lg">📅 Rincian Per Hari</h3>
+                      {activeDays.length === 0 ? (
+                        <div className="text-center py-10"><p className="text-5xl mb-3">🗓️</p><p className="text-sm font-bold text-slate-800">Belum ada pesanan di periode ini</p></div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50"><tr><th className="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-l-xl">Tanggal</th><th className="text-right py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pesanan</th><th className="text-right py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-r-xl">Omset</th></tr></thead>
+                            <tbody>{activeDays.map(d => (<tr key={d.date.toISOString()} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"><td className="py-3 px-4 font-bold text-slate-700">{d.date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td><td className="text-right py-3 px-4 font-semibold text-slate-600">{d.orders}</td><td className="text-right py-3 px-4 font-black text-orange-600">{rp(d.revenue)}</td></tr>))}</tbody>
+                            <tfoot><tr className="border-t-2 border-slate-800"><td className="py-4 px-4 font-black text-slate-800">TOTAL</td><td className="text-right py-4 px-4 font-black text-slate-800">{reportStats.totalOrders}</td><td className="text-right py-4 px-4 font-black text-orange-600 text-lg">{rp(reportStats.revenue)}</td></tr></tfoot>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="bg-white rounded-[2rem] p-8 md:p-10 max-w-3xl mx-auto shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+              <div className="border-b border-slate-100 pb-6 mb-8"><h3 className="font-black text-xl text-slate-800">Profil Toko</h3><p className="text-sm text-slate-500 mt-1">Ubah identitas dan kontak kafe Anda</p></div>
+              <form onSubmit={handleSaveSettings} className="space-y-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label>
+                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      {settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />) : (<div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>)}
+                      <div className="flex-1">
+                        <input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" />
+                        <button type="button" onClick={() => logoInputRef.current?.click()} className="bg-white border border-slate-200 hover:bg-slate-50 w-full py-2 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition-colors">{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button>
+                        <p className="text-[10px] text-slate-500 mt-1.5">PNG/JPG, maksimal 2MB</p>
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+                    </div>
+                  </div>
 
-            {activeTab === 'settings' && (
-              <div className="card-elevated rounded-3xl p-6 md:p-8 max-w-xl mx-auto border border-slate-100 bg-white shadow-sm print:hidden">
-                <div className="border-b border-slate-100 pb-4 mb-6"><h3 className="font-black text-slate-800">Profil Toko</h3><p className="text-xs text-slate-500">Ubah identitas dan kontak kafe Anda</p></div>
-                <form onSubmit={handleSaveSettings} className="space-y-5">
-                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Logo Kafe</label><div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">{settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm bg-white border border-slate-200" />) : (<div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-2xl">🏪</div>)}<div className="flex-1"><input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" /><button type="button" onClick={() => logoInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-xl text-xs">{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button><p className="text-[10px] text-slate-500 mt-1.5">PNG/JPG, maksimal 2MB</p></div></div></div>
-                  
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-2">Banner Kafe (Latar Belakang)</label>
                     <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
@@ -1116,48 +1225,51 @@ export default function DashboardPage() {
                       )}
                       <div className="flex-1">
                         <input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleImageUpload(e, 'banner')} className="hidden" />
-                        <button type="button" onClick={() => bannerInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-xl text-xs">{uploadingBanner ? 'Mengupload...' : '📷 Pilih Banner'}</button>
+                        <button type="button" onClick={() => bannerInputRef.current?.click()} className="bg-white border border-slate-200 hover:bg-slate-50 w-full py-2 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition-colors">{uploadingBanner ? 'Mengupload...' : '📷 Pilih Banner'}</button>
                         <p className="text-[10px] text-slate-500 mt-1.5">Disarankan gambar landscape.</p>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" /></div>
-                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="08xxxxxxxxxx" /></div>
-                  <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Jl. Contoh No. 123" /></div>
-                  
-                  <div className="border-t border-slate-100 pt-4">
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Persentase PPN (%)</label>
-                    <input type="number" min="0" max="100" value={settings.tax_percentage} onChange={e => setSettings({...settings, tax_percentage: Number(e.target.value)})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="11" />
-                    <p className="text-[10px] text-slate-500 mt-1.5">Sesuai ketentuan pemerintah, standar PPN adalah 11%. Isi 0 jika tidak ada pajak.</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" /></div>
+                  <div><label className="block text-xs font-bold text-slate-700 mb-2">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="08xxxxxxxxxx" /></div>
+                </div>
 
-                  <div className="border-t border-slate-100 pt-4">
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
-                    <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-800 bg-slate-50" rows="4" placeholder="00020101021126..."></textarea>
-                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis (DANA, Mandiri, BCA, dll).</p>
-                  </div>
+                <div><label className="block text-xs font-bold text-slate-700 mb-2">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Jl. Contoh No. 123" /></div>
+                
+                <div className="border-t border-slate-100 pt-6">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">Persentase PPN (%)</label>
+                  <input type="number" min="0" max="100" value={settings.tax_percentage} onChange={e => setSettings({...settings, tax_percentage: Number(e.target.value)})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="11" />
+                  <p className="text-[11px] text-slate-500 font-medium mt-2">Sesuai ketentuan pemerintah, standar PPN adalah 11%. Isi 0 jika tidak ada pajak.</p>
+                </div>
 
-                  <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm mt-2 shadow-sm">Simpan Pengaturan</button>
-                </form>
-              </div>
-            )}
-          </div>
+                <div className="border-t border-slate-100 pt-6">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
+                  <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-800" rows="3" placeholder="00020101021126..."></textarea>
+                  <p className="text-[11px] text-slate-500 font-medium mt-2">Paste string QRIS statis (DANA, Mandiri, BCA, dll).</p>
+                </div>
+
+                <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-slate-900/20 transition-all mt-4">Simpan Pengaturan</button>
+              </form>
+            </div>
+          )}
         </div>
       </main>
 
       {/* Menu Modal */}
       {isMenuModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 print:hidden">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div className="flex justify-between items-start mb-5"><div><h3 className="font-black text-lg text-slate-800">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className="text-xs text-slate-500 mt-0.5">Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center transition-colors">×</button></div>
-            <form onSubmit={handleSaveMenu} className="space-y-4">
-              <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label><div className="flex items-center gap-3"><div className="w-24 h-24 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-3xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="btn-ghost w-full py-2 rounded-xl text-xs">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Contoh: Nasi Goreng Spesial" /></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="25000" /></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
-              <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" rows="2" placeholder="Deskripsi singkat menu"></textarea></div>
-              <div className="flex gap-2 pt-2"><button type="submit" className="flex-1 btn-primary py-2.5 rounded-xl text-sm shadow-sm">Simpan</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className="btn-ghost px-6 py-2.5 rounded-xl text-sm">Batal</button></div>
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-100 animate-in zoom-in-95">
+            <div className="flex justify-between items-start mb-6"><div><h3 className="font-black text-xl text-slate-800">{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className="text-xs text-slate-500 mt-1">Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xl flex items-center justify-center transition-colors">×</button></div>
+            <form onSubmit={handleSaveMenu} className="space-y-5">
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Foto Menu</label><div className="flex items-center gap-4"><div className="w-28 h-28 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-4xl border border-slate-200">{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold w-full py-2.5 rounded-xl text-xs transition-colors">{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="Contoh: Nasi Goreng Spesial" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" placeholder="25000" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800"><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
+              <div><label className="block text-xs font-bold text-slate-700 mb-2">Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800" rows="2" placeholder="Deskripsi singkat menu"></textarea></div>
+              <div className="flex gap-3 pt-3"><button type="submit" className="flex-1 bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 active:scale-95 transition-all">Simpan</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl text-sm transition-colors">Batal</button></div>
             </form>
           </div>
         </div>
@@ -1166,14 +1278,14 @@ export default function DashboardPage() {
       {/* Kitchen Modal */}
       {kitchenModal.open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[80] print:hidden">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex items-start justify-between mb-4"><div><h3 className="font-black text-lg text-slate-800">🍳 Layar Dapur (KDS)</h3><p className="text-xs text-slate-500 mt-0.5">Buka URL ini di tablet / TV dapur</p></div><button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center transition-colors">×</button></div>
-            <div className="space-y-3">
-              <div><label className="block text-[10px] font-bold text-slate-700 uppercase mb-1.5">URL</label><div className="flex gap-2"><input readOnly value={kitchenModal.url} className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 font-mono text-slate-800" /><button onClick={() => { navigator.clipboard.writeText(kitchenModal.url); showToast('✅ URL disalin', 'success'); }} className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold whitespace-nowrap shadow-sm transition-colors">📋 Salin</button></div></div>
-              <div className="text-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(kitchenModal.url)}`} className="w-40 h-40 mx-auto rounded-xl border border-slate-200 shadow-sm" alt="QR KDS" /><p className="text-[10px] text-slate-500 mt-2">Scan QR dengan tablet dapur</p></div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3"><p className="text-xs font-bold text-amber-900">PIN: {kitchenModal.pin}</p><p className="text-[10px] text-amber-700 mt-1">PIN ini sudah termasuk di URL. Jangan bagikan ke pelanggan.</p></div>
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl border border-slate-100">
+            <div className="flex items-start justify-between mb-5"><div><h3 className="font-black text-xl text-slate-800">🍳 Layar Dapur (KDS)</h3><p className="text-xs text-slate-500 mt-1">Buka URL ini di tablet / TV dapur</p></div><button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xl flex items-center justify-center transition-colors">×</button></div>
+            <div className="space-y-4">
+              <div><label className="block text-[10px] font-bold text-slate-700 uppercase mb-2">URL</label><div className="flex gap-2"><input readOnly value={kitchenModal.url} className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-mono text-slate-800" /><button onClick={() => { navigator.clipboard.writeText(kitchenModal.url); showToast('✅ URL disalin', 'success'); }} className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold whitespace-nowrap shadow-sm transition-colors">📋 Salin</button></div></div>
+              <div className="text-center bg-slate-50 p-4 rounded-2xl border border-slate-100"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(kitchenModal.url)}`} className="w-40 h-40 mx-auto rounded-xl border border-slate-200 shadow-sm bg-white" alt="QR KDS" /><p className="text-[10px] text-slate-500 mt-3 font-medium">Scan QR dengan tablet dapur</p></div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4"><p className="text-sm font-bold text-amber-900">PIN: {kitchenModal.pin}</p><p className="text-[11px] text-amber-700 mt-1 font-medium">PIN ini sudah termasuk di URL. Jangan bagikan ke pelanggan.</p></div>
             </div>
-            <button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-full mt-4 btn-ghost py-2.5 rounded-xl text-sm font-bold">Tutup</button>
+            <button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className="w-full mt-5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl text-sm transition-colors">Tutup</button>
           </div>
         </div>
       )}
@@ -1182,19 +1294,19 @@ export default function DashboardPage() {
       <div className="fixed top-4 right-4 z-[100] space-y-2 w-80 max-w-[calc(100vw-2rem)] print:hidden pointer-events-none">
         {toasts.map(t => {
           const c = { success: { border: 'border-emerald-400', icon: '✅', bar: 'bg-emerald-500' }, error: { border: 'border-rose-400', icon: '❌', bar: 'bg-rose-500' }, warning: { border: 'border-amber-400', icon: '⚠️', bar: 'bg-amber-500' }, info: { border: 'border-orange-400', icon: '🔔', bar: 'bg-orange-500' } }[t.type] || { border: 'border-slate-300', icon: 'ℹ️', bar: 'bg-slate-500' };
-          return (<div key={t.id} className={`pointer-events-auto bg-white rounded-xl shadow-2xl border ${c.border} overflow-hidden flex items-stretch`}><div className={`${c.bar} w-1 shrink-0`}></div><div className="flex items-start gap-2.5 px-3 py-2.5 flex-1"><span className="text-lg shrink-0">{c.icon}</span><p className="text-sm font-bold text-slate-800 flex-1">{t.message}</p></div></div>);
+          return (<div key={t.id} className={`pointer-events-auto bg-white rounded-2xl shadow-2xl border ${c.border} overflow-hidden flex items-stretch animate-in slide-in-from-right-8`}><div className={`${c.bar} w-1.5 shrink-0`}></div><div className="flex items-start gap-3 px-4 py-3 flex-1"><span className="text-xl shrink-0">{c.icon}</span><p className="text-sm font-bold text-slate-800 flex-1">{t.message}</p></div></div>);
         })}
       </div>
 
       {/* Confirm Dialog */}
       {confirmDialog.open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[90] print:hidden">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
-            <h3 className="font-black text-lg text-slate-800 mb-2">{confirmDialog.title}</h3>
-            <p className="text-sm text-slate-600 mb-6 whitespace-pre-line">{confirmDialog.message}</p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false })} className="flex-1 btn-ghost py-2.5 rounded-xl text-sm font-bold">Batal</button>
-              <button onClick={async () => { const cb = confirmDialog.onConfirm; setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false }); if (cb) { try { await cb(); } catch (err) { showToast('Error: ' + err.message, 'error'); } } }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all ${confirmDialog.danger ? 'bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/30' : 'bg-slate-800 hover:bg-slate-900 shadow-md shadow-slate-900/30'}`}>Ya, Lanjutkan</button>
+          <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 shadow-2xl border border-slate-100 animate-in zoom-in-95">
+            <h3 className="font-black text-xl text-slate-800 mb-2">{confirmDialog.title}</h3>
+            <p className="text-sm text-slate-600 mb-8 whitespace-pre-line font-medium">{confirmDialog.message}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false })} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl text-sm transition-colors">Batal</button>
+              <button onClick={async () => { const cb = confirmDialog.onConfirm; setConfirmDialog({ open: false, title: '', message: '', onConfirm: null, danger: false }); if (cb) { try { await cb(); } catch (err) { showToast('Error: ' + err.message, 'error'); } } }} className={`flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all ${confirmDialog.danger ? 'bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/30' : 'bg-slate-800 hover:bg-slate-900 shadow-md shadow-slate-900/30'}`}>Ya, Lanjutkan</button>
             </div>
           </div>
         </div>
