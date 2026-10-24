@@ -20,7 +20,46 @@ const Icons = {
   Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   Calendar: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   TrendUp: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+  QR: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h.01M17 14h.01M17 17h.01M21 14h.01M21 17h.01M14 21h.01M17 21h.01M21 21h.01"/></svg>,
 };
+
+// ==========================================
+// NATIVE QRIS DYNAMIC GENERATOR (EMVCo CRC16)
+// ==========================================
+function crc16(str) {
+  let crc = 0xFFFF;
+  for (let c = 0; c < str.length; c++) {
+    crc ^= str.charCodeAt(c) << 8;
+    for (let i = 0; i < 8; i++) {
+      if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
+      else crc <<= 1;
+    }
+  }
+  let hex = (crc & 0xFFFF).toString(16).toUpperCase();
+  return hex.padStart(4, '0');
+}
+
+function generateDynamicQRIS(staticString, amount) {
+  try {
+    if (!staticString) return null;
+    let str = staticString.trim();
+    if (str.includes('010211')) str = str.replace('010211', '010212');
+    str = str.replace(/54\d{2}\d+(?=58)/, '');
+    str = str.replace(/6304[0-9A-Fa-f]{4}$/, '');
+    const amountStr = Math.round(amount).toString();
+    const amountLen = amountStr.length.toString().padStart(2, '0');
+    const amountTag = `54${amountLen}${amountStr}`;
+    const insertIndex = str.indexOf('5802');
+    if (insertIndex === -1) return null;
+    const finalStrWithTag = str.slice(0, insertIndex) + amountTag + str.slice(insertIndex);
+    const toCalculateCRC = finalStrWithTag + '6304';
+    const crc = crc16(toCalculateCRC);
+    return toCalculateCRC + crc;
+  } catch (e) {
+    console.error("QRIS Generate Error:", e);
+    return null;
+  }
+}
 
 export default function DashboardPage() {
   const [cafeName, setCafeName] = useState('Memuat...');
@@ -33,16 +72,15 @@ export default function DashboardPage() {
   const [queueFilter, setQueueFilter] = useState('active');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [currentMenu, setCurrentMenu] = useState({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' });
-  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '' });
+  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '' });
   const [newTableNum, setNewTableNum] = useState('');
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Report states (Batch 3)
   const [reportNow, setReportNow] = useState(null);
-  const [reportMode, setReportMode] = useState('daily'); // 'daily' | 'monthly' | 'custom'
+  const [reportMode, setReportMode] = useState('daily');
   const [reportDateStr, setReportDateStr] = useState('');
   const [reportMonth, setReportMonth] = useState(0);
   const [reportYear, setReportYear] = useState(2026);
@@ -50,7 +88,6 @@ export default function DashboardPage() {
   const [reportEndDateStr, setReportEndDateStr] = useState('');
   const [chartDays, setChartDays] = useState(7);
 
-  // Menu search states (Batch 3)
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
 
@@ -171,7 +208,13 @@ export default function DashboardPage() {
         const tId = userData.tenant_id;
         setTenantId(tId);
         setCafeName(userData.tenants.name);
-        setSettings({ name: userData.tenants.name, wa: userData.tenants.wa_number || '', address: userData.tenants.address || '', logo_url: userData.tenants.logo_url || '' });
+        setSettings({ 
+          name: userData.tenants.name, 
+          wa: userData.tenants.wa_number || '', 
+          address: userData.tenants.address || '', 
+          logo_url: userData.tenants.logo_url || '',
+          qris_string: userData.tenants.qris_string || ''
+        });
         fetchMenus(tId); fetchTables(tId); fetchOrders(tId);
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
@@ -276,7 +319,13 @@ export default function DashboardPage() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    await supabase.from('tenants').update({ name: settings.name, wa_number: settings.wa, address: settings.address, logo_url: settings.logo_url }).eq('id', tenantId);
+    await supabase.from('tenants').update({ 
+      name: settings.name, 
+      wa_number: settings.wa, 
+      address: settings.address, 
+      logo_url: settings.logo_url,
+      qris_string: settings.qris_string
+    }).eq('id', tenantId);
     setCafeName(settings.name); showToast('✅ Pengaturan disimpan', 'success');
   };
 
@@ -288,12 +337,79 @@ export default function DashboardPage() {
     showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
   };
 
+  // ===== PRINT BILL + QRIS =====
+  const printBillWithQRIS = (order) => {
+    if (!settings.qris_string) {
+      showToast('QRIS DANA belum diatur. Buka menu Pengaturan.', 'error');
+      return;
+    }
+    const dynamicQRIS = generateDynamicQRIS(settings.qris_string, order.total_price);
+    if (!dynamicQRIS) {
+      showToast('Gagal generate QRIS. Periksa string QRIS Anda di Pengaturan.', 'error');
+      return;
+    }
+
+    const win = window.open('', '', 'width=400,height=800');
+    win.document.write(`
+      <html><head><title>Bill - Meja ${order.table_number}</title><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; color: #000; }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        h2 { font-size: 16px; margin-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        td { padding: 4px 0; vertical-align: top; }
+        .right { text-align: right; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .total { font-size: 14px; font-weight: bold; margin-top: 8px; }
+        .qris-box { text-align: center; margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        .qris-box img { width: 200px; height: 200px; display: block; margin: 0 auto; }
+        .qris-text { font-size: 10px; color: #555; margin-top: 5px; }
+        @media print { body { padding: 0; } .qris-box { border: none; } }
+      </style></head><body>
+        <div class="center">
+          <h2>${settings.name || 'Kafe'}</h2>
+          <p>${settings.address || ''}</p>
+          <p>WA: ${settings.wa || ''}</p>
+        </div>
+        <div class="line"></div>
+        <table>
+          <tr><td class="bold">Bill:</td><td class="right">#${order.id.slice(0,8).toUpperCase()}</td></tr>
+          <tr><td class="bold">Pelanggan:</td><td class="right">${order.customer_name || 'Tamu'}</td></tr>
+          <tr><td class="bold">Meja:</td><td class="right">${order.table_number}</td></tr>
+          <tr><td class="bold">Waktu:</td><td class="right">${new Date(order.created_at).toLocaleString('id-ID')}</td></tr>
+        </table>
+        <div class="line"></div>
+        <table>
+          ${order.items.map(i => `<tr><td>${i.qty}× ${i.name}</td><td class="right">${rp(i.price * i.qty)}</td></tr>`).join('')}
+        </table>
+        <div class="line"></div>
+        <table>
+          <tr class="total"><td>TOTAL</td><td class="right">${rp(order.total_price)}</td></tr>
+        </table>
+        
+        <div class="qris-box">
+          <p class="bold" style="margin-bottom:8px;">BAYAR DENGAN QRIS</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicQRIS)}" alt="QRIS" />
+          <p class="qris-text">Scan dengan aplikasi bank / e-wallet apa saja.</p>
+          <p class="qris-text">Nominal sudah otomatis terisi.</p>
+          <p class="qris-text bold" style="margin-top:5px;">Merchant: ${settings.name}</p>
+        </div>
+        
+        <div class="line" style="margin-top:15px;"></div>
+        <p class="center" style="font-size:10px; margin-top:5px;">Terima Kasih 🙏</p>
+      </body></html>
+    `);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 1000);
+  };
+
   const printBill = (order) => {
     const win = window.open('', '', 'width=400,height=600');
     win.document.write(`
       <html><head><title>Struk</title><style>body{font-family:monospace;font-size:12px;padding:10px;} .center{text-align:center;} table{width:100%;} td{padding:2px 0;}</style></head><body>
       <div class="center"><h3>${settings.name}</h3><p>${settings.address}</p><p>WA: ${settings.wa}</p></div>
-      <hr><p>Meja: ${order.table_number}<br>Order: ${order.id.slice(0,8)}<br>Tanggal: ${new Date(order.created_at).toLocaleString('id-ID')}</p><hr>
+      <hr><p>Pelanggan: ${order.customer_name || 'Tamu'}<br>Meja: ${order.table_number}<br>Order: ${order.id.slice(0,8)}<br>Tanggal: ${new Date(order.created_at).toLocaleString('id-ID')}</p><hr>
       <table>${order.items.map(i => `<tr><td>${i.name} x${i.qty} ${i.note ? '('+i.note+')' : ''}</td><td style="text-align:right">${rp(i.price*i.qty)}</td></tr>`).join('')}</table>
       <hr><table><tr><td><b>TOTAL</b></td><td style="text-align:right"><b>${rp(order.total_price)}</b></td></tr></table>
       <hr><div class="center"><p>${order.payment_status === 'paid' ? 'LUNAS' : 'BELUM LUNAS'}</p><p>Terima Kasih!</p></div></body></html>
@@ -334,17 +450,16 @@ export default function DashboardPage() {
     setTimeout(() => { win.focus(); win.print(); }, 1000);
   };
 
-  // ===== BATCH 3: EXPORT CSV =====
   const exportCSV = (reportOrders, reportLabelForFile) => {
     if (reportOrders.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
-    const headers = ['Tanggal', 'Jam', 'Meja', 'Order ID', 'Status', 'Pembayaran', 'Menu', 'Qty', 'Harga', 'Subtotal', 'Total Order'];
+    const headers = ['Tanggal', 'Jam', 'Pelanggan', 'Meja', 'Order ID', 'Status', 'Pembayaran', 'Menu', 'Qty', 'Harga', 'Subtotal', 'Total Order'];
     const rows = [];
     reportOrders.forEach(o => {
       const dt = new Date(o.created_at);
       const dateStr = dt.toLocaleDateString('id-ID');
       const timeStr = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       (o.items || []).forEach(item => {
-        rows.push([dateStr, timeStr, o.table_number, o.id.slice(0, 8), o.status, o.payment_status, item.name, item.qty, item.price, item.price * item.qty, o.total_price]);
+        rows.push([dateStr, timeStr, o.customer_name || 'Tamu', o.table_number, o.id.slice(0, 8), o.status, o.payment_status, item.name, item.qty, item.price, item.price * item.qty, o.total_price]);
       });
     });
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -360,7 +475,6 @@ export default function DashboardPage() {
     showToast('✅ CSV berhasil diunduh', 'success');
   };
 
-  // ===== BATCH 3: PRINT REPORT =====
   const printReport = (reportStats, topMenus, reportLabel) => {
     const win = window.open('', '', 'width=800,height=1000');
     if (!win) { showToast('Popup diblokir. Izinkan popup untuk print', 'error'); return; }
@@ -434,7 +548,6 @@ export default function DashboardPage() {
     revenue: todayOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + Number(o.total_price), 0)
   };
 
-  // ===== REPORT COMPUTATION (Batch 3) =====
   let reportOrders = [];
   let reportStats = { totalOrders: 0, revenue: 0, paidCount: 0, totalItems: 0, avgOrder: 0, statusCount: { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 } };
   let topMenus = [];
@@ -489,7 +602,6 @@ export default function DashboardPage() {
     });
     topMenus = Object.entries(menuSales).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
 
-    // Daily breakdown: works for any range
     const dailyMap = {};
     reportOrders.forEach(o => {
       const d = new Date(o.created_at);
@@ -500,7 +612,6 @@ export default function DashboardPage() {
     });
     activeDays = Object.values(dailyMap).sort((a, b) => a.date - b.date);
 
-    // Label
     if (reportMode === 'daily') {
       reportLabel = startD.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     } else if (reportMode === 'monthly') {
@@ -513,7 +624,6 @@ export default function DashboardPage() {
     monthName = reportNow.toLocaleDateString('id-ID', { month: 'short' });
   }
 
-  // ===== CHART DATA (Batch 3) =====
   const chartData = [];
   if (reportNow) {
     for (let i = chartDays - 1; i >= 0; i--) {
@@ -535,7 +645,6 @@ export default function DashboardPage() {
   const maxChartRev = Math.max(...chartData.map(c => c.revenue), 1);
   const totalChartRev = chartData.reduce((s, c) => s + c.revenue, 0);
 
-  // ===== FILTERED MENUS (Batch 3) =====
   const filteredMenus = menus.filter(m => {
     const matchSearch = !menuSearch || m.name.toLowerCase().includes(menuSearch.toLowerCase()) || (m.description || '').toLowerCase().includes(menuSearch.toLowerCase());
     const matchCat = menuCategoryFilter === 'all' || m.category === menuCategoryFilter;
@@ -634,7 +743,6 @@ export default function DashboardPage() {
               <div className="rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 shadow-[0_4px_12px_-2px_rgba(15,23,42,0.3),0_12px_32px_-8px_rgba(15,23,42,0.4)]"><div className="flex items-start justify-between mb-3"><p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Omset Hari Ini</p><div className="icon-box w-8 h-8 bg-orange-500/20 border-orange-500/30 text-orange-400">💰</div></div><h3 className="text-2xl font-black text-white tracking-tight">{rp(stats.revenue)}</h3><p className="text-[11px] text-slate-400 font-semibold mt-1">Total pendapatan</p></div>
             </div>
 
-            {/* QUEUE TAB */}
             {activeTab === 'queue' && (
               <div className="space-y-4 print:hidden">
                 <div className="flex flex-wrap items-center gap-3">
@@ -652,7 +760,10 @@ export default function DashboardPage() {
                       return (
                         <div key={order.id} className="card-elevated rounded-2xl overflow-hidden">
                           <div className="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
-                            <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja</p><p className="text-2xl font-black text-slate-900 leading-tight">{order.table_number}</p></div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja {order.table_number}</p>
+                              <p className="text-2xl font-black text-slate-900 leading-tight truncate max-w-[150px]">{order.customer_name || 'Tamu'}</p>
+                            </div>
                             <span className={`status-pill ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
                           </div>
                           <div className="px-5 py-4 space-y-3">
@@ -663,10 +774,18 @@ export default function DashboardPage() {
                                 <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
                               </div>
                             </div>
+                            
+                            {order.order_note && (
+                              <div className="bg-amber-50 border-l-4 border-amber-400 p-2 rounded-r text-xs font-bold text-amber-800">
+                                📝 Catatan: {order.order_note}
+                              </div>
+                            )}
+
                             <div className="space-y-2 pt-1">
                               {order.items.map((item, idx) => (<div key={idx}><div className="flex justify-between text-sm"><span className="font-bold text-slate-700">{item.qty}× {item.name}</span><span className="font-bold text-slate-900">{rp(item.price * item.qty)}</span></div>{item.note && (<p className="text-[11px] text-orange-600 font-bold mt-0.5 italic">↳ "{item.note}"</p>)}</div>))}
                             </div>
                             <div className="pt-3 border-t border-slate-100 flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Total</span><span className="text-lg font-black text-orange-600">{rp(order.total_price)}</span></div>
+                            
                             {order.status !== 'completed' && order.status !== 'cancelled' && (
                               <div className="space-y-2 pt-1">
                                 <div className="grid grid-cols-2 gap-2">
@@ -677,7 +796,11 @@ export default function DashboardPage() {
                                 <button onClick={() => handleCancelOrder(order.id)} className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all"><Icons.X /> Tolak Pesanan</button>
                               </div>
                             )}
-                            <button onClick={() => printBill(order)} className="w-full btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5"><Icons.Print /> Cetak Struk</button>
+                            
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button onClick={() => printBill(order)} className="btn-ghost py-2 rounded-lg text-xs flex items-center justify-center gap-1.5"><Icons.Print /> Struk</button>
+                              <button onClick={() => printBillWithQRIS(order)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/30"><Icons.QR /> QRIS</button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -687,7 +810,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* MENU TAB (Batch 3: + search + filter) */}
             {activeTab === 'menu' && (
               <div className="space-y-4 print:hidden">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -729,7 +851,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* TABLES TAB */}
             {activeTab === 'tables' && (
               <div className="card-elevated rounded-2xl p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
@@ -755,10 +876,8 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* REPORTS TAB (Batch 3: 3 modes + pickers + export + print + chart) */}
             {activeTab === 'reports' && (
               <div className="space-y-6">
-                {/* Mode Tabs + Actions */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1 bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
@@ -773,7 +892,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Date Pickers */}
                 {reportNow && (
                   <div className="card-elevated rounded-2xl p-4">
                     {reportMode === 'daily' && (
@@ -808,7 +926,6 @@ export default function DashboardPage() {
                   <div className="card-subtle rounded-2xl p-16 text-center"><p className="font-bold text-slate-900">Memuat laporan...</p></div>
                 ) : (
                   <>
-                    {/* Stats Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="card-elevated rounded-2xl p-5"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Pesanan</p><h3 className="text-3xl font-black text-slate-900">{reportStats.totalOrders}</h3><p className="text-[11px] text-slate-500 font-semibold mt-1">{reportStats.paidCount} lunas</p></div>
                       <div className="rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-800 shadow-lg"><p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-2">Total Omset</p><h3 className="text-2xl font-black text-white">{rp(reportStats.revenue)}</h3><p className="text-[11px] text-slate-400 font-semibold mt-1">Dari pesanan lunas</p></div>
@@ -816,7 +933,6 @@ export default function DashboardPage() {
                       <div className="card-elevated rounded-2xl p-5"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Item Terjual</p><h3 className="text-3xl font-black text-slate-900">{reportStats.totalItems}</h3><p className="text-[11px] text-slate-500 font-semibold mt-1">Total porsi</p></div>
                     </div>
 
-                    {/* Chart */}
                     <div className="card-elevated rounded-2xl p-6">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                         <div className="flex items-center gap-2"><Icons.TrendUp /><h3 className="font-black text-slate-900">Grafik Omzet {chartDays} Hari Terakhir</h3></div>
@@ -847,7 +963,6 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Status */}
                     <div className="card-elevated rounded-2xl p-6">
                       <h3 className="font-black text-slate-900 mb-4">Status Pesanan</h3>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -858,7 +973,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Top Menus */}
                     <div className="card-elevated rounded-2xl p-6">
                       <h3 className="font-black text-slate-900 mb-4">🔥 Menu Terlaris</h3>
                       {topMenus.length === 0 ? (
@@ -875,7 +989,6 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Daily Breakdown */}
                     {showDailyBreakdown && (
                       <div className="card-elevated rounded-2xl p-6">
                         <h3 className="font-black text-slate-900 mb-4">📅 Rincian Per Hari</h3>
@@ -897,7 +1010,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* SETTINGS */}
             {activeTab === 'settings' && (
               <div className="card-elevated rounded-2xl p-6 md:p-8 max-w-xl mx-auto print:hidden">
                 <div className="border-b border-slate-100 pb-4 mb-6"><h3 className="font-black text-slate-900">Profil Toko</h3><p className="text-xs text-slate-500">Ubah identitas dan kontak kafe Anda</p></div>
@@ -906,7 +1018,15 @@ export default function DashboardPage() {
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp</label><input type="text" value={settings.wa} onChange={e => setSettings({...settings, wa: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="08xxxxxxxxxx" /></div>
                   <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Alamat</label><input type="text" value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-semibold text-slate-900" placeholder="Jl. Contoh No. 123" /></div>
-                  <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm">Simpan Pengaturan</button>
+                  
+                  {/* BATCH 4B: QRIS INPUT */}
+                  <div className="border-t border-slate-100 pt-4">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">QRIS DANA String (Untuk Cetak Bill)</label>
+                    <textarea value={settings.qris_string} onChange={e => setSettings({...settings, qris_string: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono text-slate-900 bg-slate-50" rows="4" placeholder="00020101021126..."></textarea>
+                    <p className="text-[10px] text-slate-500 mt-1.5">Paste string QRIS statis dari DANA Bisnis Anda. Sistem akan otomatis mengisi nominal tagihan saat cetak bill.</p>
+                  </div>
+
+                  <button type="submit" className="btn-dark w-full py-3 rounded-xl text-sm mt-2">Simpan Pengaturan</button>
                 </form>
               </div>
             )}
