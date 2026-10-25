@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-// FUNGSI EKSTRAKSI WARNA DARI BANNER
 const extractDominantColor = (imgUrl) => {
   try {
     const img = new Image();
@@ -27,11 +26,8 @@ const extractDominantColor = (imgUrl) => {
         }
         if (count > 0) {
           r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
-          // Set warna dasar
           document.documentElement.style.setProperty('--primary-color', `rgb(${r}, ${g}, ${b})`);
-          // Set warna soft (untuk background tombol sekunder)
           document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.1)`);
-          // Set warna gelap (untuk efek 3D gradient)
           const darkR = Math.max(0, r - 30);
           const darkG = Math.max(0, g - 30);
           const darkB = Math.max(0, b - 30);
@@ -137,10 +133,6 @@ export default function DashboardPage() {
   const [reportYear, setReportYear] = useState(2026);
   const [reportStartDateStr, setReportStartDateStr] = useState('');
   const [reportEndDateStr, setReportEndDateStr] = useState('');
-  const [chartDays, setChartDays] = useState(7);
-
-  const [menuSearch, setMenuSearch] = useState('');
-  const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
 
   const [nowTick, setNowTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -263,7 +255,7 @@ export default function DashboardPage() {
     setReportStartDateStr(`${yyyy}-${mm}-01`);
     setReportEndDateStr(`${yyyy}-${mm}-${dd}`);
 
-    let channel, isMounted = true;
+    let channel, presenceChannel, isMounted = true;
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return router.push('/login');
@@ -271,6 +263,7 @@ export default function DashboardPage() {
       setUserEmail(session.user.email);
       
       const { data: userData } = await supabase.from('users').select('tenant_id, tenants(*)').eq('id', session.user.id).single();
+      
       if (userData && userData.tenants && isMounted) {
         const tId = userData.tenant_id;
         setTenantId(tId);
@@ -285,7 +278,6 @@ export default function DashboardPage() {
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11
         });
         
-        // Ekstrak warna saat load
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
         else if (userData.tenants.logo_url) extractDominantColor(userData.tenants.logo_url);
 
@@ -295,6 +287,7 @@ export default function DashboardPage() {
           fetchOrders(tId)
         ]);
 
+        // 1. Realtime untuk Pesanan
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
           .subscribe((status) => {
@@ -302,10 +295,28 @@ export default function DashboardPage() {
             else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('offline');
             else setRealtimeStatus('connecting');
           });
+
+        // 2. PRESENCE TRACKING UNTUK ADMIN (Sensor Online)
+        presenceChannel = supabase.channel('online-rooms', {
+          config: { presence: { key: session.user.id } },
+        });
+        presenceChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await presenceChannel.track({
+              tenant_id: tId,
+              user_email: session.user.email,
+              online_at: new Date().toISOString(),
+            });
+          }
+        });
       }
     };
     fetchData();
-    return () => { isMounted = false; if (channel) supabase.removeChannel(channel); };
+    return () => { 
+      isMounted = false; 
+      if (channel) supabase.removeChannel(channel); 
+      if (presenceChannel) supabase.removeChannel(presenceChannel); 
+    };
   }, [router]);
 
   const fetchMenus = async (tId) => { const { data } = await supabase.from('menus').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }); if (data) setMenus(data); };
@@ -395,7 +406,7 @@ export default function DashboardPage() {
       if (type === 'logo') setSettings(prev => ({ ...prev, logo_url: urlData.publicUrl }));
       else if (type === 'banner') {
         setSettings(prev => ({ ...prev, banner_url: urlData.publicUrl }));
-        extractDominantColor(urlData.publicUrl); // Langsung ekstrak warna baru
+        extractDominantColor(urlData.publicUrl);
       }
       else setCurrentMenu(prev => ({ ...prev, image_url: urlData.publicUrl }));
       
@@ -472,7 +483,7 @@ export default function DashboardPage() {
 
   const printBillWithQRIS = (order) => {
     if (!settings.qris_string) {
-      showToast('QRIS DANA belum diatur. Buka menu Pengaturan.', 'error');
+      showToast('QRIS belum diatur. Buka menu Pengaturan.', 'error');
       return;
     }
     const dynamicQRIS = generateDynamicQRIS(settings.qris_string, order.total_price);
@@ -755,7 +766,7 @@ export default function DashboardPage() {
 
   const chartData = [];
   if (reportNow) {
-    for (let i = chartDays - 1; i >= 0; i--) {
+    for (let i = 6; i >= 0; i--) {
       const d = new Date(reportNow.getFullYear(), reportNow.getMonth(), reportNow.getDate() - i);
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -822,12 +833,10 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       
-      {/* HEADER TOP NAVIGATION */}
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-center h-20">
             
-            {/* Logo & Brand */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] flex items-center justify-center shadow-lg shadow-[var(--primary-color)]/30">
                 <span className="text-white font-black text-lg">N</span>
@@ -838,7 +847,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1">
               {[
                 { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },
@@ -855,7 +863,6 @@ export default function DashboardPage() {
               ))}
             </nav>
 
-            {/* Right Actions */}
             <div className="flex items-center gap-3">
               <button onClick={openKitchenLink} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/20 transition-all text-xs font-bold">
                 🍳 <span className="hidden lg:inline">Layar Dapur</span>
@@ -880,7 +887,6 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         
-        {/* STATS CARDS (Moved to Top) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div>
@@ -923,7 +929,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* CONTENT AREA */}
         <div className="bg-transparent mt-6">
           {activeTab === 'queue' && (
             <div className="space-y-4">
@@ -947,7 +952,6 @@ export default function DashboardPage() {
                     return (
                       <div key={order.id} className="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300">
                         
-                        {/* Card Header */}
                         <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
                           <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meja {order.table_number}</p>
@@ -956,7 +960,6 @@ export default function DashboardPage() {
                           <span className={`status-pill shadow-sm ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
                         </div>
                         
-                        {/* Card Body */}
                         <div className="px-6 py-5 space-y-4 flex-1 flex flex-col">
                           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 font-semibold">
                             <span>#{order.id.slice(0, 8).toUpperCase()}</span>
@@ -989,7 +992,6 @@ export default function DashboardPage() {
                             <span className="text-xl font-black text-[var(--primary-color)]">{rp(order.total_price)}</span>
                           </div>
                           
-                          {/* Actions */}
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
                             <div className="space-y-2 pt-2">
                               <div className="grid grid-cols-2 gap-2">
@@ -1149,11 +1151,7 @@ export default function DashboardPage() {
 
                   <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                      <div className="flex items-center gap-3 text-slate-800"><Icons.TrendUp /><h3 className="font-black text-lg">Grafik Omzet {chartDays} Hari Terakhir</h3></div>
-                      <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
-                        <button onClick={() => setChartDays(7)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${chartDays === 7 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>7 Hari</button>
-                        <button onClick={() => setChartDays(30)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${chartDays === 30 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>30 Hari</button>
-                      </div>
+                      <div className="flex items-center gap-3 text-slate-800"><Icons.TrendUp /><h3 className="font-black text-lg">Grafik Omzet 7 Hari Terakhir</h3></div>
                     </div>
                     {chartData.length > 0 && chartData.every(c => c.revenue === 0) ? (
                       <div className="text-center py-16"><p className="text-5xl mb-3">📈</p><p className="text-sm font-bold text-slate-800">Belum ada omzet</p></div>
