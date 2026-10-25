@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-// ⚙️ GANTI DENGAN NOMOR WA ANDA
+// ⚙️ GANTI DENGAN NOMOR WA ANDA (Format 62)
 const WA_NUMBER = '6281234567890';
 const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
-// Logo Kustom (Sesuai gambar)
+// Logo Kustom
 const NexaLogo = ({ className = "w-8 h-8" }) => (
   <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
@@ -55,8 +55,81 @@ export default function LandingPage() {
   const [year, setYear] = useState(2026);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
+  const canvasRef = useRef(null);
 
-  useEffect(() => { setYear(new Date().getFullYear()); }, []);
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
+  // ============ LOGIKA ANIMASI CANVAS (NETWORK) ============
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    let particles = [];
+    const particleCount = 70;
+    const maxDistance = 200;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 2 + 1.5
+      });
+    }
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < particles.length; i++) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(160, 140, 120, 0.6)'; // Warna titik
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          let p2 = particles[j];
+          let dx = p.x - p2.x;
+          let dy = p.y - p2.y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < maxDistance) {
+            let opacity = 1 - (distance / maxDistance);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(160, 140, 120, ${opacity * 0.4})`; // Warna garis
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+      animationFrameId = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   const openWhatsApp = () => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`, '_blank');
   const scrollTo = (id) => { setMobileOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
@@ -64,39 +137,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F4EFE9] text-[#3A2A20] font-sans overflow-x-hidden selection:bg-[#3A2A20]/20 selection:text-[#3A2A20]">
       
-      {/* ============ ANIMASI BACKGROUND CONSTELLATION (BERGERAK) ============ */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Layer 1: Garis Diagonal Bergerak */}
-        <div className="absolute inset-0 opacity-[0.15] bg-[linear-gradient(45deg,transparent_45%,#3A2A20_49%,#3A2A20_51%,transparent_55%)] bg-[size:120px_120px] animate-[panBg_20s_linear_infinite]"></div>
-        <div className="absolute inset-0 opacity-[0.15] bg-[linear-gradient(-45deg,transparent_45%,#3A2A20_49%,#3A2A20_51%,transparent_55%)] bg-[size:120px_120px] animate-[panBgReverse_25s_linear_infinite]"></div>
-        
-        {/* Layer 2: Titik-titik Bergerak */}
-        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#D3C8BB_2px,transparent_2px)] bg-[size:40px_40px] animate-[panBg_15s_linear_infinite]"></div>
-        
-        {/* Layer 3: Node Bulat Melayang */}
-        <div className="absolute top-[20%] left-[15%] w-6 h-6 bg-[#D3C8BB] rounded-full blur-[2px] animate-[floatNode_8s_ease-in-out_infinite]"></div>
-        <div className="absolute top-[60%] left-[80%] w-10 h-10 bg-[#D3C8BB]/50 rounded-full blur-[4px] animate-[floatNode_12s_ease-in-out_infinite_reverse]"></div>
-        <div className="absolute top-[80%] left-[30%] w-4 h-4 bg-[#3A2A20]/30 rounded-full blur-[1px] animate-[floatNode_10s_ease-in-out_infinite]"></div>
-        <div className="absolute top-[30%] right-[20%] w-8 h-8 bg-[#D3C8BB]/40 rounded-full blur-[3px] animate-[floatNode_14s_ease-in-out_infinite_reverse]"></div>
-      </div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes panBg {
-          0% { background-position: 0 0; }
-          100% { background-position: 240px 240px; }
-        }
-        @keyframes panBgReverse {
-          0% { background-position: 0 0; }
-          100% { background-position: -240px 240px; }
-        }
-        @keyframes floatNode {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          50% { transform: translateY(-40px) translateX(20px); }
-        }
-      `}} />
+      {/* Canvas Background */}
+      <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
       {/* ============ NAVBAR ============ */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#F4EFE9]/90 backdrop-blur-md border-b border-[#E3DCD1]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#F4EFE9]/80 backdrop-blur-md border-b border-[#E3DCD1]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
@@ -299,7 +344,7 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             {features.map((f, i) => (
-              <div key={i} className="group relative rounded-3xl p-8 bg-white border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1">
+              <div key={i} className="group relative rounded-3xl p-8 bg-white/80 backdrop-blur-sm border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#E3DCD1] mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]">
                   <f.Icon />
                 </div>
@@ -312,7 +357,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ CARA KERJA ============ */}
-      <section id="cara-kerja" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/60 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
+      <section id="cara-kerja" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/40 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
@@ -323,7 +368,7 @@ export default function LandingPage() {
             <div className="hidden md:block absolute top-20 left-10 right-10 h-0.5 bg-gradient-to-r from-transparent via-[#D3C8BB] to-transparent"></div>
             {steps.map((s, i) => (
               <div key={i} className="relative">
-                <div className="relative bg-white border border-[#E3DCD1] rounded-3xl p-8 hover:border-[#8C7A6B] shadow-sm hover:shadow-md transition-all text-center md:text-left">
+                <div className="relative bg-white/80 backdrop-blur-sm border border-[#E3DCD1] rounded-3xl p-8 hover:border-[#8C7A6B] shadow-sm hover:shadow-md transition-all text-center md:text-left">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#D3C8BB] text-[#3A2A20] font-black text-xl shadow-sm mb-6">{s.num}</div>
                   <h3 className="text-xl font-black text-[#3A2A20] mb-3">{s.title}</h3>
                   <p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{s.desc}</p>
@@ -344,12 +389,11 @@ export default function LandingPage() {
           </div>
           <div className="relative max-w-md mx-auto">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-[#D3C8BB] to-[#8C7A6B] rounded-[2rem] blur-lg opacity-50"></div>
-            <div className="relative rounded-[2rem] bg-white border border-[#3A2A20]/20 overflow-hidden shadow-2xl">
+            <div className="relative rounded-[2rem] bg-white/90 backdrop-blur-md border border-[#3A2A20]/20 overflow-hidden shadow-2xl">
               <div className="absolute top-0 right-0 bg-[#3A2A20] text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-bl-2xl shadow-md">⭐ Paling Populer</div>
               <div className="p-10 sm:p-12">
                 <p className="text-sm font-bold text-[#8C7A6B] uppercase tracking-widest mb-3">NexaFlow Pro</p>
                 
-                {/* REVISI HARGA MENJADI 250.000 */}
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-2xl font-bold text-[#8C7A6B]">Rp</span>
                   <span className="text-6xl font-black text-[#3A2A20] tracking-tight">250.000</span>
@@ -378,7 +422,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FAQ ============ */}
-      <section id="faq" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/60 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
+      <section id="faq" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/40 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight">
@@ -387,7 +431,7 @@ export default function LandingPage() {
           </div>
           <div className="space-y-4">
             {faqs.map((f, i) => (
-              <div key={i} className="rounded-2xl bg-white border border-[#E3DCD1] overflow-hidden hover:border-[#D3C8BB] transition-colors shadow-sm">
+              <div key={i} className="rounded-2xl bg-white/80 backdrop-blur-sm border border-[#E3DCD1] overflow-hidden hover:border-[#D3C8BB] transition-colors shadow-sm">
                 <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="w-full flex items-center justify-between gap-4 p-6 text-left">
                   <span className="font-bold text-[#3A2A20] text-base">{f.q}</span>
                   <span className={`shrink-0 text-[#8C7A6B] transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span>
@@ -423,7 +467,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F4EFE9] relative z-10">
+      <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F4EFE9]/80 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
