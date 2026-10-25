@@ -14,12 +14,17 @@ export default function LoginPage() {
   const canvasRef = useRef(null);
   const router = useRouter();
 
+  // Efek 1: Set mounted (untuk mencegah hydration error)
   useEffect(() => {
     setMounted(true);
+  }, []);
 
-    // --- LOGIKA ANIMASI JARINGAN (CANVAS) ---
+  // Efek 2: Animasi Canvas (Hanya jalan setelah canvas dirender / mounted)
+  useEffect(() => {
+    if (!mounted) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let width, height;
@@ -36,9 +41,9 @@ export default function LoginPage() {
       constructor() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 0.8; 
-        this.vy = (Math.random() - 0.5) * 0.8;
-        this.radius = Math.random() * 2 + 1;
+        this.vx = (Math.random() - 0.5) * 1.2; // Kecepatan lebih dinamis
+        this.vy = (Math.random() - 0.5) * 1.2;
+        this.radius = Math.random() * 2.5 + 1.5;
       }
       update() {
         this.x += this.vx;
@@ -49,12 +54,13 @@ export default function LoginPage() {
       draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(141, 110, 99, 0.6)'; 
+        // Warna titik dipertegas (Coklat Tua)
+        ctx.fillStyle = 'rgba(93, 64, 55, 0.7)'; 
         ctx.fill();
       }
     }
 
-    const particleCount = Math.floor(width / 15);
+    const particleCount = Math.floor(width / 12); // Lebih banyak titik
     for (let i = 0; i < particleCount; i++) {
       particles.push(new Particle());
     }
@@ -68,11 +74,12 @@ export default function LoginPage() {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 150) {
+          if (distance < 160) {
             ctx.beginPath();
-            const opacity = 1 - (distance / 150);
-            ctx.strokeStyle = `rgba(141, 110, 99, ${opacity * 0.3})`;
-            ctx.lineWidth = 1;
+            const opacity = 1 - (distance / 160);
+            // Garis penghubung lebih tegas
+            ctx.strokeStyle = `rgba(93, 64, 55, ${opacity * 0.4})`;
+            ctx.lineWidth = 1.2;
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
             ctx.stroke();
@@ -87,7 +94,7 @@ export default function LoginPage() {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [mounted]); // Bergantung pada mounted
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -105,25 +112,22 @@ export default function LoginPage() {
     }
   };
 
-  if (!mounted) return null; // Mencegah error prerender Next.js
+  if (!mounted) return null; 
 
   return (
     <div className="min-h-screen bg-[#f5ebe0] flex flex-col lg:flex-row font-sans selection:bg-[#8d6e63]/30 selection:text-[#3e2723] overflow-hidden relative">
       
-      {/* CANVAS ANIMASI */}
       <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-      {/* SISI KIRI - BRANDING */}
       <div className="w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10 border-b lg:border-b-0 lg:border-r border-[#8d6e63]/20 text-center lg:text-left items-center lg:items-start">
         <div className="flex flex-col items-center lg:items-start flex-1 justify-center w-full max-w-lg">
           
           <div className="flex items-center gap-4 mb-10">
-            {/* LOGO SVG CAFFE */}
             <svg width="60" height="60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#5d4037" />
-                  <stop offset="100%" stop-color="#8d6e63" />
+                  <stop offset="0%" stopColor="#5d4037" />
+                  <stop offset="100%" stopColor="#8d6e63" />
                 </linearGradient>
               </defs>
               <path d="M20 80 V20 L50 60 V20 H70 V60 L50 80 L50 60 L35 40 V80 H20 Z" fill="url(#grad1)"/>
@@ -158,7 +162,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* FOOTER BRANDING (Laptop) */}
         <div className="hidden lg:flex items-center gap-2 mt-10 text-sm font-extrabold text-[#6d4c41]">
           Powered by 
           <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[#8d6e63] flex items-center gap-1.5 border-b-2 border-transparent hover:text-[#3e2723] hover:border-[#3e2723] transition-all pb-0.5">
@@ -168,7 +171,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* SISI KANAN - FORM LOGIN */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-20">
         <div className="w-full max-w-md bg-white/75 backdrop-blur-xl border-2 border-white/90 rounded-[2rem] p-8 sm:p-10 shadow-[0_25px_50px_-12px_rgba(109,76,65,0.2)] transition-transform duration-500 hover:-translate-y-2 hover:shadow-[0_35px_60px_-15px_rgba(109,76,65,0.25)]">
           
@@ -224,7 +226,6 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          {/* FOOTER BRANDING (HP) */}
           <div className="lg:hidden text-center mt-8 text-sm font-extrabold text-[#6d4c41]">
             Powered by <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[#5d4037] border-b-2 border-[#5d4037]">NexaFlow</a>
           </div>
