@@ -2,11 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-// ⚙️ GANTI DENGAN NOMOR WA ANDA (Format 62)
+// ⚙️ GANTI DENGAN NOMOR WA ANDA (Format 62, tanpa + dan 0 di depan)
 const WA_NUMBER = '6281234567890';
 const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
-// Logo Kustom
 const NexaLogo = ({ className = "w-8 h-8" }) => (
   <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
@@ -57,9 +56,7 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0);
   const canvasRef = useRef(null);
 
-  useEffect(() => {
-    setYear(new Date().getFullYear());
-  }, []);
+  useEffect(() => { setYear(new Date().getFullYear()); }, []);
 
   // ============ LOGIKA ANIMASI CANVAS (NETWORK) ============
   useEffect(() => {
@@ -90,45 +87,31 @@ export default function LandingPage() {
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       for (let i = 0; i < particles.length; i++) {
         let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-
+        p.x += p.vx; p.y += p.vy;
         if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
         if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(160, 140, 120, 0.6)'; // Warna titik
+        ctx.fillStyle = 'rgba(160, 140, 120, 0.6)';
         ctx.fill();
-
         for (let j = i + 1; j < particles.length; j++) {
           let p2 = particles[j];
-          let dx = p.x - p2.x;
-          let dy = p.y - p2.y;
+          let dx = p.x - p2.x; let dy = p.y - p2.y;
           let distance = Math.sqrt(dx * dx + dy * dy);
-
           if (distance < maxDistance) {
             let opacity = 1 - (distance / maxDistance);
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(160, 140, 120, ${opacity * 0.4})`; // Warna garis
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(160, 140, 120, ${opacity * 0.4})`;
+            ctx.lineWidth = 1; ctx.stroke();
           }
         }
       }
       animationFrameId = requestAnimationFrame(draw);
     };
     draw();
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationFrameId);
-    };
+    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
   }, []);
 
   const openWhatsApp = () => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`, '_blank');
@@ -137,10 +120,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F4EFE9] text-[#3A2A20] font-sans overflow-x-hidden selection:bg-[#3A2A20]/20 selection:text-[#3A2A20]">
       
-      {/* Canvas Background */}
       <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
-      {/* ============ NAVBAR ============ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#F4EFE9]/80 backdrop-blur-md border-b border-[#E3DCD1]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -151,82 +132,40 @@ export default function LandingPage() {
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
               </div>
             </Link>
-
             <nav className="hidden md:flex items-center gap-2 relative z-10">
               <button onClick={() => scrollTo('fitur')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Fitur</button>
               <button onClick={() => scrollTo('tampilan')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Pratinjau</button>
               <button onClick={() => scrollTo('harga')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Harga</button>
               <button onClick={() => scrollTo('faq')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">FAQ</button>
             </nav>
-
             <div className="flex items-center gap-3 relative z-10">
               <Link href="/login" className="hidden sm:inline-flex px-5 py-2.5 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Masuk</Link>
-              <Link href="/register" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F4EFE9] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
-                Coba Gratis <Icons.ArrowRight />
-              </Link>
-              <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#3A2A20] rounded-lg hover:bg-[#E3DCD1]">
-                {mobileOpen ? <Icons.X /> : <Icons.Menu />}
-              </button>
+              <Link href="/register" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F4EFE9] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Coba Gratis <Icons.ArrowRight /></Link>
+              <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#3A2A20] rounded-lg hover:bg-[#E3DCD1]">{mobileOpen ? <Icons.X /> : <Icons.Menu />}</button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ============ HERO SECTION ============ */}
       <section className="relative pt-32 sm:pt-40 pb-24 px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E3DCD1]/50 border border-[#D3C8BB] text-[#3A2A20] text-[10px] font-black tracking-[0.15em] uppercase mb-8 shadow-sm backdrop-blur-sm">
-                <Icons.Sparkles />
-                Langkah Baru Bisnis Anda
-              </div>
-
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-[#3A2A20] leading-[1.05] tracking-tight">
-                Ubah Cara Caffe<br />
-                <span className="text-[#8C7A6B]">Bekerja Hari Ini.</span>
-              </h1>
-
-              <p className="mt-6 text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">
-                Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.
-              </p>
-
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E3DCD1]/50 border border-[#D3C8BB] text-[#3A2A20] text-[10px] font-black tracking-[0.15em] uppercase mb-8 shadow-sm backdrop-blur-sm"><Icons.Sparkles />Langkah Baru Bisnis Anda</div>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-[#3A2A20] leading-[1.05] tracking-tight">Ubah Cara Caffe<br /><span className="text-[#8C7A6B]">Bekerja Hari Ini.</span></h1>
+              <p className="mt-6 text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.</p>
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
-                  Mulai Gratis 14 Hari <Icons.ArrowRight />
-                </Link>
-                <button onClick={() => scrollTo('tampilan')} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-[#D3C8BB] text-[#3A2A20] font-bold text-base hover:bg-white shadow-sm hover:shadow-md transition-all">
-                  Lihat Pratinjau
-                </button>
+                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Mulai Gratis 7 Hari <Icons.ArrowRight /></Link>
+                <button onClick={() => scrollTo('tampilan')} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-[#D3C8BB] text-[#3A2A20] font-bold text-base hover:bg-white shadow-sm hover:shadow-md transition-all">Lihat Pratinjau</button>
               </div>
             </div>
-
-            {/* Mockup Utama di Hero (Kasir) */}
             <div className="relative hidden lg:block">
               <div className="absolute -inset-4 bg-[#3A2A20]/5 rounded-[2rem] blur-xl"></div>
               <div className="relative rounded-3xl overflow-hidden border border-[#D3C8BB] bg-white shadow-2xl">
-                <div className="bg-[#F4EFE9] px-5 py-4 flex items-center gap-2 border-b border-[#E3DCD1]">
-                  <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
-                  <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
-                  <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
-                  <div className="ml-4 flex-1 bg-white border border-[#E3DCD1] rounded-lg px-4 py-1.5 text-xs text-[#8C7A6B] font-mono">nexaflow.app/dashboard</div>
-                </div>
+                <div className="bg-[#F4EFE9] px-5 py-4 flex items-center gap-2 border-b border-[#E3DCD1]"><div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div><div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div><div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div><div className="ml-4 flex-1 bg-white border border-[#E3DCD1] rounded-lg px-4 py-1.5 text-xs text-[#8C7A6B] font-mono">nexaflow.app/dashboard</div></div>
                 <div className="p-6 space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-[#8C7A6B] uppercase tracking-widest mb-1">Dashboard Kasir</p>
-                      <p className="text-xl font-black text-[#3A2A20]">Caffe Premium</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Online</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Pesanan</p><p className="text-2xl font-black text-[#3A2A20]">24</p></div>
-                    <div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Dimasak</p><p className="text-2xl font-black text-[#3A2A20]">7</p></div>
-                    <div className="bg-[#3A2A20] rounded-xl p-4 shadow-md"><p className="text-[10px] font-bold text-[#D3C8BB] uppercase mb-1">Omset</p><p className="text-xl font-black text-white">2.4jt</p></div>
-                  </div>
+                  <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-[#8C7A6B] uppercase tracking-widest mb-1">Dashboard Kasir</p><p className="text-xl font-black text-[#3A2A20]">Caffe Premium</p></div><div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div><span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Online</span></div></div>
+                  <div className="grid grid-cols-3 gap-3"><div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Pesanan</p><p className="text-2xl font-black text-[#3A2A20]">24</p></div><div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Dimasak</p><p className="text-2xl font-black text-[#3A2A20]">7</p></div><div className="bg-[#3A2A20] rounded-xl p-4 shadow-md"><p className="text-[10px] font-bold text-[#D3C8BB] uppercase mb-1">Omset</p><p className="text-xl font-black text-white">2.4jt</p></div></div>
                 </div>
               </div>
             </div>
@@ -234,208 +173,89 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ PRATINJAU TAMPILAN ============ */}
       <section id="tampilan" className="px-6 lg:px-8 py-24 relative z-10 bg-white/40 border-y border-[#E3DCD1] backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Desain Presisi untuk <span className="text-[#8C7A6B]">Setiap Peran</span>
-            </h2>
-            <p className="text-[#7A6A5F] text-lg font-medium">Antarmuka yang bersih, cepat, dan sangat mudah digunakan oleh siapa saja.</p>
-          </div>
-
+          <div className="text-center max-w-2xl mx-auto mb-16"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Desain Presisi untuk <span className="text-[#8C7A6B]">Setiap Peran</span></h2><p className="text-[#7A6A5F] text-lg font-medium">Antarmuka yang bersih, cepat, dan sangat mudah digunakan oleh siapa saja.</p></div>
           <div className="space-y-16">
-            
-            {/* 1. Tampilan Pelanggan (Mobile) */}
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="order-2 md:order-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-5">Pelanggan</div>
-                <h3 className="text-3xl font-black text-[#3A2A20] mb-4">Pengalaman Pesan Mandiri (Self-Order)</h3>
-                <p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">
-                  Pelanggan hanya perlu memindai QR Code di meja. Tampilan mobile-first memudahkan mereka memilih menu, menambahkan catatan, dan melihat total pembayaran secara transparan.
-                </p>
-                <ul className="space-y-3">
-                  {['Keranjang melayang (Sticky Cart)', 'Perhitungan PPN otomatis', 'Konfirmasi pesanan 1 klik'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>
-                  ))}
-                </ul>
+                <h3 className="text-3xl font-black text-[#3A2A20] mb-4">Pengalaman Pesan Mandiri (Self-Order)</h3><p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">Pelanggan hanya perlu memindai QR Code di meja. Tampilan mobile-first memudahkan mereka memilih menu, menambahkan catatan, dan melihat total pembayaran secara transparan.</p>
+                <ul className="space-y-3">{['Keranjang melayang (Sticky Cart)', 'Perhitungan PPN otomatis', 'Konfirmasi pesanan 1 klik'].map((item, i) => (<li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>))}</ul>
               </div>
               <div className="order-1 md:order-2 flex justify-center">
-                <div className="w-[300px] h-[600px] bg-white rounded-[3rem] border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative">
-                  <div className="absolute top-0 w-full h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-16 h-1 bg-white/30 rounded-full"></div></div>
-                  <div className="p-5 pt-10 h-full flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                      <div><p className="text-[10px] font-bold text-[#8C7A6B] uppercase">Meja 04</p><h4 className="text-xl font-black text-[#3A2A20]">Caffe Premium</h4></div>
-                      <div className="w-8 h-8 rounded-full bg-[#F4EFE9] border border-[#E3DCD1] flex items-center justify-center"><Icons.Menu/></div>
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm">
-                        <div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div>
-                        <div><p className="font-bold text-sm text-[#3A2A20]">Es Kopi Susu</p><p className="text-[10px] text-[#8C7A6B]">Kopi</p><p className="font-black text-[#3A2A20] mt-1">Rp 22.000</p></div>
-                      </div>
-                      <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm">
-                        <div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div>
-                        <div><p className="font-bold text-sm text-[#3A2A20]">Croissant Butter</p><p className="text-[10px] text-[#8C7A6B]">Cemilan</p><p className="font-black text-[#3A2A20] mt-1">Rp 18.000</p></div>
-                      </div>
-                    </div>
-                    <div className="bg-[#3A2A20] rounded-2xl p-4 text-white mt-4 shadow-lg">
-                      <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-[#D3C8BB]">2 Item</span><span className="text-sm font-black">Rp 40.000</span></div>
-                      <div className="bg-white/10 text-center py-2.5 rounded-xl text-xs font-bold">Pesan Sekarang</div>
-                    </div>
-                  </div>
-                </div>
+                <div className="w-[300px] h-[600px] bg-white rounded-[3rem] border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative"><div className="absolute top-0 w-full h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-16 h-1 bg-white/30 rounded-full"></div></div><div className="p-5 pt-10 h-full flex flex-col"><div className="flex justify-between items-center mb-6"><div><p className="text-[10px] font-bold text-[#8C7A6B] uppercase">Meja 04</p><h4 className="text-xl font-black text-[#3A2A20]">Caffe Premium</h4></div><div className="w-8 h-8 rounded-full bg-[#F4EFE9] border border-[#E3DCD1] flex items-center justify-center"><Icons.Menu/></div></div><div className="flex-1 space-y-4"><div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm"><div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-sm text-[#3A2A20]">Es Kopi Susu</p><p className="text-[10px] text-[#8C7A6B]">Kopi</p><p className="font-black text-[#3A2A20] mt-1">Rp 22.000</p></div></div><div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm"><div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-sm text-[#3A2A20]">Croissant Butter</p><p className="text-[10px] text-[#8C7A6B]">Cemilan</p><p className="font-black text-[#3A2A20] mt-1">Rp 18.000</p></div></div></div><div className="bg-[#3A2A20] rounded-2xl p-4 text-white mt-4 shadow-lg"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-[#D3C8BB]">2 Item</span><span className="text-sm font-black">Rp 40.000</span></div><div className="bg-white/10 text-center py-2.5 rounded-xl text-xs font-bold">Pesan Sekarang</div></div></div></div>
               </div>
             </div>
-
-            {/* 2. Tampilan Dapur (KDS) */}
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="flex justify-center">
-                <div className="w-full max-w-lg bg-[#1A1A1A] rounded-2xl border border-[#333] shadow-2xl overflow-hidden">
-                  <div className="bg-[#222] px-4 py-3 border-b border-[#333] flex justify-between items-center">
-                    <div className="flex items-center gap-2"><Icons.Chef className="text-white"/><span className="text-white font-bold text-sm">Kitchen Display (KDS)</span></div>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Live</span>
-                  </div>
-                  <div className="p-4 grid grid-cols-2 gap-4">
-                    <div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-amber-500">
-                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 04</span><span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded">DIMASAK</span></div>
-                      <p className="text-xs text-gray-400 mb-3">Budi · 10:45</p>
-                      <ul className="space-y-2 text-sm text-white font-medium">
-                        <li className="flex justify-between"><span>1x Es Kopi Susu</span></li>
-                        <li className="flex justify-between"><span>1x Croissant</span></li>
-                      </ul>
-                    </div>
-                    <div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-emerald-500 opacity-60">
-                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 09</span><span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">SIAP</span></div>
-                      <p className="text-xs text-gray-400 mb-3">Sinta · 10:50</p>
-                      <ul className="space-y-2 text-sm text-gray-300 font-medium line-through">
-                        <li className="flex justify-between"><span>2x Matcha Latte</span></li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div className="flex justify-center"><div className="w-full max-w-lg bg-[#1A1A1A] rounded-2xl border border-[#333] shadow-2xl overflow-hidden"><div className="bg-[#222] px-4 py-3 border-b border-[#333] flex justify-between items-center"><div className="flex items-center gap-2"><Icons.Chef className="text-white"/><span className="text-white font-bold text-sm">Kitchen Display (KDS)</span></div><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Live</span></div><div className="p-4 grid grid-cols-2 gap-4"><div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-amber-500"><div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 04</span><span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded">DIMASAK</span></div><p className="text-xs text-gray-400 mb-3">Budi · 10:45</p><ul className="space-y-2 text-sm text-white font-medium"><li className="flex justify-between"><span>1x Es Kopi Susu</span></li><li className="flex justify-between"><span>1x Croissant</span></li></ul></div><div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-emerald-500 opacity-60"><div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 09</span><span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">SIAP</span></div><p className="text-xs text-gray-400 mb-3">Sinta · 10:50</p><ul className="space-y-2 text-sm text-gray-300 font-medium line-through"><li className="flex justify-between"><span>2x Matcha Latte</span></li></ul></div></div></div></div>
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-5">Koki / Dapur</div>
-                <h3 className="text-3xl font-black text-[#3A2A20] mb-4">Layar Dapur Real-Time (KDS)</h3>
-                <p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">
-                  Hilangkan kebisingan suara teriakan pesanan atau kertas struk yang hilang. Koki melihat daftar pesanan masuk langsung di layar TV atau Tablet.
-                </p>
-                <ul className="space-y-3">
-                  {['Tema Gelap (Dark Mode) nyaman untuk mata', 'Notifikasi suara otomatis saat order masuk', 'Tombol Undo jika salah klik'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>
-                  ))}
-                </ul>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-5">Koki / Dapur</div><h3 className="text-3xl font-black text-[#3A2A20] mb-4">Layar Dapur Real-Time (KDS)</h3><p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">Hilangkan kebisingan suara teriakan pesanan atau kertas struk yang hilang. Koki melihat daftar pesanan masuk langsung di layar TV atau Tablet.</p>
+                <ul className="space-y-3">{['Tema Gelap (Dark Mode) nyaman untuk mata', 'Notifikasi suara otomatis saat order masuk', 'Tombol Undo jika salah klik'].map((item, i) => (<li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>))}</ul>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* ============ FITUR ============ */}
       <section id="fitur" className="px-6 lg:px-8 py-24 sm:py-32 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Semua yang Caffe Anda Butuhkan,<br className="hidden sm:block" />
-              <span className="text-[#8C7A6B]">dalam Satu Platform</span>
-            </h2>
-            <p className="text-[#7A6A5F] text-lg font-medium">Dirancang khusus untuk operasional yang cepat dan rapi.</p>
-          </div>
+          <div className="text-center max-w-2xl mx-auto mb-16"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Semua yang Caffe Anda Butuhkan,<br className="hidden sm:block" /><span className="text-[#8C7A6B]">dalam Satu Platform</span></h2><p className="text-[#7A6A5F] text-lg font-medium">Dirancang khusus untuk operasional yang cepat dan rapi.</p></div>
           <div className="grid md:grid-cols-2 gap-6">
             {features.map((f, i) => (
-              <div key={i} className="group relative rounded-3xl p-8 bg-white/80 backdrop-blur-sm border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#E3DCD1] mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]">
-                  <f.Icon />
-                </div>
-                <h3 className="text-xl font-black text-[#3A2A20] mb-3">{f.title}</h3>
-                <p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{f.desc}</p>
-              </div>
+              <div key={i} className="group relative rounded-3xl p-8 bg-white/80 backdrop-blur-sm border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1"><div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#E3DCD1] mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]"><f.Icon /></div><h3 className="text-xl font-black text-[#3A2A20] mb-3">{f.title}</h3><p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{f.desc}</p></div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ============ CARA KERJA ============ */}
       <section id="cara-kerja" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/40 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Mulai Beroperasi dalam <span className="text-[#8C7A6B]">3 Langkah</span>
-            </h2>
-          </div>
+          <div className="text-center max-w-2xl mx-auto mb-16"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Mulai Beroperasi dalam <span className="text-[#8C7A6B]">3 Langkah</span></h2></div>
           <div className="grid md:grid-cols-3 gap-6 relative">
             <div className="hidden md:block absolute top-20 left-10 right-10 h-0.5 bg-gradient-to-r from-transparent via-[#D3C8BB] to-transparent"></div>
             {steps.map((s, i) => (
-              <div key={i} className="relative">
-                <div className="relative bg-white/80 backdrop-blur-sm border border-[#E3DCD1] rounded-3xl p-8 hover:border-[#8C7A6B] shadow-sm hover:shadow-md transition-all text-center md:text-left">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#D3C8BB] text-[#3A2A20] font-black text-xl shadow-sm mb-6">{s.num}</div>
-                  <h3 className="text-xl font-black text-[#3A2A20] mb-3">{s.title}</h3>
-                  <p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{s.desc}</p>
-                </div>
-              </div>
+              <div key={i} className="relative"><div className="relative bg-white/80 backdrop-blur-sm border border-[#E3DCD1] rounded-3xl p-8 hover:border-[#8C7A6B] shadow-sm hover:shadow-md transition-all text-center md:text-left"><div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#D3C8BB] text-[#3A2A20] font-black text-xl shadow-sm mb-6">{s.num}</div><h3 className="text-xl font-black text-[#3A2A20] mb-3">{s.title}</h3><p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{s.desc}</p></div></div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ============ PRICING ============ */}
       <section id="harga" className="px-6 lg:px-8 py-24 sm:py-32 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Investasi Terjangkau, <span className="text-[#8C7A6B]">Hasil Maksimal</span>
-            </h2>
+            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Siap Membawa Caffe Anda <span className="text-[#8C7A6B]">ke Level Berikutnya?</span></h2>
+            <p className="text-[#7A6A5F] text-lg font-medium">Dapatkan penawaran spesial dan konsultasi gratis dengan tim kami.</p>
           </div>
           <div className="relative max-w-md mx-auto">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-[#D3C8BB] to-[#8C7A6B] rounded-[2rem] blur-lg opacity-50"></div>
             <div className="relative rounded-[2rem] bg-white/90 backdrop-blur-md border border-[#3A2A20]/20 overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 bg-[#3A2A20] text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-bl-2xl shadow-md">⭐ Paling Populer</div>
-              <div className="p-10 sm:p-12">
+              <div className="p-10 sm:p-12 text-center">
                 <p className="text-sm font-bold text-[#8C7A6B] uppercase tracking-widest mb-3">NexaFlow Pro</p>
-                
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-2xl font-bold text-[#8C7A6B]">Rp</span>
-                  <span className="text-6xl font-black text-[#3A2A20] tracking-tight">250.000</span>
-                  <span className="text-lg font-semibold text-[#8C7A6B]">/bulan</span>
+                <div className="mb-8">
+                  <p className="text-2xl font-black text-[#3A2A20]">Penawaran Spesial</p>
+                  <p className="text-sm font-medium text-[#7A6A5F] mt-1">Khusus untuk caffe yang mendaftar bulan ini.</p>
                 </div>
-
-                <p className="text-xs font-bold text-emerald-600 mb-8">🎁 Gratis 14 hari pertama</p>
-
-                <div className="space-y-4 mb-10 pt-8 border-t border-[#E3DCD1]">
+                <div className="space-y-4 mb-10 text-left">
                   {['Semua fitur tanpa batasan', 'Unlimited menu & meja', 'Order via QR & Bill QRIS otomatis', 'Kitchen Display System (KDS)', 'Laporan harian, bulanan & custom', 'Export CSV kapan saja', 'Support via WhatsApp'].map((f, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="text-[#3A2A20] mt-0.5 shrink-0"><Icons.Check /></span>
-                      <span className="text-sm font-bold text-[#7A6A5F]">{f}</span>
-                    </div>
+                    <div key={i} className="flex items-start gap-3"><span className="text-[#3A2A20] mt-0.5 shrink-0"><Icons.Check /></span><span className="text-sm font-bold text-[#7A6A5F]">{f}</span></div>
                   ))}
                 </div>
-
-                <Link href="/register" className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-[#3A2A20] text-white font-black text-base shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
-                  Mulai Gratis Sekarang <Icons.ArrowRight />
-                </Link>
-                <p className="text-center text-[11px] font-bold text-[#8C7A6B] mt-4">Tanpa kartu kredit · Cancel kapan saja</p>
+                <button onClick={openWhatsApp} className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-[#3A2A20] text-white font-black text-base shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all"><Icons.WhatsApp /> Konsultasi & Tanya Harga</button>
+                <p className="text-center text-[11px] font-bold text-[#8C7A6B] mt-4">Gratis 7 hari percobaan · Tanpa kartu kredit</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ============ FAQ ============ */}
       <section id="faq" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/40 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight">
-              Pertanyaan Umum
-            </h2>
-          </div>
+          <div className="text-center mb-14"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight">Pertanyaan Umum</h2></div>
           <div className="space-y-4">
             {faqs.map((f, i) => (
               <div key={i} className="rounded-2xl bg-white/80 backdrop-blur-sm border border-[#E3DCD1] overflow-hidden hover:border-[#D3C8BB] transition-colors shadow-sm">
-                <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="w-full flex items-center justify-between gap-4 p-6 text-left">
-                  <span className="font-bold text-[#3A2A20] text-base">{f.q}</span>
-                  <span className={`shrink-0 text-[#8C7A6B] transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span>
-                </button>
+                <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="w-full flex items-center justify-between gap-4 p-6 text-left"><span className="font-bold text-[#3A2A20] text-base">{f.q}</span><span className={`shrink-0 text-[#8C7A6B] transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span></button>
                 {openFaq === i && <div className="px-6 pb-6 text-sm text-[#7A6A5F] leading-relaxed font-medium">{f.a}</div>}
               </div>
             ))}
@@ -443,74 +263,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ FINAL CTA ============ */}
-      <section className="px-6 lg:px-8 py-24 sm:py-32 relative z-10">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative rounded-[2rem] overflow-hidden bg-[#3A2A20] border border-[#3A2A20] p-12 sm:p-20 text-center shadow-2xl">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-            <h2 className="text-4xl sm:text-5xl font-black text-[#F4EFE9] tracking-tight leading-tight mb-6">
-              Siap Membawa Caffe Anda<br /><span className="text-[#D3C8BB]">ke Level Berikutnya?</span>
-            </h2>
-            <p className="text-[#D3C8BB] text-lg mb-10 max-w-xl mx-auto font-medium">
-              Bergabung dengan caffe-caffe modern yang sudah beralih ke NexaFlow. Gratis 14 hari, tanpa risiko.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#F4EFE9] text-[#3A2A20] font-black text-base shadow-xl hover:-translate-y-0.5 transition-all">
-                Coba Gratis Sekarang <Icons.ArrowRight />
-              </Link>
-              <button onClick={openWhatsApp} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-transparent border-2 border-[#8C7A6B] text-[#F4EFE9] font-bold text-base hover:bg-white/5 transition-all">
-                <Icons.WhatsApp /> Chat via WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ FOOTER ============ */}
       <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F4EFE9]/80 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-3 mb-5">
-                <NexaLogo className="w-8 h-8" />
-                <div>
-                  <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
-                  <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
-                </div>
-              </div>
-              <p className="text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">
-                Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.
-              </p>
+              <div className="flex items-center gap-3 mb-5"><NexaLogo className="w-8 h-8" /><div><p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p><p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p></div></div>
+              <p className="text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.</p>
             </div>
-            <div>
-              <p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Produk</p>
-              <ul className="space-y-3 text-sm">
-                <li><button onClick={() => scrollTo('fitur')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Fitur</button></li>
-                <li><button onClick={() => scrollTo('harga')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Harga</button></li>
-                <li><button onClick={() => scrollTo('faq')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">FAQ</button></li>
-                <li><Link href="/login" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Login</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Kontak</p>
-              <ul className="space-y-3 text-sm">
-                <li><button onClick={openWhatsApp} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors inline-flex items-center gap-2"><Icons.WhatsApp /> WhatsApp</button></li>
-                <li><a href="mailto:hello@nexaflow.app" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">hello@nexaflow.app</a></li>
-              </ul>
-            </div>
+            <div><p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Produk</p><ul className="space-y-3 text-sm"><li><button onClick={() => scrollTo('fitur')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Fitur</button></li><li><button onClick={() => scrollTo('harga')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Harga</button></li><li><button onClick={() => scrollTo('faq')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">FAQ</button></li><li><Link href="/login" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Login</Link></li></ul></div>
+            <div><p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Kontak</p><ul className="space-y-3 text-sm"><li><button onClick={openWhatsApp} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors inline-flex items-center gap-2"><Icons.WhatsApp /> WhatsApp</button></li><li><a href="mailto:hello@nexaflow.app" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">hello@nexaflow.app</a></li></ul></div>
           </div>
-          <div className="pt-8 border-t border-[#E3DCD1] flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-xs font-semibold text-[#8C7A6B]">© {year} NexaFlow. All rights reserved.</p>
-            <p className="text-xs font-semibold text-[#8C7A6B]">Made with <span className="text-rose-500">♥</span> in Indonesia</p>
-          </div>
+          <div className="pt-8 border-t border-[#E3DCD1] flex flex-col sm:flex-row justify-between items-center gap-4"><p className="text-xs font-semibold text-[#8C7A6B]">© {year} NexaFlow. All rights reserved.</p><p className="text-xs font-semibold text-[#8C7A6B]">Made with <span className="text-rose-500">♥</span> in Indonesia</p></div>
         </div>
       </footer>
 
-      {/* ============ FLOATING WHATSAPP ============ */}
-      <button onClick={openWhatsApp} className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#3A2A20] text-[#F4EFE9] flex items-center justify-center shadow-2xl shadow-[#3A2A20]/40 hover:scale-110 transition-transform" aria-label="Chat WhatsApp">
-        <Icons.WhatsApp />
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#F4EFE9] animate-pulse"></span>
-      </button>
+      <button onClick={openWhatsApp} className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#3A2A20] text-[#F4EFE9] flex items-center justify-center shadow-2xl shadow-[#3A2A20]/40 hover:scale-110 transition-transform" aria-label="Chat WhatsApp"><Icons.WhatsApp /><span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#F4EFE9] animate-pulse"></span></button>
 
     </div>
   );
