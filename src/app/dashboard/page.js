@@ -146,7 +146,7 @@ export default function DashboardPage() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
   
-  // FIX: Menambahkan state isMobileMenuOpen yang sempat hilang
+  // State yang sempat hilang dan menyebabkan error
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -271,6 +271,18 @@ export default function DashboardPage() {
       
       const { data: userData } = await supabase.from('users').select('tenant_id, tenants(*)').eq('id', session.user.id).single();
       
+      // --- TAMBAHAN: Redirect Developer ke /admin ---
+      if (!userData || !userData.tenants) {
+        if (session.user.email === 'dinamis.id.shop@gmail.com') {
+          return router.push('/admin');
+        } else {
+          showToast('Akun ini belum terhubung ke kafe manapun.', 'error');
+          await supabase.auth.signOut();
+          return router.push('/login');
+        }
+      }
+      // ---------------------------------------------
+
       if (userData && userData.tenants && isMounted) {
         const tId = userData.tenant_id;
         setTenantId(tId);
@@ -294,7 +306,6 @@ export default function DashboardPage() {
           fetchOrders(tId)
         ]);
 
-        // 1. Realtime untuk Pesanan
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
           .subscribe((status) => {
@@ -303,7 +314,6 @@ export default function DashboardPage() {
             else setRealtimeStatus('connecting');
           });
 
-        // 2. PRESENCE TRACKING UNTUK ADMIN (Sensor Online)
         presenceChannel = supabase.channel('online-rooms', {
           config: { presence: { key: session.user.id } },
         });
@@ -894,7 +904,6 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        {/* Mobile Nav Dropdown */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-slate-100 bg-white p-4 space-y-2 absolute w-full shadow-xl z-50">
             {[
