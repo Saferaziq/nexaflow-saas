@@ -149,7 +149,10 @@ export default function RegisterPage() {
               <rect x="75" y="65" width="8" height="8" fill="#8d6e63" rx="2" />
               <rect x="85" y="75" width="6" height="6" fill="#8d6e63" opacity="0.6" rx="1"/>
             </svg>
-            <span className="text-4xl font-black tracking-widest text-[#3e2723] drop-shadow-sm">CAFFE</span>
+            <div className="flex flex-col">
+              <span className="text-3xl font-black tracking-[0.2em] text-[#3e2723] drop-shadow-sm leading-none">NEXAFLOW</span>
+              <span className="text-[10px] font-bold text-[#8d6e63] tracking-widest uppercase mt-1">SaaS Restaurant</span>
+            </div>
           </div>
 
           <div className="inline-block px-4 py-2 rounded-full bg-[#8d6e63]/10 border-2 border-[#8d6e63]/30 text-[#5d4037] text-xs font-extrabold tracking-widest uppercase mb-6">
@@ -214,7 +217,7 @@ export default function RegisterPage() {
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@caffe.id" 
+                placeholder="owner@nexaflow.id" 
                 className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-3.5 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
               />
             </div>

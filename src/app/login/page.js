@@ -14,12 +14,10 @@ export default function LoginPage() {
   const canvasRef = useRef(null);
   const router = useRouter();
 
-  // Efek 1: Set mounted (untuk mencegah hydration error)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Efek 2: Animasi Canvas (Hanya jalan setelah canvas dirender / mounted)
   useEffect(() => {
     if (!mounted) return;
     const canvas = canvasRef.current;
@@ -41,7 +39,7 @@ export default function LoginPage() {
       constructor() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 1.2; // Kecepatan lebih dinamis
+        this.vx = (Math.random() - 0.5) * 1.2; 
         this.vy = (Math.random() - 0.5) * 1.2;
         this.radius = Math.random() * 2.5 + 1.5;
       }
@@ -54,13 +52,12 @@ export default function LoginPage() {
       draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        // Warna titik dipertegas (Coklat Tua)
         ctx.fillStyle = 'rgba(93, 64, 55, 0.7)'; 
         ctx.fill();
       }
     }
 
-    const particleCount = Math.floor(width / 12); // Lebih banyak titik
+    const particleCount = Math.floor(width / 12); 
     for (let i = 0; i < particleCount; i++) {
       particles.push(new Particle());
     }
@@ -77,7 +74,6 @@ export default function LoginPage() {
           if (distance < 160) {
             ctx.beginPath();
             const opacity = 1 - (distance / 160);
-            // Garis penghubung lebih tegas
             ctx.strokeStyle = `rgba(93, 64, 55, ${opacity * 0.4})`;
             ctx.lineWidth = 1.2;
             ctx.moveTo(particles[i].x, particles[i].y);
@@ -94,7 +90,7 @@ export default function LoginPage() {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [mounted]); // Bergantung pada mounted
+  }, [mounted]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -134,7 +130,10 @@ export default function LoginPage() {
               <rect x="75" y="65" width="8" height="8" fill="#8d6e63" rx="2" />
               <rect x="85" y="75" width="6" height="6" fill="#8d6e63" opacity="0.6" rx="1"/>
             </svg>
-            <span className="text-4xl font-black tracking-widest text-[#3e2723] drop-shadow-sm">CAFFE</span>
+            <div className="flex flex-col">
+              <span className="text-3xl font-black tracking-[0.2em] text-[#3e2723] drop-shadow-sm leading-none">NEXAFLOW</span>
+              <span className="text-[10px] font-bold text-[#8d6e63] tracking-widest uppercase mt-1">SaaS Restaurant</span>
+            </div>
           </div>
 
           <div className="inline-block px-4 py-2 rounded-full bg-[#8d6e63]/10 border-2 border-[#8d6e63]/30 text-[#5d4037] text-xs font-extrabold tracking-widest uppercase mb-6">
@@ -193,7 +192,7 @@ export default function LoginPage() {
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@caffe.id" 
+                placeholder="owner@nexaflow.id" 
                 className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-4 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
               />
             </div>
