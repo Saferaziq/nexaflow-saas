@@ -70,6 +70,7 @@ const Icons = {
   TrendUp: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
   Expand: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
   Shrink: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
+  Menu: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
 };
 
 function crc16(str) {
@@ -133,6 +134,9 @@ export default function DashboardPage() {
   const [reportYear, setReportYear] = useState(2026);
   const [reportStartDateStr, setReportStartDateStr] = useState('');
   const [reportEndDateStr, setReportEndDateStr] = useState('');
+  
+  const [menuSearch, setMenuSearch] = useState('');
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
 
   const [nowTick, setNowTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -141,7 +145,10 @@ export default function DashboardPage() {
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
+  
+  // FIX: Menambahkan state isMobileMenuOpen yang sempat hilang
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
@@ -863,7 +870,10 @@ export default function DashboardPage() {
               ))}
             </nav>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                <Icons.Menu />
+              </button>
               <button onClick={openKitchenLink} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/20 transition-all text-xs font-bold">
                 🍳 <span className="hidden lg:inline">Layar Dapur</span>
               </button>
@@ -874,7 +884,7 @@ export default function DashboardPage() {
               <button onClick={handleSoundToggle} className={`p-2.5 rounded-2xl border transition-all ${!audioUnlocked ? 'bg-[var(--primary-color)] border-[var(--primary-dark)] text-white shadow-md shadow-[var(--primary-color)]/30' : soundEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
                 {!audioUnlocked ? <span className="text-xs font-bold">🔕 ON</span> : soundEnabled ? <span className="text-lg">🔊</span> : <span className="text-lg">🔇</span>}
               </button>
-              <button onClick={toggleFullscreen} className="p-2.5 rounded-2xl border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm">
+              <button onClick={toggleFullscreen} className="hidden sm:block p-2.5 rounded-2xl border bg-white hover:bg-slate-50 border-slate-200 text-slate-600 transition-all shadow-sm">
                 {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
               </button>
               <button onClick={handleLogout} className="p-2.5 rounded-2xl border bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-500 hover:text-rose-500 transition-all shadow-sm">
@@ -883,6 +893,24 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        
+        {/* Mobile Nav Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-100 bg-white p-4 space-y-2 absolute w-full shadow-xl z-50">
+            {[
+              { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },
+              { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
+              { key: 'tables', label: 'Meja', Icon: Icons.Grid },
+              { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
+              { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
+            ].map(({ key, label, Icon, badge }) => (
+              <button key={key} onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === key ? 'bg-[var(--primary-light)] text-[var(--primary-color)]' : 'text-slate-600'}`}>
+                <Icon /> {label}
+                {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
