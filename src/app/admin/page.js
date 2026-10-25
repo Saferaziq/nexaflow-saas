@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -29,7 +29,6 @@ export default function AdminDashboard() {
   const [toasts, setToasts] = useState([]);
   const [extendingId, setExtendingId] = useState(null);
   
-  // State untuk Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   
@@ -133,14 +132,21 @@ export default function AdminDashboard() {
     showToast('ID disalin', 'success');
   };
 
+  // FIX WA: Pembersihan dan normalisasi nomor telepon secara presisi
   const openWa = (tenant) => {
-    const phone = tenant.wa_number ? tenant.wa_number.replace(/^0/, '62') : '';
-    if (!phone) return showToast('Nomor WA belum diatur oleh kafe ini', 'warning');
+    if (!tenant.wa_number) return showToast('Nomor WA belum diatur oleh kafe ini', 'warning');
+    
+    let phone = tenant.wa_number.replace(/[^0-9]/g, '');
+    if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+    else if (phone.startsWith('8')) phone = '62' + phone;
+    else if (phone.startsWith('620')) phone = '62' + phone.slice(3);
+
+    if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
+
     const msg = `Halo Owner ${tenant.name}, ini Admin NexaFlow. Kami ingin mengingatkan mengenai perpanjangan langganan sistem kasir Anda.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  // Logika Filter & Search
   const filteredTenants = tenants.filter(t => {
     const matchSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
     const daysLeft = calculateDaysLeft(t.subscription_end_date);
@@ -181,7 +187,6 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-8">
         
-        {/* STATS OVERVIEW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-[#0a192f] border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-10 text-white group-hover:scale-110 transition-transform"><Icons.Store /></div>
@@ -200,7 +205,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* TOOLBAR PENCARIAN & FILTER */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#0a192f]/50 p-4 rounded-2xl border border-white/10">
           <div className="relative w-full sm:w-96">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Icons.Search /></span>
@@ -230,7 +234,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* TABEL KLIEN */}
         <div className="bg-[#0a192f]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[900px]">
@@ -330,7 +333,6 @@ export default function AdminDashboard() {
 
       </main>
 
-      {/* TOASTS */}
       <div className="fixed bottom-6 right-6 z-[100] space-y-3 w-80 pointer-events-none">
         {toasts.map(t => {
           const isErr = t.type === 'error';
