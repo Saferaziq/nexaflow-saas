@@ -2,11 +2,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// ⚙️ GANTI NOMOR WA ANDA DI SINI (Format 62, tanpa + dan 0 di depan)
+// ⚙️ GANTI DENGAN NOMOR WA ANDA
 const WA_NUMBER = '6281234567890';
-const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir kafe Anda. Bisa info lebih lanjut?';
+const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
-// Logo Kustom Presisi (SVG)
+// Logo Kustom (Sesuai gambar)
 const NexaLogo = ({ className = "w-8 h-8" }) => (
   <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
@@ -28,28 +28,28 @@ const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+  Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
 };
 
 const features = [
-  { Icon: Icons.QrCode, title: 'Order via QR Code', desc: 'Pelanggan scan QR di meja, pesan dari HP sendiri tanpa install aplikasi. Pesanan langsung masuk ke dashboard kasir.' },
-  { Icon: Icons.Chef, title: 'Kitchen Display System', desc: 'Layar dapur khusus untuk koki. Pesanan muncul otomatis, tidak ada lagi kertas hilang atau salah baca.' },
-  { Icon: Icons.Wallet, title: 'QRIS Dinamis Otomatis', desc: 'Cetak bill dengan QRIS yang nominalnya sudah terisi otomatis. Pelanggan scan sekali, langsung bayar.' },
-  { Icon: Icons.Chart, title: 'Laporan & Analitik', desc: 'Omset harian, menu terlaris, jam sibuk, dan status pesanan dalam satu dashboard. Export CSV kapan saja.' },
+  { Icon: Icons.QrCode, title: 'Self-Order via QR', desc: 'Pelanggan memindai QR di meja, memesan langsung dari HP mereka. Tanpa antre, tanpa perlu install aplikasi.' },
+  { Icon: Icons.Chef, title: 'Kitchen Display System', desc: 'Layar khusus dapur yang menampilkan antrean pesanan secara real-time. Mencegah kertas pesanan hilang.' },
+  { Icon: Icons.Wallet, title: 'QRIS Dinamis', desc: 'Cetak struk dengan QRIS yang nominalnya sudah terisi otomatis. Pelanggan tinggal scan dan bayar.' },
+  { Icon: Icons.Chart, title: 'Laporan Instan', desc: 'Pantau omset harian, menu terlaris, dan performa caffe Anda. Ekspor laporan ke CSV untuk pembukuan.' },
 ];
 
 const steps = [
-  { num: '01', title: 'Daftar & Setup', desc: 'Buat akun kafe dalam 2 menit. Upload logo, banner, dan daftar menu Anda.' },
-  { num: '02', title: 'Cetak QR Meja', desc: 'Generate dan cetak QR code untuk setiap meja. Tempel di meja, selesai.' },
-  { num: '03', title: 'Mulai Jualan', desc: 'Pelanggan pesan sendiri, kasir fokus layani, koki lihat di layar dapur.' },
+  { num: '01', title: 'Daftar & Atur Profil', desc: 'Buat akun, unggah logo, dan masukkan daftar menu caffe Anda dalam hitungan menit.' },
+  { num: '02', title: 'Cetak QR Meja', desc: 'Generate kode QR untuk setiap meja dan letakkan di atas meja pelanggan.' },
+  { num: '03', title: 'Operasional Otomatis', desc: 'Pesanan masuk ke kasir dan dapur secara langsung. Fokus pada pelayanan, bukan pencatatan.' },
 ];
 
 const faqs = [
-  { q: 'Apakah bisa pakai QRIS kafe saya sendiri?', a: 'Ya! Anda cukup paste string QRIS statis dari bank/e-wallet Anda (DANA, BCA, Mandiri, GoPay, dll) di menu Pengaturan. Sistem otomatis akan generate QRIS dinamis dengan nominal pesanan.' },
-  { q: 'Apakah butuh printer thermal khusus?', a: 'Tidak wajib. Sistem bisa print via printer biasa (A4/A5) atau printer thermal Bluetooth 58mm/80mm.' },
-  { q: 'Berapa lama waktu setup?', a: 'Rata-rata 5-10 menit. Anda hanya perlu upload menu, cetak QR meja, dan siap menerima pesanan pertama di hari yang sama.' },
-  { q: 'Apakah ada biaya tersembunyi?', a: 'Tidak ada. Harga sudah termasuk semua fitur. Tanpa biaya setup, tanpa biaya per transaksi, tanpa biaya tersembunyi.' },
-  { q: 'Bagaimana cara pembayarannya?', a: 'Setelah trial 14 hari selesai, kami akan kirim invoice via WhatsApp. Anda bisa bayar via transfer bank atau QRIS.' },
-  { q: 'Bisa cancel kapan saja?', a: 'Tentu. Tidak ada kontrak minimum, tidak ada biaya penalti. Data Anda tetap tersimpan 30 hari setelah cancel.' },
+  { q: 'Apakah bisa menggunakan QRIS caffe saya sendiri?', a: 'Ya. Anda hanya perlu memasukkan string QRIS statis milik caffe Anda di menu Pengaturan. Sistem NexaFlow akan mengubahnya menjadi QRIS dinamis dengan nominal tagihan yang sesuai pesanan.' },
+  { q: 'Apakah butuh perangkat keras (hardware) khusus?', a: 'Tidak. NexaFlow berbasis cloud (web). Anda bisa mengakses Dashboard Kasir dan Dapur melalui browser di Laptop, PC, Tablet, maupun Smartphone.' },
+  { q: 'Berapa lama proses setup-nya?', a: 'Sangat cepat. Rata-rata pemilik caffe hanya butuh 10-15 menit untuk memasukkan menu, mencetak QR, dan siap menerima pesanan pertama.' },
+  { q: 'Apakah ada biaya tersembunyi atau komisi?', a: 'Tidak ada. Biaya langganan bersifat flat per bulan. Kami tidak memotong komisi dari setiap transaksi penjualan Anda.' },
+  { q: 'Bagaimana sistem pembayarannya?', a: 'Anda mendapatkan masa uji coba (trial) gratis. Setelahnya, Anda dapat memperpanjang langganan secara manual via WhatsApp (Transfer Bank / QRIS).' },
 ];
 
 export default function LandingPage() {
@@ -63,45 +63,33 @@ export default function LandingPage() {
   const scrollTo = (id) => { setMobileOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB] text-[#3A2A20] font-sans overflow-x-hidden selection:bg-[#3A2A20]/20 selection:text-[#3A2A20]">
+    <div className="min-h-screen bg-[#F4EFE9] text-[#3A2A20] font-sans overflow-x-hidden selection:bg-[#3A2A20]/20 selection:text-[#3A2A20]">
       
-      {/* ============ BACKGROUND ANIMASI CONSTELLATION (PRESISI TINGGI) ============ */}
+      {/* ============ BACKGROUND ANIMASI (NETWORK CONSTELLATION PERSIS SEPERTI LOGIN) ============ */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="network-pattern" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
+              <circle cx="40" cy="40" r="2.5" fill="#D3C8BB" />
+              <circle cx="160" cy="80" r="2" fill="#D3C8BB" />
+              <circle cx="100" cy="160" r="3" fill="#D3C8BB" />
+              <circle cx="20" cy="120" r="2" fill="#D3C8BB" />
+              <circle cx="180" cy="180" r="2" fill="#D3C8BB" />
+              <circle cx="80" cy="10" r="1.5" fill="#D3C8BB" />
+              <path d="M40 40 L160 80 M160 80 L100 160 M100 160 L20 120 M20 120 L40 40 M100 160 L180 180 M40 40 L80 10" stroke="#D3C8BB" strokeWidth="1" opacity="0.6"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#network-pattern)" />
+        </svg>
+        {/* Animasi garis bergerak halus */}
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_48%,rgba(58,42,32,0.03)_49%,rgba(58,42,32,0.03)_51%,transparent_52%)] bg-[length:100px_100px] animate-[pan_60s_linear_infinite]"></div>
+      </div>
       <style dangerouslySetInnerHTML={{__html: `
-        .constellation-bg {
-          position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.6;
-          background-image: 
-            radial-gradient(circle at 15% 20%, #E3DCD1 1.5px, transparent 1.5px),
-            radial-gradient(circle at 85% 15%, #E3DCD1 1.5px, transparent 1.5px),
-            radial-gradient(circle at 50% 50%, #E3DCD1 2px, transparent 2px),
-            radial-gradient(circle at 75% 80%, #E3DCD1 1.5px, transparent 1.5px),
-            radial-gradient(circle at 20% 85%, #E3DCD1 1.5px, transparent 1.5px);
-          background-size: 100% 100%;
-        }
-        .constellation-lines {
-          position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.15;
-          background-image: linear-gradient(45deg, transparent 48%, #3A2A20 49%, #3A2A20 51%, transparent 52%),
-                            linear-gradient(-45deg, transparent 48%, #3A2A20 49%, #3A2A20 51%, transparent 52%);
-          background-size: 120px 120px;
-          animation: panNetwork 40s linear infinite;
-        }
-        @keyframes panNetwork {
-          0% { background-position: 0 0; }
-          100% { background-position: 240px 240px; }
-        }
-        .node-pulse {
-          animation: pulse 4s ease-in-out infinite alternate;
-        }
-        @keyframes pulse {
-          0% { transform: scale(0.9); opacity: 0.5; }
-          100% { transform: scale(1.1); opacity: 1; }
-        }
+        @keyframes pan { 0% { background-position: 0 0; } 100% { background-position: 200px 200px; } }
       `}} />
 
-      <div className="constellation-bg"></div>
-      <div className="constellation-lines"></div>
-
       {/* ============ NAVBAR ============ */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#F5F2EB]/90 backdrop-blur-md border-b border-[#E3DCD1]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#F4EFE9]/90 backdrop-blur-md border-b border-[#E3DCD1]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
@@ -114,14 +102,14 @@ export default function LandingPage() {
 
             <nav className="hidden md:flex items-center gap-2 relative z-10">
               <button onClick={() => scrollTo('fitur')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Fitur</button>
-              <button onClick={() => scrollTo('cara-kerja')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Cara Kerja</button>
+              <button onClick={() => scrollTo('tampilan')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Pratinjau</button>
               <button onClick={() => scrollTo('harga')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Harga</button>
               <button onClick={() => scrollTo('faq')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">FAQ</button>
             </nav>
 
             <div className="flex items-center gap-3 relative z-10">
               <Link href="/login" className="hidden sm:inline-flex px-5 py-2.5 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Masuk</Link>
-              <Link href="/register" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F5F2EB] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
+              <Link href="/register" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F4EFE9] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
                 Coba Gratis <Icons.ArrowRight />
               </Link>
               <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#3A2A20] rounded-lg hover:bg-[#E3DCD1]">
@@ -130,18 +118,6 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-
-        {mobileOpen && (
-          <div className="md:hidden bg-[#F5F2EB] border-t border-[#E3DCD1] px-6 py-4 space-y-2 absolute w-full z-50 shadow-xl">
-            {[['fitur', 'Fitur'], ['cara-kerja', 'Cara Kerja'], ['harga', 'Harga'], ['faq', 'FAQ']].map(([id, label]) => (
-              <button key={id} onClick={() => scrollTo(id)} className="w-full text-left px-4 py-3 rounded-xl text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50">{label}</button>
-            ))}
-            <div className="pt-4 border-t border-[#E3DCD1] flex flex-col gap-2">
-              <Link href="/login" className="px-4 py-3 rounded-xl text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50">Masuk</Link>
-              <Link href="/register" className="px-4 py-3 rounded-xl text-sm font-bold text-[#F5F2EB] bg-[#3A2A20] text-center shadow-md">Daftar Gratis</Link>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* ============ HERO SECTION ============ */}
@@ -149,7 +125,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E3DCD1]/40 border border-[#D3C8BB] text-[#3A2A20] text-[10px] font-black tracking-[0.15em] uppercase mb-8 shadow-sm backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E3DCD1]/50 border border-[#D3C8BB] text-[#3A2A20] text-[10px] font-black tracking-[0.15em] uppercase mb-8 shadow-sm backdrop-blur-sm">
                 <Icons.Sparkles />
                 Langkah Baru Bisnis Anda
               </div>
@@ -164,20 +140,20 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F5F2EB] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
+                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">
                   Mulai Gratis 14 Hari <Icons.ArrowRight />
                 </Link>
-                <button onClick={() => scrollTo('fitur')} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white border border-[#D3C8BB] text-[#3A2A20] font-bold text-base hover:bg-[#F5F2EB] shadow-sm hover:shadow-md transition-all">
-                  Lihat Fitur
+                <button onClick={() => scrollTo('tampilan')} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-[#D3C8BB] text-[#3A2A20] font-bold text-base hover:bg-white shadow-sm hover:shadow-md transition-all">
+                  Lihat Pratinjau
                 </button>
               </div>
             </div>
 
-            {/* Mockup Dashboard */}
+            {/* Mockup Utama di Hero (Kasir) */}
             <div className="relative hidden lg:block">
               <div className="absolute -inset-4 bg-[#3A2A20]/5 rounded-[2rem] blur-xl"></div>
               <div className="relative rounded-3xl overflow-hidden border border-[#D3C8BB] bg-white shadow-2xl">
-                <div className="bg-[#F5F2EB] px-5 py-4 flex items-center gap-2 border-b border-[#E3DCD1]">
+                <div className="bg-[#F4EFE9] px-5 py-4 flex items-center gap-2 border-b border-[#E3DCD1]">
                   <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
                   <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
                   <div className="w-3 h-3 rounded-full bg-[#D3C8BB]"></div>
@@ -187,7 +163,7 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-[#8C7A6B] uppercase tracking-widest mb-1">Dashboard Kasir</p>
-                      <p className="text-xl font-black text-[#3A2A20]">Kopi Senja</p>
+                      <p className="text-xl font-black text-[#3A2A20]">Caffe Premium</p>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -195,22 +171,10 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-[#F5F2EB] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Pesanan</p><p className="text-2xl font-black text-[#3A2A20]">24</p></div>
-                    <div className="bg-[#F5F2EB] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Dimasak</p><p className="text-2xl font-black text-[#3A2A20]">7</p></div>
+                    <div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Pesanan</p><p className="text-2xl font-black text-[#3A2A20]">24</p></div>
+                    <div className="bg-[#F4EFE9] rounded-xl p-4 border border-[#E3DCD1]"><p className="text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Dimasak</p><p className="text-2xl font-black text-[#3A2A20]">7</p></div>
                     <div className="bg-[#3A2A20] rounded-xl p-4 shadow-md"><p className="text-[10px] font-bold text-[#D3C8BB] uppercase mb-1">Omset</p><p className="text-xl font-black text-white">2.4jt</p></div>
                   </div>
-                  {[{ t: 'Meja 3', n: 'Rian', p: 'Rp 85.000', s: 'Dimasak' }, { t: 'Meja 7', n: 'Sinta', p: 'Rp 124.000', s: 'Siap' }].map((o, i) => (
-                    <div key={i} className="flex items-center justify-between bg-white rounded-xl p-4 border border-[#E3DCD1] shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-[#F5F2EB] border border-[#E3DCD1] flex items-center justify-center text-sm font-black text-[#3A2A20]">{o.t.split(' ')[1]}</div>
-                        <div>
-                          <p className="text-sm font-bold text-[#3A2A20]">{o.t} · {o.n}</p>
-                          <p className="text-xs text-[#8C7A6B]">{o.p}</p>
-                        </div>
-                      </div>
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md ${o.s === 'Dimasak' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{o.s}</span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -218,15 +182,101 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ STATS ============ */}
-      <section className="relative px-6 lg:px-8 py-14 border-y border-[#E3DCD1] bg-white/60 backdrop-blur-md z-10">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          {[{ v: '2 menit', l: 'Setup kafe' }, { v: 'Real-time', l: 'Sync pesanan' }, { v: '100%', l: 'Cloud-based' }, { v: '24/7', l: 'Support WA' }].map((s, i) => (
-            <div key={i} className="text-center">
-              <p className="text-3xl font-black text-[#3A2A20]">{s.v}</p>
-              <p className="text-xs font-bold text-[#8C7A6B] mt-1 uppercase tracking-widest">{s.l}</p>
+      {/* ============ PRATINJAU TAMPILAN (BARU & PROFESIONAL) ============ */}
+      <section id="tampilan" className="px-6 lg:px-8 py-24 relative z-10 bg-white/40 border-y border-[#E3DCD1] backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
+              Desain Presisi untuk <span className="text-[#8C7A6B]">Setiap Peran</span>
+            </h2>
+            <p className="text-[#7A6A5F] text-lg font-medium">Antarmuka yang bersih, cepat, dan sangat mudah digunakan oleh siapa saja.</p>
+          </div>
+
+          <div className="space-y-16">
+            
+            {/* 1. Tampilan Pelanggan (Mobile) */}
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="order-2 md:order-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-5">Pelanggan</div>
+                <h3 className="text-3xl font-black text-[#3A2A20] mb-4">Pengalaman Pesan Mandiri (Self-Order)</h3>
+                <p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">
+                  Pelanggan hanya perlu memindai QR Code di meja. Tampilan mobile-first memudahkan mereka memilih menu, menambahkan catatan, dan melihat total pembayaran secara transparan.
+                </p>
+                <ul className="space-y-3">
+                  {['Keranjang melayang (Sticky Cart)', 'Perhitungan PPN otomatis', 'Konfirmasi pesanan 1 klik'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="order-1 md:order-2 flex justify-center">
+                <div className="w-[300px] h-[600px] bg-white rounded-[3rem] border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative">
+                  <div className="absolute top-0 w-full h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-16 h-1 bg-white/30 rounded-full"></div></div>
+                  <div className="p-5 pt-10 h-full flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                      <div><p className="text-[10px] font-bold text-[#8C7A6B] uppercase">Meja 04</p><h4 className="text-xl font-black text-[#3A2A20]">Caffe Premium</h4></div>
+                      <div className="w-8 h-8 rounded-full bg-[#F4EFE9] border border-[#E3DCD1] flex items-center justify-center"><Icons.Menu/></div>
+                    </div>
+                    <div className="flex-1 space-y-4">
+                      <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm">
+                        <div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div>
+                        <div><p className="font-bold text-sm text-[#3A2A20]">Es Kopi Susu</p><p className="text-[10px] text-[#8C7A6B]">Kopi</p><p className="font-black text-[#3A2A20] mt-1">Rp 22.000</p></div>
+                      </div>
+                      <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm">
+                        <div className="w-14 h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div>
+                        <div><p className="font-bold text-sm text-[#3A2A20]">Croissant Butter</p><p className="text-[10px] text-[#8C7A6B]">Cemilan</p><p className="font-black text-[#3A2A20] mt-1">Rp 18.000</p></div>
+                      </div>
+                    </div>
+                    <div className="bg-[#3A2A20] rounded-2xl p-4 text-white mt-4 shadow-lg">
+                      <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-[#D3C8BB]">2 Item</span><span className="text-sm font-black">Rp 40.000</span></div>
+                      <div className="bg-white/10 text-center py-2.5 rounded-xl text-xs font-bold">Pesan Sekarang</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
+
+            {/* 2. Tampilan Dapur (KDS) */}
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="flex justify-center">
+                <div className="w-full max-w-lg bg-[#1A1A1A] rounded-2xl border border-[#333] shadow-2xl overflow-hidden">
+                  <div className="bg-[#222] px-4 py-3 border-b border-[#333] flex justify-between items-center">
+                    <div className="flex items-center gap-2"><Icons.Chef className="text-white"/><span className="text-white font-bold text-sm">Kitchen Display (KDS)</span></div>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Live</span>
+                  </div>
+                  <div className="p-4 grid grid-cols-2 gap-4">
+                    <div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-amber-500">
+                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 04</span><span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded">DIMASAK</span></div>
+                      <p className="text-xs text-gray-400 mb-3">Budi · 10:45</p>
+                      <ul className="space-y-2 text-sm text-white font-medium">
+                        <li className="flex justify-between"><span>1x Es Kopi Susu</span></li>
+                        <li className="flex justify-between"><span>1x Croissant</span></li>
+                      </ul>
+                    </div>
+                    <div className="bg-[#2A2A2A] rounded-xl p-4 border-l-4 border-emerald-500 opacity-60">
+                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-lg">Meja 09</span><span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">SIAP</span></div>
+                      <p className="text-xs text-gray-400 mb-3">Sinta · 10:50</p>
+                      <ul className="space-y-2 text-sm text-gray-300 font-medium line-through">
+                        <li className="flex justify-between"><span>2x Matcha Latte</span></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-5">Koki / Dapur</div>
+                <h3 className="text-3xl font-black text-[#3A2A20] mb-4">Layar Dapur Real-Time (KDS)</h3>
+                <p className="text-[#7A6A5F] text-lg leading-relaxed mb-6 font-medium">
+                  Hilangkan kebisingan suara teriakan pesanan atau kertas struk yang hilang. Koki melihat daftar pesanan masuk langsung di layar TV atau Tablet.
+                </p>
+                <ul className="space-y-3">
+                  {['Tema Gelap (Dark Mode) nyaman untuk mata', 'Notifikasi suara otomatis saat order masuk', 'Tombol Undo jika salah klik'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 
@@ -235,15 +285,15 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Semua yang Kafe Anda Butuhkan,<br className="hidden sm:block" />
+              Semua yang Caffe Anda Butuhkan,<br className="hidden sm:block" />
               <span className="text-[#8C7A6B]">dalam Satu Platform</span>
             </h2>
-            <p className="text-[#7A6A5F] text-lg font-medium">Dirancang khusus untuk kafe & restoran Indonesia. Tanpa perlu training rumit.</p>
+            <p className="text-[#7A6A5F] text-lg font-medium">Dirancang khusus untuk operasional yang cepat dan rapi.</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             {features.map((f, i) => (
               <div key={i} className="group relative rounded-3xl p-8 bg-white border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F5F2EB] border border-[#E3DCD1] mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#E3DCD1] mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]">
                   <f.Icon />
                 </div>
                 <h3 className="text-xl font-black text-[#3A2A20] mb-3">{f.title}</h3>
@@ -259,16 +309,15 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Mulai Jualan dalam <span className="text-[#8C7A6B]">3 Langkah</span>
+              Mulai Beroperasi dalam <span className="text-[#8C7A6B]">3 Langkah</span>
             </h2>
-            <p className="text-[#7A6A5F] text-lg font-medium">Dari daftar sampai pesanan pertama dalam hitungan menit.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 relative">
             <div className="hidden md:block absolute top-20 left-10 right-10 h-0.5 bg-gradient-to-r from-transparent via-[#D3C8BB] to-transparent"></div>
             {steps.map((s, i) => (
               <div key={i} className="relative">
                 <div className="relative bg-white border border-[#E3DCD1] rounded-3xl p-8 hover:border-[#8C7A6B] shadow-sm hover:shadow-md transition-all text-center md:text-left">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F5F2EB] border border-[#D3C8BB] text-[#3A2A20] font-black text-xl shadow-sm mb-6">{s.num}</div>
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#F4EFE9] border border-[#D3C8BB] text-[#3A2A20] font-black text-xl shadow-sm mb-6">{s.num}</div>
                   <h3 className="text-xl font-black text-[#3A2A20] mb-3">{s.title}</h3>
                   <p className="text-sm text-[#7A6A5F] leading-relaxed font-medium">{s.desc}</p>
                 </div>
@@ -283,16 +332,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">
-              Satu Harga, <span className="text-[#8C7A6B]">Semua Fitur</span>
+              Investasi Terjangkau, <span className="text-[#8C7A6B]">Hasil Maksimal</span>
             </h2>
-            <p className="text-[#7A6A5F] text-lg font-medium">Tidak ada tier rumit. Tidak ada biaya tersembunyi.</p>
           </div>
           <div className="relative max-w-md mx-auto">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-[#D3C8BB] to-[#8C7A6B] rounded-[2rem] blur-lg opacity-50"></div>
             <div className="relative rounded-[2rem] bg-white border border-[#3A2A20]/20 overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 bg-[#3A2A20] text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-bl-2xl shadow-md">
-                ⭐ Paling Populer
-              </div>
+              <div className="absolute top-0 right-0 bg-[#3A2A20] text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-bl-2xl shadow-md">⭐ Paling Populer</div>
               <div className="p-10 sm:p-12">
                 <p className="text-sm font-bold text-[#8C7A6B] uppercase tracking-widest mb-3">NexaFlow Pro</p>
                 <div className="flex items-baseline gap-1 mb-2">
@@ -326,7 +372,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight">
-              Pertanyaan yang Sering Ditanyakan
+              Pertanyaan Umum
             </h2>
           </div>
           <div className="space-y-4">
@@ -348,17 +394,17 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="relative rounded-[2rem] overflow-hidden bg-[#3A2A20] border border-[#3A2A20] p-12 sm:p-20 text-center shadow-2xl">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-            <h2 className="text-4xl sm:text-5xl font-black text-[#F5F2EB] tracking-tight leading-tight mb-6">
-              Siap Membawa Kafe Anda<br /><span className="text-[#D3C8BB]">ke Level Berikutnya?</span>
+            <h2 className="text-4xl sm:text-5xl font-black text-[#F4EFE9] tracking-tight leading-tight mb-6">
+              Siap Membawa Caffe Anda<br /><span className="text-[#D3C8BB]">ke Level Berikutnya?</span>
             </h2>
             <p className="text-[#D3C8BB] text-lg mb-10 max-w-xl mx-auto font-medium">
-              Bergabung dengan kafe-kafe modern yang sudah beralih ke NexaFlow. Gratis 14 hari, tanpa risiko.
+              Bergabung dengan caffe-caffe modern yang sudah beralih ke NexaFlow. Gratis 14 hari, tanpa risiko.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#F5F2EB] text-[#3A2A20] font-black text-base shadow-xl hover:-translate-y-0.5 transition-all">
+              <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#F4EFE9] text-[#3A2A20] font-black text-base shadow-xl hover:-translate-y-0.5 transition-all">
                 Coba Gratis Sekarang <Icons.ArrowRight />
               </Link>
-              <button onClick={openWhatsApp} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-transparent border-2 border-[#8C7A6B] text-[#F5F2EB] font-bold text-base hover:bg-white/5 transition-all">
+              <button onClick={openWhatsApp} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-transparent border-2 border-[#8C7A6B] text-[#F4EFE9] font-bold text-base hover:bg-white/5 transition-all">
                 <Icons.WhatsApp /> Chat via WhatsApp
               </button>
             </div>
@@ -367,7 +413,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F5F2EB] relative z-10">
+      <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F4EFE9] relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
@@ -379,7 +425,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <p className="text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">
-                Sistem kasir modern untuk kafe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.
+                Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.
               </p>
             </div>
             <div>
@@ -407,9 +453,9 @@ export default function LandingPage() {
       </footer>
 
       {/* ============ FLOATING WHATSAPP ============ */}
-      <button onClick={openWhatsApp} className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#3A2A20] text-[#F5F2EB] flex items-center justify-center shadow-2xl shadow-[#3A2A20]/40 hover:scale-110 transition-transform" aria-label="Chat WhatsApp">
+      <button onClick={openWhatsApp} className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#3A2A20] text-[#F4EFE9] flex items-center justify-center shadow-2xl shadow-[#3A2A20]/40 hover:scale-110 transition-transform" aria-label="Chat WhatsApp">
         <Icons.WhatsApp />
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#F5F2EB] animate-pulse"></span>
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#F4EFE9] animate-pulse"></span>
       </button>
 
     </div>
