@@ -28,7 +28,6 @@ const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
-  Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
 };
 
 const features = [
@@ -65,27 +64,35 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F4EFE9] text-[#3A2A20] font-sans overflow-x-hidden selection:bg-[#3A2A20]/20 selection:text-[#3A2A20]">
       
-      {/* ============ BACKGROUND ANIMASI (NETWORK CONSTELLATION PERSIS SEPERTI LOGIN) ============ */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="network-pattern" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
-              <circle cx="40" cy="40" r="2.5" fill="#D3C8BB" />
-              <circle cx="160" cy="80" r="2" fill="#D3C8BB" />
-              <circle cx="100" cy="160" r="3" fill="#D3C8BB" />
-              <circle cx="20" cy="120" r="2" fill="#D3C8BB" />
-              <circle cx="180" cy="180" r="2" fill="#D3C8BB" />
-              <circle cx="80" cy="10" r="1.5" fill="#D3C8BB" />
-              <path d="M40 40 L160 80 M160 80 L100 160 M100 160 L20 120 M20 120 L40 40 M100 160 L180 180 M40 40 L80 10" stroke="#D3C8BB" strokeWidth="1" opacity="0.6"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#network-pattern)" />
-        </svg>
-        {/* Animasi garis bergerak halus */}
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_48%,rgba(58,42,32,0.03)_49%,rgba(58,42,32,0.03)_51%,transparent_52%)] bg-[length:100px_100px] animate-[pan_60s_linear_infinite]"></div>
+      {/* ============ ANIMASI BACKGROUND CONSTELLATION (BERGERAK) ============ */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Layer 1: Garis Diagonal Bergerak */}
+        <div className="absolute inset-0 opacity-[0.15] bg-[linear-gradient(45deg,transparent_45%,#3A2A20_49%,#3A2A20_51%,transparent_55%)] bg-[size:120px_120px] animate-[panBg_20s_linear_infinite]"></div>
+        <div className="absolute inset-0 opacity-[0.15] bg-[linear-gradient(-45deg,transparent_45%,#3A2A20_49%,#3A2A20_51%,transparent_55%)] bg-[size:120px_120px] animate-[panBgReverse_25s_linear_infinite]"></div>
+        
+        {/* Layer 2: Titik-titik Bergerak */}
+        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#D3C8BB_2px,transparent_2px)] bg-[size:40px_40px] animate-[panBg_15s_linear_infinite]"></div>
+        
+        {/* Layer 3: Node Bulat Melayang */}
+        <div className="absolute top-[20%] left-[15%] w-6 h-6 bg-[#D3C8BB] rounded-full blur-[2px] animate-[floatNode_8s_ease-in-out_infinite]"></div>
+        <div className="absolute top-[60%] left-[80%] w-10 h-10 bg-[#D3C8BB]/50 rounded-full blur-[4px] animate-[floatNode_12s_ease-in-out_infinite_reverse]"></div>
+        <div className="absolute top-[80%] left-[30%] w-4 h-4 bg-[#3A2A20]/30 rounded-full blur-[1px] animate-[floatNode_10s_ease-in-out_infinite]"></div>
+        <div className="absolute top-[30%] right-[20%] w-8 h-8 bg-[#D3C8BB]/40 rounded-full blur-[3px] animate-[floatNode_14s_ease-in-out_infinite_reverse]"></div>
       </div>
+
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes pan { 0% { background-position: 0 0; } 100% { background-position: 200px 200px; } }
+        @keyframes panBg {
+          0% { background-position: 0 0; }
+          100% { background-position: 240px 240px; }
+        }
+        @keyframes panBgReverse {
+          0% { background-position: 0 0; }
+          100% { background-position: -240px 240px; }
+        }
+        @keyframes floatNode {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          50% { transform: translateY(-40px) translateX(20px); }
+        }
       `}} />
 
       {/* ============ NAVBAR ============ */}
@@ -182,7 +189,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ PRATINJAU TAMPILAN (BARU & PROFESIONAL) ============ */}
+      {/* ============ PRATINJAU TAMPILAN ============ */}
       <section id="tampilan" className="px-6 lg:px-8 py-24 relative z-10 bg-white/40 border-y border-[#E3DCD1] backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -341,11 +348,14 @@ export default function LandingPage() {
               <div className="absolute top-0 right-0 bg-[#3A2A20] text-white text-[10px] font-black uppercase tracking-widest px-5 py-2 rounded-bl-2xl shadow-md">⭐ Paling Populer</div>
               <div className="p-10 sm:p-12">
                 <p className="text-sm font-bold text-[#8C7A6B] uppercase tracking-widest mb-3">NexaFlow Pro</p>
+                
+                {/* REVISI HARGA MENJADI 250.000 */}
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-2xl font-bold text-[#8C7A6B]">Rp</span>
-                  <span className="text-6xl font-black text-[#3A2A20] tracking-tight">149rb</span>
+                  <span className="text-6xl font-black text-[#3A2A20] tracking-tight">250.000</span>
                   <span className="text-lg font-semibold text-[#8C7A6B]">/bulan</span>
                 </div>
+
                 <p className="text-xs font-bold text-emerald-600 mb-8">🎁 Gratis 14 hari pertama</p>
 
                 <div className="space-y-4 mb-10 pt-8 border-t border-[#E3DCD1]">
