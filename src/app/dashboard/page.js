@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import OnboardingWizard from "./OnboardingWizard";
 import { useRouter } from 'next/navigation';
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -791,6 +792,11 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* ========================================================= */}
+      {/* ONBOARDING WIZARD - Panduan Setup untuk Kafe Baru         */}
+      {/* ========================================================= */}
+      <OnboardingWizard tenantId={tenantId} onNavigate={(tab) => setActiveTab(tab)} />
 
       {/* MODAL EDIT MENU */}
       {isMenuModalOpen && (
