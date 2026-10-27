@@ -27,7 +27,7 @@ const extractDominantColor = (imgUrl) => {
         if (count > 0) {
           r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
           document.documentElement.style.setProperty('--primary-color', `rgb(${r}, ${g}, ${b})`);
-          document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.15)`); // Sedikit lebih tegas
+          document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.15)`);
           const darkR = Math.max(0, r - 30); const darkG = Math.max(0, g - 30); const darkB = Math.max(0, b - 30);
           document.documentElement.style.setProperty('--primary-dark', `rgb(${darkR}, ${darkG}, ${darkB})`);
         } else { throw new Error('Fallback'); }
@@ -53,11 +53,9 @@ const printHTML = (htmlContent) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
   document.body.appendChild(iframe);
-  
   const doc = iframe.contentWindow.document;
   doc.open(); doc.write(htmlContent); doc.close();
-
-  // FUNGSI UNTUK MENUNGGU GAMBAR (QRIS & LOGO) SELESAI DIMUAT
+  
   const waitForImages = () => {
     const images = iframe.contentWindow.document.images;
     if (images.length === 0) {
@@ -68,12 +66,10 @@ const printHTML = (htmlContent) => {
       }, 500);
       return;
     }
-
     let loadedCount = 0;
     const onImageLoad = () => {
       loadedCount++;
       if (loadedCount === images.length) {
-        // Jika semua gambar sudah selesai dimuat, tunggu sedikit lalu print
         setTimeout(() => {
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
@@ -81,19 +77,14 @@ const printHTML = (htmlContent) => {
         }, 500);
       }
     };
-
-    // Pasang listener untuk setiap gambar
     for (let i = 0; i < images.length; i++) {
-      if (images[i].complete) {
-        onImageLoad();
-      } else {
+      if (images[i].complete) { onImageLoad(); } 
+      else {
         images[i].addEventListener('load', onImageLoad);
-        images[i].addEventListener('error', onImageLoad); // Tetap lanjut print jika gambar gagal dimuat
+        images[i].addEventListener('error', onImageLoad);
       }
     }
   };
-
-  // Tunggu sebentar agar DOM siap, lalu cek gambar
   setTimeout(waitForImages, 300);
 };
 
@@ -119,6 +110,7 @@ const Icons = {
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  Receipt: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>,
 };
 
 function crc16(str) {
@@ -163,7 +155,7 @@ export default function DashboardPage() {
   const [tables, setTables] = useState([]);
   const [queueFilter, setQueueFilter] = useState('active');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [currentMenu, setCurrentMenu] = useState({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' });
+  const [currentMenu, setCurrentMenu] = useState({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: '' });
   const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11 });
   const [newTableNum, setNewTableNum] = useState('');
   const [todayStr, setTodayStr] = useState('');
@@ -173,7 +165,6 @@ export default function DashboardPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   
-  // STATE UNTUK TEMA
   const [theme, setTheme] = useState('light');
 
   const [reportNow, setReportNow] = useState(null);
@@ -208,7 +199,6 @@ export default function DashboardPage() {
 
   const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
 
-  // LOGIKA TEMA
   useEffect(() => {
     const savedTheme = localStorage.getItem('nexaflow_theme') || 'light';
     setTheme(savedTheme);
@@ -425,9 +415,22 @@ export default function DashboardPage() {
   const handleSaveMenu = async (e) => {
     e.preventDefault();
     const isEdit = !!currentMenu.id;
-    const payload = { tenant_id: tenantId, name: currentMenu.name, category: currentMenu.category, price: parseFloat(currentMenu.price), description: currentMenu.desc, status: currentMenu.status, image_url: currentMenu.image_url };
-    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id); else await supabase.from('menus').insert([payload]);
-    setIsMenuModalOpen(false); fetchMenus(tenantId); showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
+    const stockValue = currentMenu.stock === '' || currentMenu.stock === null || currentMenu.stock === undefined ? null : parseInt(currentMenu.stock);
+    const payload = { 
+      tenant_id: tenantId, 
+      name: currentMenu.name, 
+      category: currentMenu.category, 
+      price: parseFloat(currentMenu.price), 
+      description: currentMenu.desc, 
+      status: currentMenu.status, 
+      image_url: currentMenu.image_url,
+      stock: stockValue
+    };
+    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id); 
+    else await supabase.from('menus').insert([payload]);
+    setIsMenuModalOpen(false); 
+    fetchMenus(tenantId); 
+    showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
   };
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); showToast('Menu dihapus', 'success'); }, true);
@@ -454,6 +457,104 @@ export default function DashboardPage() {
     const { error } = await supabase.from('menus').update({ status: newStatus }).eq('id', menu.id);
     if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
     fetchMenus(tenantId); showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
+  };
+
+  // ============ LAPORAN HARIAN (END OF DAY) ============
+  const printDailyReport = () => {
+    const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString());
+    const paidOrders = todayOrders.filter(o => o.payment_status === 'paid');
+    
+    const totalRevenue = paidOrders.reduce((s, o) => s + Number(o.total_price || 0), 0);
+    const totalCash = paidOrders.filter(o => o.payment_method !== 'qris').reduce((s, o) => s + Number(o.total_price || 0), 0);
+    const totalQris = paidOrders.filter(o => o.payment_method === 'qris').reduce((s, o) => s + Number(o.total_price || 0), 0);
+
+    // Menu terjual
+    const menuSales = {};
+    paidOrders.forEach(o => {
+      (o.items || []).forEach(item => {
+        const key = item.name;
+        if (!menuSales[key]) menuSales[key] = { qty: 0, revenue: 0 };
+        menuSales[key].qty += item.qty;
+        menuSales[key].revenue += item.price * item.qty;
+      });
+    });
+
+    // Menu yang stoknya di-track
+    const stockMenus = menus.filter(m => m.stock !== null && m.stock !== undefined);
+
+    const html = `
+      <html><head><title>Laporan Harian - ${settings.name}</title><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 11px; padding: 10px; color: #000; max-width: 80mm; margin: 0 auto; line-height: 1.4; }
+        .center { text-align: center; } .bold { font-weight: bold; } h1 { font-size: 14px; margin-bottom: 2px; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        .line-double { border-top: 2px double #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+        td { padding: 2px 0; vertical-align: top; font-size: 11px; }
+        .right { text-align: right; }
+        .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; background: #000; color: #fff; padding: 3px 6px; margin: 8px 0 4px; letter-spacing: 0.5px; }
+        .menu-item { font-size: 10px; padding: 1px 0; }
+        @media print { body { padding: 5px; } @page { margin: 3mm; } }
+      </style></head><body>
+        <div class="center">
+          <h1>${settings.name || 'Kafe'}</h1>
+          <p style="font-size: 10px;">${settings.address || ''}</p>
+          <div class="line-double"></div>
+          <h1 style="font-size: 12px;">LAPORAN HARIAN</h1>
+          <p style="font-size: 10px;">${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <div class="line-double"></div>
+        </div>
+        
+        <table>
+          <tr><td class="bold">Kasir</td><td class="right">${userEmail}</td></tr>
+          <tr><td class="bold">Total Order</td><td class="right">${todayOrders.length} transaksi</td></tr>
+          <tr><td class="bold">Order Lunas</td><td class="right">${paidOrders.length} transaksi</td></tr>
+        </table>
+
+        <div class="section-title">💰 RINGKASAN UANG</div>
+        <table>
+          <tr><td>Total Omset</td><td class="right bold">${rp(totalRevenue)}</td></tr>
+          <tr><td>- Tunai</td><td class="right">${rp(totalCash)}</td></tr>
+          <tr><td>- QRIS</td><td class="right">${rp(totalQris)}</td></tr>
+        </table>
+
+        ${Object.keys(menuSales).length > 0 ? `
+        <div class="section-title">📊 MENU TERJUAL</div>
+        <table>
+          ${Object.entries(menuSales).map(([name, data]) => `
+            <tr class="menu-item">
+              <td>${name}</td>
+              <td class="right">${data.qty}x</td>
+              <td class="right">${rp(data.revenue)}</td>
+            </tr>
+          `).join('')}
+        </table>
+        ` : ''}
+
+        ${stockMenus.length > 0 ? `
+        <div class="section-title">📦 SISA STOK SAAT INI</div>
+        <table>
+          ${stockMenus.map(m => `
+            <tr class="menu-item">
+              <td>${m.name}</td>
+              <td class="right">Sisa: ${m.stock}</td>
+            </tr>
+          `).join('')}
+        </table>
+        ` : ''}
+
+        <div class="line-double"></div>
+        <div class="center" style="font-size: 9px; margin-top: 8px;">
+          <p>Tanda Tangan Kasir:</p>
+          <br><br><br>
+          <p>_______________________</p>
+          <p class="bold" style="margin-top: 4px;">${userEmail}</p>
+        </div>
+        <div class="line"></div>
+        <p class="center" style="font-size: 8px; margin-top: 6px;">NexaFlow SaaS · ${new Date().toLocaleString('id-ID')}</p>
+      </body></html>
+    `;
+    printHTML(html);
   };
 
   const printBillWithQRIS = (order) => {
@@ -574,10 +675,15 @@ export default function DashboardPage() {
   const getStatusPill = (status) => ({ pending: 'status-pending', cooking: 'status-cooking', ready: 'status-ready', completed: 'status-completed', cancelled: 'status-cancelled' }[status] || 'status-completed');
   const getStatusLabel = (status) => ({ pending: 'Baru', cooking: 'Dimasak', ready: 'Siap', completed: 'Selesai', cancelled: 'Batal' }[status] || status);
   const getTimeBadge = (createdAt) => { if (!nowTick) return null; const mins = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000); if (mins < 0) return null; if (mins < 5) return { mins, cls: 'bg-slate-200 border-slate-300 text-slate-700', pulse: false }; if (mins < 15) return { mins, cls: 'bg-amber-100 border-amber-300 text-amber-800', pulse: false }; return { mins, cls: 'bg-rose-100 border-rose-300 text-rose-800', pulse: true }; };
+  
+  const renderStockBadge = (menu) => {
+    if (menu.stock === null || menu.stock === undefined) return null;
+    const stockNum = parseInt(menu.stock);
+    if (stockNum <= 0) return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-rose-500 text-white shadow-sm border-2 border-rose-600">HABIS</span>;
+    if (stockNum <= 3) return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-amber-400 text-amber-900 shadow-sm border-2 border-amber-500">📦 Sisa {stockNum}</span>;
+    return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-slate-100 text-slate-700 shadow-sm border-2 border-slate-300">📦 Sisa {stockNum}</span>;
+  };
 
-  // ==========================================
-  // BLOKIR JIKA MASA AKTIF HABIS (EXPIRED)
-  // ==========================================
   if (isExpired) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans ${theme === 'light' ? 'bg-[#F4EFE9]' : 'bg-slate-950'}`}>
@@ -607,7 +713,6 @@ export default function DashboardPage() {
     );
   }
 
-  // VARIABEL UNTUK STYLING TEMA (LEBIH TEGAS)
   const bgClass = theme === 'light' ? 'bg-[#F4EFE9]' : 'bg-slate-950';
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -639,7 +744,8 @@ export default function DashboardPage() {
               <button onClick={openKitchenLink} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl shadow-md transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17] shadow-[#2A1F17]/20' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600 shadow-slate-900/20'}`}>🍳 <span className="hidden lg:inline">Layar Dapur</span></button>
               <div className={`hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/50' : realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/50' : 'bg-amber-500/10 border-amber-500/50'}`}><span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span><span className={`text-[11px] font-extrabold ${realtimeStatus === 'online' ? 'text-emerald-600' : realtimeStatus === 'offline' ? 'text-rose-600' : 'text-amber-600'}`}>{realtimeStatus === 'online' ? 'Online' : 'Offline'}</span></div>
               
-              {/* TOMBOL TOGGLE TEMA */}
+              <button onClick={printDailyReport} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl shadow-md transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-emerald-600/20' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-600/20'}`} title="Cetak Laporan Harian"><Icons.Receipt /> <span className="hidden lg:inline">Lap. Harian</span></button>
+
               <button onClick={toggleTheme} className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`} title="Ganti Tema">
                 {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
               </button>
@@ -656,6 +762,7 @@ export default function DashboardPage() {
             {[{ key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrders.length },{ key: 'menu', label: 'Menu', Icon: Icons.Utensils },{ key: 'tables', label: 'Meja', Icon: Icons.Grid },{ key: 'reports', label: 'Laporan', Icon: Icons.Chart },{ key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },].map(({ key, label, Icon, badge }) => (
               <button key={key} onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-extrabold transition-all border-2 ${activeTab === key ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20' : theme === 'light' ? 'text-[#5C4B3E] hover:bg-[#F4EFE9] border-transparent' : 'text-slate-300 hover:bg-slate-800 border-transparent'}`}><Icon /> {label}{badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}</button>
             ))}
+            <button onClick={() => { printDailyReport(); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-extrabold transition-all bg-emerald-600 text-white border-2 border-emerald-700"><Icons.Receipt /> Cetak Laporan Harian</button>
           </div>
         )}
       </header>
@@ -728,10 +835,10 @@ export default function DashboardPage() {
 
           {activeTab === 'menu' && (
             <div className="space-y-5">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><div><h3 className={`font-black text-2xl ${textMainClass}`}>Daftar Menu</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>{filteredMenus.length} dari {menus.length} menu</p></div><button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white px-5 py-2.5 rounded-xl text-sm font-extrabold flex items-center gap-2 shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border-2 border-[var(--primary-dark)]"><Icons.Plus /> Tambah Menu</button></div>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><div><h3 className={`font-black text-2xl ${textMainClass}`}>Daftar Menu</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>{filteredMenus.length} dari {menus.length} menu</p></div><button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white px-5 py-2.5 rounded-xl text-sm font-extrabold flex items-center gap-2 shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border-2 border-[var(--primary-dark)]"><Icons.Plus /> Tambah Menu</button></div>
               <div className={`flex flex-col sm:flex-row gap-3 p-2 rounded-2xl shadow-sm border-2 ${cardClass}`}><div className="relative flex-1"><span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSubClass}`}><Icons.Search /></span><input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className={`w-full pl-10 pr-4 py-2.5 border-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 text-white'}`} /></div><div className={`flex items-center gap-1 rounded-xl p-1 overflow-x-auto border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap border-2 ${menuCategoryFilter === k ? (theme === 'light' ? 'bg-white text-[#2A1F17] shadow-sm border-[#D4C5B8]' : 'bg-slate-700 text-white shadow-sm border-slate-500') : 'border-transparent ' + textSubClass}`}>{l}</button>))}</div></div>
               {filteredMenus.length === 0 ? (<div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}><div className="text-5xl mb-3 opacity-50">🔍</div><p className={`font-black text-xl ${textMainClass}`}>Tidak ada menu</p></div>) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{filteredMenus.map(menu => (<div key={menu.id} className={`rounded-[2rem] overflow-hidden flex flex-col border-2 shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 ${cardClass}`}><div className={`h-48 relative overflow-hidden border-b-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-700'}`}>{menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}<div className="absolute top-4 left-4 z-10"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md border-2 ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white border-rose-700' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white border-emerald-600'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button></div><div className="absolute top-4 right-4"><span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-sm border-2 ${menu.status === 'available' ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 text-white border-rose-600 shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div></div><div className="p-5 flex-1 flex flex-col justify-between"><div><span className="text-[10px] font-black text-[var(--primary-color)] uppercase tracking-widest">{menu.category}</span><h4 className={`font-black text-xl mt-1 ${textMainClass}`}>{menu.name}</h4><p className={`text-xs font-semibold line-clamp-2 mt-1 min-h-[2rem] ${textSubClass}`}>{menu.description || 'Tidak ada deskripsi'}</p><p className="font-black text-[var(--primary-color)] text-xl mt-3">{rp(menu.price)}</p></div><div className="flex gap-2 mt-5"><button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '' }); setIsMenuModalOpen(true); }} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>Edit</button><button onClick={() => handleDeleteMenu(menu.id)} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>Hapus</button></div></div></div>))}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{filteredMenus.map(menu => (<div key={menu.id} className={`rounded-[2rem] overflow-hidden flex flex-col border-2 shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 ${cardClass}`}><div className={`h-48 relative overflow-hidden border-b-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-700'}`}>{menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}<div className="absolute top-4 left-4 z-10 flex flex-col gap-2"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md border-2 ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white border-rose-700' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white border-emerald-600'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button>{renderStockBadge(menu)}</div><div className="absolute top-4 right-4"><span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-sm border-2 ${menu.status === 'available' ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 text-white border-rose-600 shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div></div><div className="p-5 flex-1 flex flex-col justify-between"><div><span className="text-[10px] font-black text-[var(--primary-color)] uppercase tracking-widest">{menu.category}</span><h4 className={`font-black text-xl mt-1 ${textMainClass}`}>{menu.name}</h4><p className={`text-xs font-semibold line-clamp-2 mt-1 min-h-[2rem] ${textSubClass}`}>{menu.description || 'Tidak ada deskripsi'}</p><p className="font-black text-[var(--primary-color)] text-xl mt-3">{rp(menu.price)}</p></div><div className="flex gap-2 mt-5"><button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '', stock: menu.stock !== null && menu.stock !== undefined ? menu.stock : '' }); setIsMenuModalOpen(true); }} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>Edit</button><button onClick={() => handleDeleteMenu(menu.id)} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>Hapus</button></div></div></div>))}</div>
               )}
             </div>
           )}
@@ -788,7 +895,7 @@ export default function DashboardPage() {
                     <div className={`rounded-[2rem] p-8 border-2 shadow-sm ${cardClass}`}>
                       <h3 className={`font-black mb-6 text-lg ${textMainClass}`}>🔥 Menu Terlaris</h3>
                       {topMenus.length === 0 ? (<div className="text-center py-10"><p className="text-5xl mb-3">📊</p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada penjualan</p></div>) : (
-                        <div className="space-y-5">{topMenus.map(([name, data], idx) => { const maxQty = topMenus[0][1].qty; const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0; const rankBg = idx === 0 ? 'bg-amber-200 text-amber-900 border-amber-300' : idx === 1 ? 'bg-slate-200 text-slate-800 border-slate-300' : idx === 2 ? 'bg-orange-200 text-orange-900 border-orange-300' : (theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'); return (<div key={name}><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-3 min-w-0"><span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm border-2 ${rankBg}`}>{idx + 1}</span><span className={`font-bold text-sm truncate ${textMainClass}`}>{name}</span></div><span className={`text-xs font-extrabold whitespace-nowrap ml-2 px-2 py-1 rounded-lg border-2 ${theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'}`}>{data.qty}× · {rp(data.revenue)}</span></div><div className={`h-2.5 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><div className="h-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] rounded-full transition-all" style={{ width: `${pct}%` }}></div></div></div>); })}</div>
+                        <div className="space-y-5">{topMenus.map(([name, data], idx) => { const maxQty = topMenus[0][1].qty; const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0; const rankBg = idx === 0 ? 'bg-amber-200 text-amber-900 border-amber-300' : idx === 1 ? 'bg-slate-200 text-slate-800 border-slate-300' : idx === 2 ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20' : (theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'); return (<div key={name}><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-3 min-w-0"><span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm border-2 ${rankBg}`}>{idx + 1}</span><span className={`font-bold text-sm truncate ${textMainClass}`}>{name}</span></div><span className={`text-xs font-extrabold whitespace-nowrap ml-2 px-2 py-1 rounded-lg border-2 ${theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'}`}>{data.qty}× · {rp(data.revenue)}</span></div><div className={`h-2.5 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><div className="h-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] rounded-full transition-all" style={{ width: `${pct}%` }}></div></div></div>); })}</div>
                       )}
                     </div>
                   </div>
@@ -841,6 +948,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Kategori</label><select value={currentMenu.category} onChange={e => setCurrentMenu({...currentMenu, category: e.target.value})} className={inputClass}><option value="makanan">Makanan</option><option value="minuman">Minuman</option><option value="cemilan">Cemilan</option></select></div>
+                <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Stok (Opsional)</label><input type="number" min="0" value={currentMenu.stock} onChange={e => setCurrentMenu({...currentMenu, stock: e.target.value})} className={inputClass} placeholder="Kosongkan jika unlimited" /><p className={`text-[10px] font-semibold mt-1 ${textSubClass}`}>Isi angka untuk track stok. Kosongkan untuk unlimited.</p></div>
               </div>
               <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Deskripsi</label><textarea value={currentMenu.desc} onChange={e => setCurrentMenu({...currentMenu, desc: e.target.value})} className={inputClass} rows="3" placeholder="Deskripsi singkat menu"></textarea></div>
               <div className={`flex gap-3 pt-4 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}><button type="submit" className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3.5 rounded-xl text-base shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border-2 border-[var(--primary-dark)]">Simpan Menu</button><button type="button" onClick={() => setIsMenuModalOpen(false)} className={`font-extrabold px-8 py-3.5 rounded-xl text-base transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>Batal</button></div>

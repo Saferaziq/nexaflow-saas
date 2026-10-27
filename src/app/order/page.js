@@ -77,7 +77,7 @@ function OrderContent() {
         else if (cafeData.logo_url) extractDominantColor(cafeData.logo_url);
       }
       
-      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
+      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available').or('stock.is.null,stock.gt.0');
       if (menuData) setMenus(menuData);
       
       const savedName = localStorage.getItem('nexaflow_customer_name');
