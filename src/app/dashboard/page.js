@@ -53,12 +53,48 @@ const printHTML = (htmlContent) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
   document.body.appendChild(iframe);
+  
   const doc = iframe.contentWindow.document;
   doc.open(); doc.write(htmlContent); doc.close();
-  setTimeout(() => {
-    iframe.contentWindow.focus(); iframe.contentWindow.print();
-    setTimeout(() => { document.body.removeChild(iframe); }, 5000);
-  }, 500);
+
+  // FUNGSI UNTUK MENUNGGU GAMBAR (QRIS & LOGO) SELESAI DIMUAT
+  const waitForImages = () => {
+    const images = iframe.contentWindow.document.images;
+    if (images.length === 0) {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { document.body.removeChild(iframe); }, 10000);
+      }, 500);
+      return;
+    }
+
+    let loadedCount = 0;
+    const onImageLoad = () => {
+      loadedCount++;
+      if (loadedCount === images.length) {
+        // Jika semua gambar sudah selesai dimuat, tunggu sedikit lalu print
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          setTimeout(() => { document.body.removeChild(iframe); }, 10000);
+        }, 500);
+      }
+    };
+
+    // Pasang listener untuk setiap gambar
+    for (let i = 0; i < images.length; i++) {
+      if (images[i].complete) {
+        onImageLoad();
+      } else {
+        images[i].addEventListener('load', onImageLoad);
+        images[i].addEventListener('error', onImageLoad); // Tetap lanjut print jika gambar gagal dimuat
+      }
+    }
+  };
+
+  // Tunggu sebentar agar DOM siap, lalu cek gambar
+  setTimeout(waitForImages, 300);
 };
 
 const Icons = {
