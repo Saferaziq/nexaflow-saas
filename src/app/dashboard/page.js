@@ -408,25 +408,41 @@ export default function DashboardPage() {
   };
 
   const handleSaveMenu = async (e) => {
-    e.preventDefault();
-    const isEdit = !!currentMenu.id;
-    const stockValue = currentMenu.stock === '' || currentMenu.stock === null || currentMenu.stock === undefined ? null : parseInt(currentMenu.stock);
-    const payload = { 
-      tenant_id: tenantId, 
-      name: currentMenu.name, 
-      category: currentMenu.category, 
-      price: parseFloat(currentMenu.price), 
-      description: currentMenu.desc, 
-      status: currentMenu.status, 
-      image_url: currentMenu.image_url,
-      stock: stockValue
-    };
-    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id); 
-    else await supabase.from('menus').insert([payload]);
+  e.preventDefault();
+  const isEdit = !!currentMenu.id;
+  
+  // Mengubah string kosong menjadi null agar Supabase tidak error
+  const stockValue = currentMenu.stock === '' || currentMenu.stock === null || currentMenu.stock === undefined 
+    ? null 
+    : parseInt(currentMenu.stock);
+
+  const payload = { 
+    tenant_id: tenantId, 
+    name: currentMenu.name, 
+    category: currentMenu.category, 
+    price: parseFloat(currentMenu.price), 
+    description: currentMenu.desc, 
+    status: currentMenu.status, 
+    image_url: currentMenu.image_url,
+    stock: stockValue // <--- INI YANG TERTINGGAL SEBELUMNYA
+  };
+  
+  try {
+    if (isEdit) {
+      const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('menus').insert([payload]);
+      if (error) throw error;
+    }
     setIsMenuModalOpen(false); 
     fetchMenus(tenantId); 
-    showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
-  };
+    showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
+  } catch (error) {
+    console.error("Error saving menu:", error);
+    showToast('Gagal simpan: ' + error.message, 'error');
+  }
+};
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); showToast('Menu dihapus', 'success'); }, true);
 
