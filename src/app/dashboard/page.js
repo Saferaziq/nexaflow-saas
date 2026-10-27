@@ -407,42 +407,42 @@ export default function DashboardPage() {
     if (type === 'logo') setUploadingLogo(false); else if (type === 'banner') setUploadingBanner(false); else setUploading(false);
   };
 
-  const handleSaveMenu = async (e) => {
-  e.preventDefault();
-  const isEdit = !!currentMenu.id;
-  
-  // Mengubah string kosong menjadi null agar Supabase tidak error
-  const stockValue = currentMenu.stock === '' || currentMenu.stock === null || currentMenu.stock === undefined 
-    ? null 
-    : parseInt(currentMenu.stock);
+    const handleSaveMenu = async (e) => {
+    e.preventDefault();
+    const isEdit = !!currentMenu.id;
+    
+    const stockValue = currentMenu.stock === '' || currentMenu.stock === null || currentMenu.stock === undefined 
+      ? null 
+      : parseInt(currentMenu.stock);
 
-  const payload = { 
-    tenant_id: tenantId, 
-    name: currentMenu.name, 
-    category: currentMenu.category, 
-    price: parseFloat(currentMenu.price), 
-    description: currentMenu.desc, 
-    status: currentMenu.status, 
-    image_url: currentMenu.image_url,
-    stock: stockValue // <--- INI YANG TERTINGGAL SEBELUMNYA
-  };
-  
-  try {
-    if (isEdit) {
-      const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from('menus').insert([payload]);
-      if (error) throw error;
+    const payload = { 
+      tenant_id: tenantId, 
+      name: currentMenu.name, 
+      category: currentMenu.category, 
+      price: parseFloat(currentMenu.price), 
+      description: currentMenu.desc, 
+      status: currentMenu.status, 
+      image_url: currentMenu.image_url,
+      stock: stockValue
+    };
+    
+    try {
+      if (isEdit) {
+        const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+        if (error) throw error;
+      } else {
+        // MENGGUNAKAN FUNGSI RPC UNTUK BYPASS ERROR CACHE SUPABASE
+        const { error } = await supabase.rpc('save_menu_direct', { menu_data: payload });
+        if (error) throw error;
+      }
+      setIsMenuModalOpen(false); 
+      fetchMenus(tenantId); 
+      showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
+    } catch (error) {
+      console.error("Error saving menu:", error);
+      showToast('Gagal simpan: ' + error.message, 'error');
     }
-    setIsMenuModalOpen(false); 
-    fetchMenus(tenantId); 
-    showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
-  } catch (error) {
-    console.error("Error saving menu:", error);
-    showToast('Gagal simpan: ' + error.message, 'error');
-  }
-};
+  };
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); showToast('Menu dihapus', 'success'); }, true);
 
