@@ -55,7 +55,6 @@ const printHTML = (htmlContent) => {
   document.body.appendChild(iframe);
   const doc = iframe.contentWindow.document;
   doc.open(); doc.write(htmlContent); doc.close();
-  
   const waitForImages = () => {
     const images = iframe.contentWindow.document.images;
     if (images.length === 0) {
@@ -164,9 +163,7 @@ export default function DashboardPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
-  
   const [theme, setTheme] = useState('light');
-
   const [reportNow, setReportNow] = useState(null);
   const [reportMode, setReportMode] = useState('daily');
   const [reportDateStr, setReportDateStr] = useState('');
@@ -174,10 +171,8 @@ export default function DashboardPage() {
   const [reportYear, setReportYear] = useState(2026);
   const [reportStartDateStr, setReportStartDateStr] = useState('');
   const [reportEndDateStr, setReportEndDateStr] = useState('');
-  
   const [menuSearch, setMenuSearch] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
-
   const [nowTick, setNowTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -245,12 +240,12 @@ export default function DashboardPage() {
         audioCtxRef.current.resume();
         audioUnlockedRef.current = true; setAudioUnlocked(true);
         soundEnabledRef.current = true; setSoundEnabled(true);
-        playBeep(); showToast('🔊 Notifikasi suara aktif', 'success');
+        playBeep(); showToast('Notifikasi suara aktif', 'success');
       } catch { showToast('Browser tidak mendukung suara', 'error'); }
     } else {
       const newEnabled = !soundEnabledRef.current;
       soundEnabledRef.current = newEnabled; setSoundEnabled(newEnabled);
-      if (newEnabled) { playBeep(); showToast('🔊 Suara aktif', 'info'); } else showToast('🔇 Suara dimatikan', 'info');
+      if (newEnabled) { playBeep(); showToast('Suara aktif', 'info'); } else showToast('Suara dimatikan', 'info');
     }
   };
 
@@ -360,7 +355,7 @@ export default function DashboardPage() {
         if (newOnes.length > 0) {
           playBeep();
           const firstNew = data.find(o => o.id === newOnes[0]);
-          if (firstNew) showToast(`🔔 Pesanan baru! Meja ${firstNew.table_number} - ${rp(firstNew.total_price)}`, 'info');
+          if (firstNew) showToast(`Pesanan baru! Meja ${firstNew.table_number} - ${rp(firstNew.total_price)}`, 'info');
         }
       }
       prevOrderIdsRef.current = activeIds;
@@ -430,7 +425,7 @@ export default function DashboardPage() {
     else await supabase.from('menus').insert([payload]);
     setIsMenuModalOpen(false); 
     fetchMenus(tenantId); 
-    showToast(isEdit ? '✅ Menu diperbarui' : '✅ Menu ditambahkan', 'success');
+    showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
   };
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => { await supabase.from('menus').delete().eq('id', id); fetchMenus(tenantId); showToast('Menu dihapus', 'success'); }, true);
@@ -443,23 +438,22 @@ export default function DashboardPage() {
   };
 
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => { await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); fetchOrders(tenantId); showToast('Pesanan ditolak', 'warning'); }, true);
-  const handleAddTable = async (e) => { e.preventDefault(); if (!newTableNum) return; await supabase.from('tables').insert([{ tenant_id: tenantId, table_number: newTableNum }]); setNewTableNum(''); fetchTables(tenantId); showToast('✅ Meja ditambahkan', 'success'); };
+  const handleAddTable = async (e) => { e.preventDefault(); if (!newTableNum) return; await supabase.from('tables').insert([{ tenant_id: tenantId, table_number: newTableNum }]); setNewTableNum(''); fetchTables(tenantId); showToast('Meja ditambahkan', 'success'); };
   const handleDeleteTable = (id) => askConfirm('Hapus Meja', 'Meja akan dihapus. Lanjutkan?', async () => { await supabase.from('tables').delete().eq('id', id); fetchTables(tenantId); showToast('Meja dihapus', 'success'); }, true);
   
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     await supabase.from('tenants').update({ name: settings.name, wa_number: settings.wa, address: settings.address, logo_url: settings.logo_url, qris_string: settings.qris_string, banner_url: settings.banner_url, tax_percentage: settings.tax_percentage }).eq('id', tenantId);
-    setCafeName(settings.name); showToast('✅ Pengaturan disimpan', 'success');
+    setCafeName(settings.name); showToast('Pengaturan disimpan', 'success');
   };
 
   const toggleMenuStatus = async (menu) => {
     const newStatus = menu.status === 'available' ? 'soldout' : 'available';
     const { error } = await supabase.from('menus').update({ status: newStatus }).eq('id', menu.id);
     if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
-    fetchMenus(tenantId); showToast(newStatus === 'available' ? '✅ Menu tersedia' : '⛔ Menu ditandai habis', 'success');
+    fetchMenus(tenantId); showToast(newStatus === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // ============ LAPORAN HARIAN (END OF DAY) ============
   const printDailyReport = () => {
     const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString());
     const paidOrders = todayOrders.filter(o => o.payment_status === 'paid');
@@ -468,7 +462,6 @@ export default function DashboardPage() {
     const totalCash = paidOrders.filter(o => o.payment_method !== 'qris').reduce((s, o) => s + Number(o.total_price || 0), 0);
     const totalQris = paidOrders.filter(o => o.payment_method === 'qris').reduce((s, o) => s + Number(o.total_price || 0), 0);
 
-    // Menu terjual
     const menuSales = {};
     paidOrders.forEach(o => {
       (o.items || []).forEach(item => {
@@ -479,7 +472,6 @@ export default function DashboardPage() {
       });
     });
 
-    // Menu yang stoknya di-track
     const stockMenus = menus.filter(m => m.stock !== null && m.stock !== undefined);
 
     const html = `
@@ -511,7 +503,7 @@ export default function DashboardPage() {
           <tr><td class="bold">Order Lunas</td><td class="right">${paidOrders.length} transaksi</td></tr>
         </table>
 
-        <div class="section-title">💰 RINGKASAN UANG</div>
+        <div class="section-title">RINGKASAN UANG</div>
         <table>
           <tr><td>Total Omset</td><td class="right bold">${rp(totalRevenue)}</td></tr>
           <tr><td>- Tunai</td><td class="right">${rp(totalCash)}</td></tr>
@@ -519,7 +511,7 @@ export default function DashboardPage() {
         </table>
 
         ${Object.keys(menuSales).length > 0 ? `
-        <div class="section-title">📊 MENU TERJUAL</div>
+        <div class="section-title">MENU TERJUAL</div>
         <table>
           ${Object.entries(menuSales).map(([name, data]) => `
             <tr class="menu-item">
@@ -532,7 +524,7 @@ export default function DashboardPage() {
         ` : ''}
 
         ${stockMenus.length > 0 ? `
-        <div class="section-title">📦 SISA STOK SAAT INI</div>
+        <div class="section-title">SISA STOK SAAT INI</div>
         <table>
           ${stockMenus.map(m => `
             <tr class="menu-item">
@@ -578,10 +570,10 @@ export default function DashboardPage() {
       </style></head><body>
         <div class="center"><h2>${settings.name || 'Kafe'}</h2><p>${settings.address || ''}</p><p>WA: ${settings.wa || ''}</p></div><div class="line"></div>
         <table><tr><td class="bold">Bill:</td><td class="right">#${order.id.slice(0,8).toUpperCase()}</td></tr><tr><td class="bold">Pelanggan:</td><td class="right">${order.customer_name || 'Tamu'}</td></tr><tr><td class="bold">Meja:</td><td class="right">${order.table_number}</td></tr><tr><td class="bold">Waktu:</td><td class="right">${new Date(order.created_at).toLocaleString('id-ID')}</td></tr></table><div class="line"></div>
-        <table>${order.items.map(i => `<tr><td>${i.qty}× ${i.name}</td><td class="right">${rp(i.price * i.qty)}</td></tr>`).join('')}</table><div class="line"></div>
+        <table>${order.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td class="right">${rp(i.price * i.qty)}</td></tr>`).join('')}</table><div class="line"></div>
         <table><tr><td>Subtotal</td><td class="right">${rp(subtotal)}</td></tr>${taxAmount > 0 ? `<tr><td>PPN (${taxRate}%)</td><td class="right">${rp(taxAmount)}</td></tr>` : ''}<tr class="total"><td>TOTAL</td><td class="right">${rp(order.total_price)}</td></tr></table>
         <div class="qris-box"><p class="bold" style="margin-bottom:8px;">BAYAR DENGAN QRIS</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicQRIS)}" alt="QRIS" /><p class="qris-text">Scan dengan aplikasi bank / e-wallet apa saja.</p><p class="qris-text">Nominal sudah otomatis terisi.</p><p class="qris-text bold" style="margin-top:5px;">Merchant: ${settings.name}</p></div>
-        <div class="line" style="margin-top:15px;"></div><p class="center" style="font-size:10px; margin-top:5px;">Terima Kasih 🙏</p></body></html>
+        <div class="line" style="margin-top:15px;"></div><p class="center" style="font-size:10px; margin-top:5px;">Terima Kasih</p></body></html>
     `;
     printHTML(html);
   };
@@ -606,7 +598,7 @@ export default function DashboardPage() {
         @media print { body { padding: 10px; } }
       </style></head><body>
         ${settings.logo_url ? `<img src="${settings.logo_url}" class="logo" alt="Logo" />` : ''}<span class="badge">Scan untuk Pesan</span><h1>${settings.name || 'Kafe'}</h1><h2>Meja ${table.table_number}</h2>
-        <div class="qr-wrapper"><img src="${qrUrl}" alt="QR" /></div><p class="hint">📱 Buka kamera HP, arahkan ke QR code</p><p class="url">${orderUrl}</p></body></html>
+        <div class="qr-wrapper"><img src="${qrUrl}" alt="QR" /></div><p class="hint">Buka kamera HP, arahkan ke QR code</p><p class="url">${orderUrl}</p></body></html>
     `;
     printHTML(html);
   };
@@ -616,7 +608,7 @@ export default function DashboardPage() {
     const headers = ['Tanggal', 'Jam', 'Pelanggan', 'Meja', 'Order ID', 'Status', 'Pembayaran', 'Menu', 'Qty', 'Harga', 'Subtotal', 'PPN', 'Total Order'];
     const rows = []; reportOrders.forEach(o => { const dt = new Date(o.created_at); const dateStr = dt.toLocaleDateString('id-ID'); const timeStr = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); (o.items || []).forEach(item => { rows.push([dateStr, timeStr, o.customer_name || 'Tamu', o.table_number, o.id.slice(0, 8), o.status, o.payment_status, item.name, item.qty, item.price, item.price * item.qty, o.tax_amount || 0, o.total_price]); }); });
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `laporan-${String(reportLabelForFile).replace(/[^a-zA-Z0-9-]/g, '_')}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast('✅ CSV diunduh', 'success');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `laporan-${String(reportLabelForFile).replace(/[^a-zA-Z0-9-]/g, '_')}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast('CSV diunduh', 'success');
   };
 
   const printReport = (reportStats, topMenus, reportLabel) => {
@@ -637,7 +629,7 @@ export default function DashboardPage() {
         <h1>${settings.name || 'Kafe'}</h1><h2>Laporan · ${reportLabel}</h2>
         <div class="grid"><div class="card"><p>Total Pesanan</p><p>${reportStats.totalOrders}</p></div><div class="card"><p>Total Omset</p><p>${rp(reportStats.revenue)}</p></div><div class="card"><p>Rata-rata / Order</p><p>${rp(reportStats.avgOrder)}</p></div><div class="card"><p>Item Terjual</p><p>${reportStats.totalItems}</p></div></div>
         <p class="section-title">STATUS PESANAN</p><table><thead><tr><th>Status</th><th class="text-right">Jumlah</th></tr></thead><tbody><tr><td>Baru</td><td class="text-right">${reportStats.statusCount.pending}</td></tr><tr><td>Dimasak</td><td class="text-right">${reportStats.statusCount.cooking}</td></tr><tr><td>Siap</td><td class="text-right">${reportStats.statusCount.ready}</td></tr><tr><td>Selesai</td><td class="text-right">${reportStats.statusCount.completed}</td></tr><tr><td>Batal</td><td class="text-right">${reportStats.statusCount.cancelled}</td></tr></tbody></table>
-        ${topMenus.length > 0 ? `<p class="section-title">MENU TERLARIS</p><table><thead><tr><th>#</th><th>Menu</th><th class="text-right">Qty</th><th class="text-right">Omset</th></tr></thead><tbody>${topMenus.map(([name, data], idx) => `<tr><td>${idx + 1}</td><td>${name}</td><td class="text-right">${data.qty}×</td><td class="text-right">${rp(data.revenue)}</td></tr>`).join('')}</tbody></table>` : ''}
+        ${topMenus.length > 0 ? `<p class="section-title">MENU TERLARIS</p><table><thead><tr><th>#</th><th>Menu</th><th class="text-right">Qty</th><th class="text-right">Omset</th></tr></thead><tbody>${topMenus.map(([name, data], idx) => `<tr><td>${idx + 1}</td><td>${name}</td><td class="text-right">${data.qty}x</td><td class="text-right">${rp(data.revenue)}</td></tr>`).join('')}</tbody></table>` : ''}
         <div class="footer">Dicetak ${reportNow ? reportNow.toLocaleString('id-ID') : ''} · NexaFlow SaaS</div></body></html>
     `;
     printHTML(html);
@@ -680,8 +672,8 @@ export default function DashboardPage() {
     if (menu.stock === null || menu.stock === undefined) return null;
     const stockNum = parseInt(menu.stock);
     if (stockNum <= 0) return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-rose-500 text-white shadow-sm border-2 border-rose-600">HABIS</span>;
-    if (stockNum <= 3) return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-amber-400 text-amber-900 shadow-sm border-2 border-amber-500">📦 Sisa {stockNum}</span>;
-    return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-slate-100 text-slate-700 shadow-sm border-2 border-slate-300">📦 Sisa {stockNum}</span>;
+    if (stockNum <= 3) return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-amber-400 text-amber-900 shadow-sm border-2 border-amber-500">Sisa {stockNum}</span>;
+    return <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-slate-100 text-slate-700 shadow-sm border-2 border-slate-300">Sisa {stockNum}</span>;
   };
 
   if (isExpired) {
@@ -739,20 +731,38 @@ export default function DashboardPage() {
               ))}
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`md:hidden p-2 rounded-xl transition-colors ${theme === 'light' ? 'text-[#2A1F17] hover:bg-white border-2 border-transparent' : 'text-slate-300 hover:bg-slate-800 border-2 border-transparent'}`}><Icons.Menu /></button>
-              <button onClick={openKitchenLink} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl shadow-md transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17] shadow-[#2A1F17]/20' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600 shadow-slate-900/20'}`}>🍳 <span className="hidden lg:inline">Layar Dapur</span></button>
-              <div className={`hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/50' : realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/50' : 'bg-amber-500/10 border-amber-500/50'}`}><span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span><span className={`text-[11px] font-extrabold ${realtimeStatus === 'online' ? 'text-emerald-600' : realtimeStatus === 'offline' ? 'text-rose-600' : 'text-amber-600'}`}>{realtimeStatus === 'online' ? 'Online' : 'Offline'}</span></div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`md:hidden p-2.5 rounded-2xl transition-colors border-2 ${theme === 'light' ? 'text-[#2A1F17] hover:bg-white border-[#D4C5B8]' : 'text-slate-300 hover:bg-slate-800 border-slate-600'}`}><Icons.Menu /></button>
               
-              <button onClick={printDailyReport} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl shadow-md transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-emerald-600/20' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-600/20'}`} title="Cetak Laporan Harian"><Icons.Receipt /> <span className="hidden lg:inline">Lap. Harian</span></button>
+              <button onClick={openKitchenLink} title="Layar Dapur (KDS)" className={`flex items-center justify-center px-3 py-2.5 rounded-2xl shadow-sm transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>
+                <Icons.Utensils /> <span className="hidden xl:inline ml-1.5">Layar Dapur</span>
+              </button>
 
-              <button onClick={toggleTheme} className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`} title="Ganti Tema">
+              <div className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-2xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/50' : realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/50' : 'bg-amber-500/10 border-amber-500/50'}`}>
+                <span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
+              </div>
+
+              <button onClick={printDailyReport} title="Cetak Laporan Harian" className={`flex items-center justify-center px-3 py-2.5 rounded-2xl shadow-sm transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'}`}>
+                <Icons.Receipt /> <span className="hidden xl:inline ml-1.5">Lap. Harian</span>
+              </button>
+
+              <div className={`w-0.5 h-6 mx-1 ${theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-700'}`}></div>
+
+              <button onClick={toggleTheme} title="Ganti Tema" className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}>
                 {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
               </button>
 
-              <button onClick={handleSoundToggle} className={`p-2.5 rounded-2xl border-2 transition-all ${!audioUnlocked ? 'bg-[var(--primary-color)] border-[var(--primary-dark)] text-white shadow-md shadow-[var(--primary-color)]/30' : soundEnabled ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-600' : theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>{!audioUnlocked ? <span className="text-xs font-bold">🔕 ON</span> : soundEnabled ? <span className="text-lg">🔊</span> : <span className="text-lg">🔇</span>}</button>
-              <button onClick={toggleFullscreen} className={`hidden sm:block p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}>{isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}</button>
-              <button onClick={handleLogout} className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}><Icons.Logout /></button>
+              <button onClick={handleSoundToggle} title="Notifikasi Suara" className={`p-2.5 rounded-2xl border-2 transition-all ${!audioUnlocked ? 'bg-[var(--primary-color)] border-[var(--primary-dark)] text-white shadow-md shadow-[var(--primary-color)]/30' : soundEnabled ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-600' : theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
+                {!audioUnlocked ? <span className="text-[10px] font-bold">OFF</span> : soundEnabled ? <span className="text-lg leading-none">ON</span> : <span className="text-lg leading-none">OFF</span>}
+              </button>
+
+              <button onClick={toggleFullscreen} title="Layar Penuh" className={`hidden sm:block p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}>
+                {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
+              </button>
+
+              <button onClick={handleLogout} title="Logout" className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}>
+                <Icons.Logout />
+              </button>
             </div>
           </div>
         </div>
@@ -771,9 +781,9 @@ export default function DashboardPage() {
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform ${theme === 'light' ? 'bg-[#F4EFE9]' : 'bg-slate-800/50'}`}></div><div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#5C4B3E]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}><Icons.Clipboard /></div><p className={`text-[11px] font-extrabold uppercase tracking-widest ${textSubClass}`}>Total Pesanan</p></div><h3 className={`text-4xl font-black tracking-tight ${textMainClass}`}>{stats.total}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Hari ini</p></div>
-          <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-[var(--primary-light)] rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] text-[var(--primary-color)] flex items-center justify-center shadow-sm text-xl border border-[var(--primary-color)]/20">👨‍🍳</div><p className="text-[11px] font-extrabold text-[var(--primary-color)] uppercase tracking-widest">Dimasak</p></div><h3 className="text-4xl font-black text-[var(--primary-color)] tracking-tight">{stats.cooking}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Sedang diproses</p></div>
-          <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm text-xl border border-emerald-300">🍽️</div><p className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-widest">Siap Saji</p></div><h3 className="text-4xl font-black text-emerald-700 tracking-tight">{stats.ready}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Menunggu diantar</p></div>
-          <div className="rounded-[2rem] p-6 bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] shadow-[0_8px_30px_var(--primary-color)] relative overflow-hidden group text-white border-2 border-[var(--primary-dark)]"><div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner text-xl backdrop-blur-sm border border-white/20">💰</div><p className="text-[11px] font-extrabold text-white/90 uppercase tracking-widest">Omset Hari Ini</p></div><h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats.revenue)}</h3><p className="text-xs text-white/90 font-semibold mt-1">Total pendapatan</p></div>
+          <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-[var(--primary-light)] rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] text-[var(--primary-color)] flex items-center justify-center shadow-sm border border-[var(--primary-color)]/20"><Icons.Clock /></div><p className="text-[11px] font-extrabold text-[var(--primary-color)] uppercase tracking-widest">Dimasak</p></div><h3 className="text-4xl font-black text-[var(--primary-color)] tracking-tight">{stats.cooking}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Sedang diproses</p></div>
+          <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm border border-emerald-300"><Icons.Grid /></div><p className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-widest">Siap Saji</p></div><h3 className="text-4xl font-black text-emerald-700 tracking-tight">{stats.ready}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Menunggu diantar</p></div>
+          <div className="rounded-[2rem] p-6 bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] shadow-[0_8px_30px_var(--primary-color)] relative overflow-hidden group text-white border-2 border-[var(--primary-dark)]"><div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner backdrop-blur-sm border border-white/20"><Icons.Chart /></div><p className="text-[11px] font-extrabold text-white/90 uppercase tracking-widest">Omset Hari Ini</p></div><h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats.revenue)}</h3><p className="text-xs text-white/90 font-semibold mt-1">Total pendapatan</p></div>
         </div>
 
         <div className="bg-transparent mt-6">
@@ -787,7 +797,7 @@ export default function DashboardPage() {
               </div>
 
               {displayOrders.length === 0 ? (
-                <div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}><div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>📋</div><p className={`font-black text-xl ${textMainClass}`}>Tidak ada antrian pesanan</p><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Pesanan baru akan muncul otomatis</p></div>
+                <div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}><div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><Icons.Clipboard /></div><p className={`font-black text-xl ${textMainClass}`}>Tidak ada antrian pesanan</p><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Pesanan baru akan muncul otomatis</p></div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {displayOrders.map(order => {
@@ -806,11 +816,11 @@ export default function DashboardPage() {
                               <span>{new Date(order.created_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}</span>
                             </div>
                           </div>
-                          {order.order_note && (<div className="bg-amber-100 border-l-4 border-amber-500 p-3 rounded-r-xl text-xs font-bold text-amber-800 shadow-sm">📝 Catatan: {order.order_note}</div>)}
+                          {order.order_note && (<div className="bg-amber-100 border-l-4 border-amber-500 p-3 rounded-r-xl text-xs font-bold text-amber-800 shadow-sm">Catatan: {order.order_note}</div>)}
                           <div className="space-y-3 pt-1 flex-1">
                             {order.items.map((item, idx) => (
                               <div key={idx} className="flex justify-between items-start gap-3">
-                                <div className="flex-1"><span className={`font-bold text-sm ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>{item.qty}× {item.name}</span>{item.note && (<p className={`text-[11px] font-bold mt-1 italic inline-block px-2 py-0.5 rounded border ${theme === 'light' ? 'text-[var(--primary-color)] bg-[var(--primary-light)] border-[var(--primary-color)]/20' : 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20'}`}>↳ "{item.note}"</p>)}</div>
+                                <div className="flex-1"><span className={`font-bold text-sm ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>{item.qty}x {item.name}</span>{item.note && (<p className={`text-[11px] font-bold mt-1 italic inline-block px-2 py-0.5 rounded border ${theme === 'light' ? 'text-[var(--primary-color)] bg-[var(--primary-light)] border-[var(--primary-color)]/20' : 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20'}`}>Catatan: "{item.note}"</p>)}</div>
                                 <span className={`font-black text-sm whitespace-nowrap ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{rp(item.price * item.qty)}</span>
                               </div>
                             ))}
@@ -837,16 +847,16 @@ export default function DashboardPage() {
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><div><h3 className={`font-black text-2xl ${textMainClass}`}>Daftar Menu</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>{filteredMenus.length} dari {menus.length} menu</p></div><button onClick={() => { setCurrentMenu({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: '' }); setIsMenuModalOpen(true); }} className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white px-5 py-2.5 rounded-xl text-sm font-extrabold flex items-center gap-2 shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border-2 border-[var(--primary-dark)]"><Icons.Plus /> Tambah Menu</button></div>
               <div className={`flex flex-col sm:flex-row gap-3 p-2 rounded-2xl shadow-sm border-2 ${cardClass}`}><div className="relative flex-1"><span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSubClass}`}><Icons.Search /></span><input type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} placeholder="Cari menu..." className={`w-full pl-10 pr-4 py-2.5 border-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 text-white'}`} /></div><div className={`flex items-center gap-1 rounded-xl p-1 overflow-x-auto border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{[{k:'all',l:'Semua'},{k:'makanan',l:'Makanan'},{k:'minuman',l:'Minuman'},{k:'cemilan',l:'Cemilan'}].map(({k,l}) => (<button key={k} onClick={() => setMenuCategoryFilter(k)} className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap border-2 ${menuCategoryFilter === k ? (theme === 'light' ? 'bg-white text-[#2A1F17] shadow-sm border-[#D4C5B8]' : 'bg-slate-700 text-white shadow-sm border-slate-500') : 'border-transparent ' + textSubClass}`}>{l}</button>))}</div></div>
-              {filteredMenus.length === 0 ? (<div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}><div className="text-5xl mb-3 opacity-50">🔍</div><p className={`font-black text-xl ${textMainClass}`}>Tidak ada menu</p></div>) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{filteredMenus.map(menu => (<div key={menu.id} className={`rounded-[2rem] overflow-hidden flex flex-col border-2 shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 ${cardClass}`}><div className={`h-48 relative overflow-hidden border-b-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-700'}`}>{menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}<div className="absolute top-4 left-4 z-10 flex flex-col gap-2"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md border-2 ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white border-rose-700' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white border-emerald-600'}`}>{menu.status === 'available' ? '⛔ Set Habis' : '✅ Set Tersedia'}</button>{renderStockBadge(menu)}</div><div className="absolute top-4 right-4"><span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-sm border-2 ${menu.status === 'available' ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 text-white border-rose-600 shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div></div><div className="p-5 flex-1 flex flex-col justify-between"><div><span className="text-[10px] font-black text-[var(--primary-color)] uppercase tracking-widest">{menu.category}</span><h4 className={`font-black text-xl mt-1 ${textMainClass}`}>{menu.name}</h4><p className={`text-xs font-semibold line-clamp-2 mt-1 min-h-[2rem] ${textSubClass}`}>{menu.description || 'Tidak ada deskripsi'}</p><p className="font-black text-[var(--primary-color)] text-xl mt-3">{rp(menu.price)}</p></div><div className="flex gap-2 mt-5"><button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '', stock: menu.stock !== null && menu.stock !== undefined ? menu.stock : '' }); setIsMenuModalOpen(true); }} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>Edit</button><button onClick={() => handleDeleteMenu(menu.id)} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>Hapus</button></div></div></div>))}</div>
+              {filteredMenus.length === 0 ? (<div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}><div className="text-5xl mb-3 opacity-50"><Icons.Search /></div><p className={`font-black text-xl ${textMainClass}`}>Tidak ada menu</p></div>) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{filteredMenus.map(menu => (<div key={menu.id} className={`rounded-[2rem] overflow-hidden flex flex-col border-2 shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 ${cardClass}`}><div className={`h-48 relative overflow-hidden border-b-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-700'}`}>{menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl"><Icons.Utensils /></div>}<div className="absolute top-4 left-4 z-10 flex flex-col gap-2"><button onClick={() => toggleMenuStatus(menu)} className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-md transition-all backdrop-blur-md border-2 ${menu.status === 'available' ? 'bg-rose-600/90 hover:bg-rose-700 text-white border-rose-700' : 'bg-emerald-500/90 hover:bg-emerald-600 text-white border-emerald-600'}`}>{menu.status === 'available' ? 'Set Habis' : 'Set Tersedia'}</button>{renderStockBadge(menu)}</div><div className="absolute top-4 right-4"><span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-sm border-2 ${menu.status === 'available' ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/30' : 'bg-rose-500 text-white border-rose-600 shadow-rose-500/30'}`}>{menu.status === 'available' ? 'Tersedia' : 'Habis'}</span></div></div><div className="p-5 flex-1 flex flex-col justify-between"><div><span className="text-[10px] font-black text-[var(--primary-color)] uppercase tracking-widest">{menu.category}</span><h4 className={`font-black text-xl mt-1 ${textMainClass}`}>{menu.name}</h4><p className={`text-xs font-semibold line-clamp-2 mt-1 min-h-[2rem] ${textSubClass}`}>{menu.description || 'Tidak ada deskripsi'}</p><p className="font-black text-[var(--primary-color)] text-xl mt-3">{rp(menu.price)}</p></div><div className="flex gap-2 mt-5"><button onClick={() => { setCurrentMenu({ ...menu, desc: menu.description || '', stock: menu.stock !== null && menu.stock !== undefined ? menu.stock : '' }); setIsMenuModalOpen(true); }} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>Edit</button><button onClick={() => handleDeleteMenu(menu.id)} className={`flex-1 font-extrabold py-2.5 rounded-xl text-xs transition-colors border-2 ${theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>Hapus</button></div></div></div>))}</div>
               )}
             </div>
           )}
 
           {activeTab === 'tables' && (
             <div className={`rounded-[2rem] p-6 sm:p-8 border-2 shadow-sm ${cardClass}`}>
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8"><div><h3 className={`font-black text-2xl ${textMainClass}`}>QR Code Meja</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>{tables.length} meja terdaftar · Klik "Cetak QR" untuk cetak per meja</p></div><form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto"><input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className={`border-2 rounded-xl px-4 py-2.5 text-sm w-28 font-extrabold focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 ${theme === 'light' ? 'border-[#D4C5B8] bg-[#F4EFE9] text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`} /><button type="submit" className={`px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-md transition-colors border-2 ${theme === 'light' ? 'bg-[#2A1F17] text-white hover:bg-[#1A120D] border-[#2A1F17]' : 'bg-slate-700 text-white hover:bg-slate-600 border-slate-600'}`}>Tambah</button></form></div>
-              {tables.length === 0 ? (<div className="text-center py-20"><div className={`w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center text-4xl border-2 shadow-inner ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>🪑</div><p className={`font-black text-xl ${textMainClass}`}>Belum ada meja</p></div>) : (
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8"><div><h3 className={`font-black text-2xl ${textMainClass}`}>QR Code Meja</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>{tables.length} meja terdaftar. Klik "Cetak QR" untuk cetak per meja</p></div><form onSubmit={handleAddTable} className="flex gap-2 w-full sm:w-auto"><input type="number" required value={newTableNum} onChange={e => setNewTableNum(e.target.value)} placeholder="No Meja" className={`border-2 rounded-xl px-4 py-2.5 text-sm w-28 font-extrabold focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 ${theme === 'light' ? 'border-[#D4C5B8] bg-[#F4EFE9] text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`} /><button type="submit" className={`px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-md transition-colors border-2 ${theme === 'light' ? 'bg-[#2A1F17] text-white hover:bg-[#1A120D] border-[#2A1F17]' : 'bg-slate-700 text-white hover:bg-slate-600 border-slate-600'}`}>Tambah</button></form></div>
+              {tables.length === 0 ? (<div className="text-center py-20"><div className={`w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center text-4xl border-2 shadow-inner ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><Icons.Grid /></div><p className={`font-black text-xl ${textMainClass}`}>Belum ada meja</p></div>) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-5">{tables.map(t => (<div key={t.id} className={`border-2 rounded-3xl p-5 text-center group hover:shadow-lg transition-all duration-300 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] hover:bg-white' : 'bg-slate-800/50 border-slate-600 hover:bg-slate-800'}`}><p className={`font-black text-xl mb-4 ${textMainClass}`}>Meja {t.table_number}</p><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/order?tenant=${tenantId}&table=${t.table_number}`)}`} className="w-full rounded-2xl mb-4 shadow-sm border border-slate-300" alt="QR" /><div className="flex gap-2"><button onClick={() => printTableQR(t)} className={`flex-1 text-white text-[11px] font-extrabold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 border-slate-600'}`}><Icons.Print /> Cetak QR</button><button onClick={() => handleDeleteTable(t.id)} className={`text-[11px] rounded-xl px-3 font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>Hapus</button></div></div>))}</div>
               )}
             </div>
@@ -855,7 +865,7 @@ export default function DashboardPage() {
           {activeTab === 'reports' && (
             <div className="space-y-6">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div className="flex flex-wrap items-center gap-2"><div className={`flex items-center gap-1 rounded-2xl p-1.5 border-2 shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}><button onClick={() => setReportMode('daily')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'daily' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>📅 Harian</button><button onClick={() => setReportMode('monthly')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'monthly' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>📊 Bulanan</button><button onClick={() => setReportMode('custom')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'custom' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>📆 Custom</button></div></div>
+                <div className="flex flex-wrap items-center gap-2"><div className={`flex items-center gap-1 rounded-2xl p-1.5 border-2 shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}><button onClick={() => setReportMode('daily')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'daily' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>Harian</button><button onClick={() => setReportMode('monthly')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'monthly' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>Bulanan</button><button onClick={() => setReportMode('custom')} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === 'custom' ? (theme === 'light' ? 'bg-[#2A1F17] text-white shadow-md border-[#2A1F17]' : 'bg-slate-700 text-white shadow-md border-slate-600') : 'border-transparent ' + textSubClass}`}>Custom</button></div></div>
                 <div className="flex items-center gap-3"><button onClick={() => exportCSV(reportOrders, reportLabel)} disabled={!reportNow || reportOrders.length === 0} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-500/20 transition-all border-2 border-emerald-700"><Icons.Download /> Export CSV</button><button onClick={() => printReport(reportStats, topMenus, reportLabel)} disabled={!reportNow} className={`flex items-center gap-2 px-4 py-2.5 disabled:opacity-40 text-white text-xs font-extrabold rounded-xl shadow-md transition-all border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 border-slate-600'}`}><Icons.Print /> Print</button></div>
               </div>
 
@@ -881,7 +891,7 @@ export default function DashboardPage() {
 
                   <div className={`rounded-[2rem] p-8 border-2 shadow-sm ${cardClass}`}>
                     <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 ${textMainClass}`}><div className="flex items-center gap-3"><Icons.TrendUp /><h3 className="font-black text-lg">Grafik Omzet 7 Hari Terakhir</h3></div></div>
-                    {chartData.length > 0 && chartData.every(c => c.revenue === 0) ? (<div className="text-center py-16"><p className="text-5xl mb-3">📈</p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada omzet</p></div>) : (
+                    {chartData.length > 0 && chartData.every(c => c.revenue === 0) ? (<div className="text-center py-16"><p className="text-5xl mb-3"><Icons.Chart /></p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada omzet</p></div>) : (
                       <><div className="h-64 flex items-end gap-2 px-2">{chartData.map((d, i) => (<div key={i} className="flex-1 h-full flex flex-col"><div className="flex-1 relative group"><div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--primary-color)] to-[var(--primary-light)] rounded-t-lg transition-all cursor-default shadow-sm group-hover:from-[var(--primary-dark)]" style={{ height: `${(d.revenue / maxChartRev) * 100}%`, minHeight: d.revenue > 0 ? '4px' : '0' }} title={`${d.label}: ${rp(d.revenue)} (${d.orders} order)`}></div></div><p className={`text-[10px] font-bold mt-2 text-center truncate ${textSubClass}`}>{d.label}</p></div>))}</div><div className={`mt-6 pt-6 border-t-2 border-dashed flex justify-between text-sm ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}><span className={`font-bold ${textSubClass}`}>Total: <span className="text-[var(--primary-color)] font-black text-lg ml-1">{rp(totalChartRev)}</span></span><span className={`font-bold ${textSubClass}`}>Max hari: <span className={`font-black text-lg ml-1 ${textMainClass}`}>{rp(maxChartRev)}</span></span></div></>
                     )}
                   </div>
@@ -893,17 +903,17 @@ export default function DashboardPage() {
                     </div>
 
                     <div className={`rounded-[2rem] p-8 border-2 shadow-sm ${cardClass}`}>
-                      <h3 className={`font-black mb-6 text-lg ${textMainClass}`}>🔥 Menu Terlaris</h3>
-                      {topMenus.length === 0 ? (<div className="text-center py-10"><p className="text-5xl mb-3">📊</p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada penjualan</p></div>) : (
-                        <div className="space-y-5">{topMenus.map(([name, data], idx) => { const maxQty = topMenus[0][1].qty; const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0; const rankBg = idx === 0 ? 'bg-amber-200 text-amber-900 border-amber-300' : idx === 1 ? 'bg-slate-200 text-slate-800 border-slate-300' : idx === 2 ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20' : (theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'); return (<div key={name}><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-3 min-w-0"><span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm border-2 ${rankBg}`}>{idx + 1}</span><span className={`font-bold text-sm truncate ${textMainClass}`}>{name}</span></div><span className={`text-xs font-extrabold whitespace-nowrap ml-2 px-2 py-1 rounded-lg border-2 ${theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'}`}>{data.qty}× · {rp(data.revenue)}</span></div><div className={`h-2.5 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><div className="h-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] rounded-full transition-all" style={{ width: `${pct}%` }}></div></div></div>); })}</div>
+                      <h3 className={`font-black mb-6 text-lg ${textMainClass}`}>Menu Terlaris</h3>
+                      {topMenus.length === 0 ? (<div className="text-center py-10"><p className="text-5xl mb-3"><Icons.Chart /></p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada penjualan</p></div>) : (
+                        <div className="space-y-5">{topMenus.map(([name, data], idx) => { const maxQty = topMenus[0][1].qty; const pct = maxQty > 0 ? (data.qty / maxQty) * 100 : 0; const rankBg = idx === 0 ? 'bg-amber-200 text-amber-900 border-amber-300' : idx === 1 ? 'bg-slate-200 text-slate-800 border-slate-300' : idx === 2 ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20' : (theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'); return (<div key={name}><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-3 min-w-0"><span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm border-2 ${rankBg}`}>{idx + 1}</span><span className={`font-bold text-sm truncate ${textMainClass}`}>{name}</span></div><span className={`text-xs font-extrabold whitespace-nowrap ml-2 px-2 py-1 rounded-lg border-2 ${theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] border-[#D4C5B8]' : 'bg-slate-800 text-slate-300 border-slate-600'}`}>{data.qty}x · {rp(data.revenue)}</span></div><div className={`h-2.5 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><div className="h-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] rounded-full transition-all" style={{ width: `${pct}%` }}></div></div></div>); })}</div>
                       )}
                     </div>
                   </div>
 
                   {showDailyBreakdown && (
                     <div className={`rounded-[2rem] p-8 border-2 shadow-sm ${cardClass}`}>
-                      <h3 className={`font-black mb-6 text-lg ${textMainClass}`}>📅 Rincian Per Hari</h3>
-                      {activeDays.length === 0 ? (<div className="text-center py-10"><p className="text-5xl mb-3">🗓️</p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada pesanan di periode ini</p></div>) : (
+                      <h3 className={`font-black mb-6 text-lg ${textMainClass}`}>Rincian Per Hari</h3>
+                      {activeDays.length === 0 ? (<div className="text-center py-10"><p className="text-5xl mb-3"><Icons.Calendar /></p><p className={`text-sm font-bold ${textMainClass}`}>Belum ada pesanan di periode ini</p></div>) : (
                         <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className={theme === 'light' ? 'bg-[#E8DFD3]' : 'bg-slate-800'}><tr><th className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest rounded-l-xl ${textSubClass}`}>Tanggal</th><th className={`text-right py-3 px-4 text-[10px] font-black uppercase tracking-widest ${textSubClass}`}>Pesanan</th><th className={`text-right py-3 px-4 text-[10px] font-black uppercase tracking-widest rounded-r-xl ${textSubClass}`}>Omset</th></tr></thead><tbody>{activeDays.map(d => (<tr key={d.date.toISOString()} className={`border-b-2 transition-colors ${theme === 'light' ? 'border-[#E8DFD3] hover:bg-[#F4EFE9]' : 'border-slate-700 hover:bg-slate-800/50'}`}><td className={`py-3 px-4 font-bold ${textMainClass}`}>{d.date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td><td className={`text-right py-3 px-4 font-bold ${textSubClass}`}>{d.orders}</td><td className="text-right py-3 px-4 font-black text-[var(--primary-color)]">{rp(d.revenue)}</td></tr>))}</tbody><tfoot><tr className={`border-t-2 ${theme === 'light' ? 'border-[#2A1F17]' : 'border-slate-500'}`}><td className={`py-4 px-4 font-black ${textMainClass}`}>TOTAL</td><td className={`text-right py-4 px-4 font-black ${textMainClass}`}>{reportStats.totalOrders}</td><td className="text-right py-4 px-4 font-black text-[var(--primary-color)] text-lg">{rp(reportStats.revenue)}</td></tr></tfoot></table></div>
                       )}
                     </div>
@@ -918,8 +928,8 @@ export default function DashboardPage() {
               <div className={`border-b-2 pb-6 mb-8 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}><h3 className={`font-black text-2xl ${textMainClass}`}>Profil Toko</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Ubah identitas dan kontak kafe Anda</p></div>
               <form onSubmit={handleSaveSettings} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div><label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Logo Kafe</label><div className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm border-2 border-[#D4C5B8]" />) : (<div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl border-2 ${theme === 'light' ? 'bg-[#E8DFD3] border-[#D4C5B8]' : 'bg-slate-700 border-slate-600'}`}>🏪</div>)}<div className="flex-1"><input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" /><button type="button" onClick={() => logoInputRef.current?.click()} className={`w-full py-2 rounded-xl text-xs font-extrabold shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8] hover:bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-700 border-slate-600 hover:bg-slate-600 text-white'}`}>{uploadingLogo ? 'Mengupload...' : '📷 Ganti Logo'}</button><p className={`text-[10px] font-semibold mt-1.5 ${textSubClass}`}>PNG/JPG, maksimal 2MB</p></div></div></div>
-                  <div><label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Banner Kafe (Latar Belakang)</label><div className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{settings.banner_url ? (<img src={settings.banner_url} className="w-24 h-16 rounded-xl object-cover shadow-sm border-2 border-[#D4C5B8]" />) : (<div className={`w-24 h-16 rounded-xl flex items-center justify-center text-2xl border-2 ${theme === 'light' ? 'bg-[#E8DFD3] border-[#D4C5B8]' : 'bg-slate-700 border-slate-600'}`}>🖼️</div>)}<div className="flex-1"><input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleImageUpload(e, 'banner')} className="hidden" /><button type="button" onClick={() => bannerInputRef.current?.click()} className={`w-full py-2 rounded-xl text-xs font-extrabold shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8] hover:bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-700 border-slate-600 hover:bg-slate-600 text-white'}`}>{uploadingBanner ? 'Mengupload...' : '📷 Pilih Banner'}</button><p className={`text-[10px] font-semibold mt-1.5 ${textSubClass}`}>Disarankan landscape.</p></div></div></div>
+                  <div><label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Logo Kafe</label><div className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{settings.logo_url ? (<img src={settings.logo_url} className="w-16 h-16 rounded-xl object-cover shadow-sm border-2 border-[#D4C5B8]" />) : (<div className={`w-16 h-16 rounded-xl flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#E8DFD3] border-[#D4C5B8]' : 'bg-slate-700 border-slate-600'}`}><Icons.Utensils /></div>)}<div className="flex-1"><input type="file" accept="image/*" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" /><button type="button" onClick={() => logoInputRef.current?.click()} className={`w-full py-2 rounded-xl text-xs font-extrabold shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8] hover:bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-700 border-slate-600 hover:bg-slate-600 text-white'}`}>{uploadingLogo ? 'Mengupload...' : 'Ganti Logo'}</button><p className={`text-[10px] font-semibold mt-1.5 ${textSubClass}`}>PNG/JPG, maksimal 2MB</p></div></div></div>
+                  <div><label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Banner Kafe (Latar Belakang)</label><div className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{settings.banner_url ? (<img src={settings.banner_url} className="w-24 h-16 rounded-xl object-cover shadow-sm border-2 border-[#D4C5B8]" />) : (<div className={`w-24 h-16 rounded-xl flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#E8DFD3] border-[#D4C5B8]' : 'bg-slate-700 border-slate-600'}`}><Icons.Grid /></div>)}<div className="flex-1"><input type="file" accept="image/*" ref={bannerInputRef} onChange={(e) => handleImageUpload(e, 'banner')} className="hidden" /><button type="button" onClick={() => bannerInputRef.current?.click()} className={`w-full py-2 rounded-xl text-xs font-extrabold shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8] hover:bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-700 border-slate-600 hover:bg-slate-600 text-white'}`}>{uploadingBanner ? 'Mengupload...' : 'Pilih Banner'}</button><p className={`text-[10px] font-semibold mt-1.5 ${textSubClass}`}>Disarankan landscape.</p></div></div></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div><label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Nama Kafe</label><input type="text" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} className={inputClass} /></div>
@@ -935,13 +945,12 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* MODAL EDIT MENU */}
       {isMenuModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 print:hidden">
           <div className={`rounded-[2rem] max-w-3xl w-full p-8 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto border-2 animate-in zoom-in-95 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
-            <div className="flex justify-between items-start mb-6"><div><h3 className={`font-black text-2xl ${textMainClass}`}>{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className={`w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'}`}>×</button></div>
+            <div className="flex justify-between items-start mb-6"><div><h3 className={`font-black text-2xl ${textMainClass}`}>{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3><p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Isi informasi menu baru</p></div><button onClick={() => setIsMenuModalOpen(false)} className={`w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'}`}><Icons.X /></button></div>
             <form onSubmit={handleSaveMenu} className="space-y-6">
-              <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Foto Menu</label><div className="flex items-center gap-6"><div className={`w-32 h-32 rounded-2xl overflow-hidden flex items-center justify-center text-5xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : '🍽️'}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>{uploading ? 'Mengupload...' : '📷 Pilih Foto'}</button></div></div></div>
+              <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Foto Menu</label><div className="flex items-center gap-6"><div className={`w-32 h-32 rounded-2xl overflow-hidden flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>{currentMenu.image_url ? <img src={currentMenu.image_url} className="w-full h-full object-cover" /> : <Icons.Utensils />}</div><div className="flex-1"><input type="file" ref={fileInputRef} onChange={(e) => handleImageUpload(e, 'menu')} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current?.click()} className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>{uploading ? 'Mengupload...' : 'Pilih Foto'}</button></div></div></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Nama Menu</label><input required type="text" value={currentMenu.name} onChange={e => setCurrentMenu({...currentMenu, name: e.target.value})} className={inputClass} placeholder="Contoh: Nasi Goreng Spesial" /></div>
                 <div><label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Harga (Rp)</label><input required type="number" value={currentMenu.price} onChange={e => setCurrentMenu({...currentMenu, price: e.target.value})} className={inputClass} placeholder="25000" /></div>
@@ -957,13 +966,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* KITCHEN MODAL */}
       {kitchenModal.open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[80] print:hidden">
           <div className={`rounded-[2rem] max-w-md w-full p-8 shadow-2xl border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
-            <div className="flex items-start justify-between mb-5"><div><h3 className={`font-black text-xl ${textMainClass}`}>🍳 Layar Dapur (KDS)</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Buka URL ini di tablet / TV dapur</p></div><button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className={`w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'}`}>×</button></div>
+            <div className="flex items-start justify-between mb-5"><div><h3 className={`font-black text-xl ${textMainClass}`}>Layar Dapur (KDS)</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Buka URL ini di tablet / TV dapur</p></div><button onClick={() => setKitchenModal({ open: false, url: '', pin: '' })} className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'}`}><Icons.X /></button></div>
             <div className="space-y-4">
-              <div><label className={`block text-[10px] font-bold uppercase mb-2 ${textSubClass}`}>URL</label><div className="flex gap-2"><input readOnly value={kitchenModal.url} className={`flex-1 border-2 rounded-xl px-3 py-2.5 text-xs font-mono ${theme === 'light' ? 'border-[#D4C5B8] bg-[#F4EFE9] text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-slate-300'}`} /><button onClick={() => { navigator.clipboard.writeText(kitchenModal.url); showToast('✅ URL disalin', 'success'); }} className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'}`}>📋 Salin</button></div></div>
+              <div><label className={`block text-[10px] font-bold uppercase mb-2 ${textSubClass}`}>URL</label><div className="flex gap-2"><input readOnly value={kitchenModal.url} className={`flex-1 border-2 rounded-xl px-3 py-2.5 text-xs font-mono ${theme === 'light' ? 'border-[#D4C5B8] bg-[#F4EFE9] text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-slate-300'}`} /><button onClick={() => { navigator.clipboard.writeText(kitchenModal.url); showToast('URL disalin', 'success'); }} className={`px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap shadow-sm transition-colors border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'}`}>Salin</button></div></div>
               <div className={`text-center p-4 rounded-2xl border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(kitchenModal.url)}`} className="w-40 h-40 mx-auto rounded-xl shadow-sm border border-slate-300 bg-white" alt="QR KDS" /><p className={`text-[10px] font-semibold mt-3 ${textSubClass}`}>Scan QR dengan tablet dapur</p></div>
               <div className={`border-2 rounded-xl p-4 ${theme === 'light' ? 'bg-amber-100 border-amber-300' : 'bg-amber-500/10 border-amber-500/30'}`}><p className={`text-sm font-bold ${theme === 'light' ? 'text-amber-900' : 'text-amber-500'}`}>PIN: {kitchenModal.pin}</p><p className={`text-[11px] font-semibold mt-1 ${theme === 'light' ? 'text-amber-800' : 'text-amber-500/70'}`}>PIN ini sudah termasuk di URL. Jangan bagikan ke pelanggan.</p></div>
             </div>
@@ -972,15 +980,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* TOASTS */}
       <div className="fixed top-4 right-4 z-[100] space-y-2 w-80 max-w-[calc(100vw-2rem)] print:hidden pointer-events-none">
         {toasts.map(t => {
-          const c = { success: { border: 'border-emerald-500', icon: '✅', bar: 'bg-emerald-500' }, error: { border: 'border-rose-500', icon: '❌', bar: 'bg-rose-500' }, warning: { border: 'border-amber-500', icon: '⚠️', bar: 'bg-amber-500' }, info: { border: 'border-[var(--primary-color)]', icon: '🔔', bar: 'bg-[var(--primary-color)]' } }[t.type] || { border: 'border-slate-500', icon: 'ℹ️', bar: 'bg-slate-500' };
-          return (<div key={t.id} className={`pointer-events-auto rounded-2xl shadow-2xl border-2 overflow-hidden flex items-stretch animate-in slide-in-from-right-8 ${theme === 'light' ? 'bg-white' : 'bg-slate-800'} ${c.border}`}><div className={`${c.bar} w-1.5 shrink-0`}></div><div className="flex items-start gap-3 px-4 py-3 flex-1"><span className="text-xl shrink-0">{c.icon}</span><p className={`text-sm font-bold flex-1 ${textMainClass}`}>{t.message}</p></div></div>);
+          const c = { success: { border: 'border-emerald-500', icon: 'OK', bar: 'bg-emerald-500' }, error: { border: 'border-rose-500', icon: 'X', bar: 'bg-rose-500' }, warning: { border: 'border-amber-500', icon: '!', bar: 'bg-amber-500' }, info: { border: 'border-[var(--primary-color)]', icon: 'i', bar: 'bg-[var(--primary-color)]' } }[t.type] || { border: 'border-slate-500', icon: 'i', bar: 'bg-slate-500' };
+          return (<div key={t.id} className={`pointer-events-auto rounded-2xl shadow-2xl border-2 overflow-hidden flex items-stretch animate-in slide-in-from-right-8 ${theme === 'light' ? 'bg-white' : 'bg-slate-800'} ${c.border}`}><div className={`${c.bar} w-1.5 shrink-0`}></div><div className="flex items-start gap-3 px-4 py-3 flex-1"><span className="text-sm font-black shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-slate-100 text-slate-800">{c.icon}</span><p className={`text-sm font-bold flex-1 ${textMainClass}`}>{t.message}</p></div></div>);
         })}
       </div>
 
-      {/* CONFIRM DIALOG */}
       {confirmDialog.open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[90] print:hidden">
           <div className={`rounded-[2rem] max-w-sm w-full p-8 shadow-2xl border-2 animate-in zoom-in-95 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
