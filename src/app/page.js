@@ -6,13 +6,9 @@ import Link from 'next/link';
 const WA_NUMBER = '6281389744957';
 const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
+// Logo NexaFlow baru sesuai dengan gambar referensi NF (Digital/Pixel Blue)
 const NexaLogo = ({ className = "w-8 h-8" }) => (
-  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
-    <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
-    <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
-    <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
-  </svg>
+  <img src="/logo nexa flow.jpg" alt="NexaFlow Logo" className={`${className} object-contain rounded-lg shadow-sm`} />
 );
 
 const Icons = {
@@ -135,7 +131,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
-              <NexaLogo className="w-8 h-8 group-hover:scale-105 transition-transform" />
+              <NexaLogo className="w-10 h-10" />
               <div>
                 <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
@@ -155,6 +151,20 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileOpen && (
+        <div className="fixed inset-x-0 top-20 bg-[#F4EFE9] border-b border-[#E3DCD1] p-6 z-40 md:hidden shadow-xl space-y-3">
+          <button onClick={() => scrollTo('fitur')} className="block w-full text-left py-2 text-base font-bold text-[#7A6A5F]">Fitur</button>
+          <button onClick={() => scrollTo('tampilan')} className="block w-full text-left py-2 text-base font-bold text-[#7A6A5F]">Pratinjau</button>
+          <button onClick={() => scrollTo('harga')} className="block w-full text-left py-2 text-base font-bold text-[#7A6A5F]">Harga</button>
+          <button onClick={() => scrollTo('faq')} className="block w-full text-left py-2 text-base font-bold text-[#7A6A5F]">FAQ</button>
+          <div className="pt-4 border-t border-[#E3DCD1] flex flex-col gap-3">
+            <Link href="/login" className="w-full py-3 text-center text-sm font-bold text-[#3A2A20] bg-white rounded-xl border border-[#E3DCD1]">Masuk</Link>
+            <Link href="/register" className="w-full py-3 text-center text-sm font-bold text-[#F4EFE9] bg-[#3A2A20] rounded-xl shadow-md">Coba Gratis</Link>
+          </div>
+        </div>
+      )}
 
       <section className="relative pt-32 sm:pt-40 pb-24 px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
@@ -302,43 +312,47 @@ export default function LandingPage() {
                     <div key={i} className="flex items-start gap-3"><span className="text-[#3A2A20] mt-0.5 shrink-0"><Icons.Check /></span><span className="text-sm font-bold text-[#7A6A5F]">{f}</span></div>
                   ))}
                 </div>
-                <button onClick={openWhatsApp} className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-[#3A2A20] text-white font-black text-base shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all"><Icons.WhatsApp /> Konsultasi & Tanya Harga</button>
-                <p className="text-center text-[11px] font-bold text-[#8C7A6B] mt-4">Gratis 7 hari percobaan · Tanpa kartu kredit</p>
+                <button onClick={openWhatsApp} className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base shadow-xl shadow-emerald-600/20 hover:shadow-emerald-600/40 transition-all">
+                  <Icons.WhatsApp /> Konsultasi via WhatsApp
+                </button>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="faq" className="px-6 lg:px-8 py-24 sm:py-32 relative bg-white/40 border-y border-[#E3DCD1] z-10 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight">Pertanyaan Umum</h2></div>
+      <section id="faq" className="px-6 lg:px-8 py-24 relative bg-white/40 border-t border-[#E3DCD1] z-10 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-16"><h2 className="text-4xl sm:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Pertanyaan yang <span className="text-[#8C7A6B]">Sering Diajukan</span></h2></div>
           <div className="space-y-4">
-            {faqs.map((f, i) => (
-              <div key={i} className="rounded-2xl bg-white/80 backdrop-blur-sm border border-[#E3DCD1] overflow-hidden hover:border-[#D3C8BB] transition-colors shadow-sm">
-                <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="w-full flex items-center justify-between gap-4 p-6 text-left"><span className="font-bold text-[#3A2A20] text-base">{f.q}</span><span className={`shrink-0 text-[#8C7A6B] transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span></button>
-                {openFaq === i && <div className="px-6 pb-6 text-sm text-[#7A6A5F] leading-relaxed font-medium">{f.a}</div>}
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-[#E3DCD1] overflow-hidden shadow-sm">
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full px-6 py-5 text-left font-bold text-[#3A2A20] flex justify-between items-center gap-4 hover:bg-[#F4EFE9]/50 transition-colors">
+                  <span>{faq.q}</span>
+                  <span className={`transform transition-transform ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span>
+                </button>
+                {openFaq === i && <div className="px-6 pb-5 text-sm text-[#7A6A5F] leading-relaxed font-medium">{faq.a}</div>}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-[#E3DCD1] px-6 lg:px-8 py-14 bg-[#F4EFE9]/80 backdrop-blur-md relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-10 mb-12">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-3 mb-5"><NexaLogo className="w-8 h-8" /><div><p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p><p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p></div></div>
-              <p className="text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.</p>
+      <footer className="bg-[#3A2A20] text-[#F4EFE9] py-16 px-6 lg:px-8 relative z-10 border-t border-[#3A2A20]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-3">
+            <NexaLogo className="w-10 h-10" />
+            <div>
+              <p className="text-xl font-black tracking-tight leading-none uppercase">NEXAFLOW</p>
+              <p className="text-[10px] font-bold text-[#D3C8BB] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
             </div>
-            <div><p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Produk</p><ul className="space-y-3 text-sm"><li><button onClick={() => scrollTo('fitur')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Fitur</button></li><li><button onClick={() => scrollTo('harga')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Harga</button></li><li><button onClick={() => scrollTo('faq')} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">FAQ</button></li><li><Link href="/login" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">Login</Link></li></ul></div>
-            <div><p className="text-xs font-black text-[#3A2A20] uppercase tracking-widest mb-5">Kontak</p><ul className="space-y-3 text-sm"><li><button onClick={openWhatsApp} className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors inline-flex items-center gap-2"><Icons.WhatsApp /> WhatsApp</button></li><li><a href="mailto:hello@nexaflow.app" className="text-[#7A6A5F] hover:text-[#3A2A20] font-semibold transition-colors">hello@nexaflow.app</a></li></ul></div>
           </div>
-          <div className="pt-8 border-t border-[#E3DCD1] flex flex-col sm:flex-row justify-between items-center gap-4"><p className="text-xs font-semibold text-[#8C7A6B]">© {year} NexaFlow. All rights reserved.</p><p className="text-xs font-semibold text-[#8C7A6B]">Made with <span className="text-rose-500">♥</span> in Indonesia</p></div>
+          <p className="text-sm text-[#D3C8BB] font-medium text-center">© {year} NexaFlow SaaS. Hak cipta dilindungi.</p>
+          <div className="flex gap-6">
+            <button onClick={openWhatsApp} className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"><Icons.WhatsApp /></button>
+          </div>
         </div>
       </footer>
-
-      <button onClick={openWhatsApp} className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#3A2A20] text-[#F4EFE9] flex items-center justify-center shadow-2xl shadow-[#3A2A20]/40 hover:scale-110 transition-transform" aria-label="Chat WhatsApp"><Icons.WhatsApp /><span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#F4EFE9] animate-pulse"></span></button>
 
     </div>
   );
