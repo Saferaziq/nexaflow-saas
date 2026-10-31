@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 // Logo NexaFlow baru
 const NexaLogo = ({ className = "w-10 h-10" }) => (
-  <img src="/logo nexa flow.jpg" alt="NexaFlow Logo" className={`${className} object-contain rounded-xl shadow-md`} />
+  <img src="/logo.jpg" alt="NexaFlow Logo" className={`${className} object-contain rounded-xl shadow-md`} />
 );
 
 const Icons = {
