@@ -134,7 +134,7 @@ export default function RegisterPage() {
           
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
-              <img src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/logo%20nexa%20flow.jpg" alt="NexaFlow Logo" className="w-20 h-20 object-contain mix-blend-multiply" />
+              <img src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/Gemini_Generated_Image_kv5nevkv5nevkv5n.jpg" alt="NexaFlow Logo" className="w-24 h-24 object-contain mix-blend-multiply" />
               <div>
                 <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
                 <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>

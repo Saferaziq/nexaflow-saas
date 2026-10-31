@@ -9,7 +9,7 @@ const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda.
 // Logo NexaFlow baru sesuai dengan gambar referensi NF (Digital/Pixel Blue)
 const NexaLogo = ({ className = "w-8 h-8" }) => (
   <img 
-    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/logo%20nexa%20flow.jpg" 
+    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/Gemini_Generated_Image_kv5nevkv5nevkv5n.jpg" 
     alt="NexaFlow Logo" 
     className={`${className} object-contain mix-blend-multiply`} 
   />
