@@ -149,7 +149,7 @@ export default function LandingPage() {
             </nav>
             <div className="flex items-center gap-3 relative z-10">
               <Link href="/login" className="hidden sm:inline-flex px-5 py-2.5 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Masuk</Link>
-              <Link href="/register" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F4EFE9] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Coba Gratis <Icons.ArrowRight /></Link>
+              <Link href="/login" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3A2A20] text-[#F4EFE9] text-sm font-bold shadow-lg shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Coba Gratis <Icons.ArrowRight /></Link>
               <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-[#3A2A20] rounded-lg hover:bg-[#E3DCD1]">{mobileOpen ? <Icons.X /> : <Icons.Menu />}</button>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function LandingPage() {
           <button onClick={() => scrollTo('faq')} className="block w-full text-left py-2 text-base font-bold text-[#7A6A5F]">FAQ</button>
           <div className="pt-4 border-t border-[#E3DCD1] flex flex-col gap-3">
             <Link href="/login" className="w-full py-3 text-center text-sm font-bold text-[#3A2A20] bg-white rounded-xl border border-[#E3DCD1]">Masuk</Link>
-            <Link href="/register" className="w-full py-3 text-center text-sm font-bold text-[#F4EFE9] bg-[#3A2A20] rounded-xl shadow-md">Coba Gratis</Link>
+            <Link href="/login" className="w-full py-3 text-center text-sm font-bold text-[#F4EFE9] bg-[#3A2A20] rounded-xl shadow-md">Coba Gratis</Link>
           </div>
         </div>
       )}
@@ -178,7 +178,7 @@ export default function LandingPage() {
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-[#3A2A20] leading-[1.05] tracking-tight">Ubah Cara Caffe<br /><span className="text-[#8C7A6B]">Bekerja Hari Ini.</span></h1>
               <p className="mt-6 text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.</p>
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Mulai Gratis 7 Hari <Icons.ArrowRight /></Link>
+                <Link href="/login" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Mulai Gratis 7 Hari <Icons.ArrowRight /></Link>
                 <button onClick={() => scrollTo('tampilan')} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-[#D3C8BB] text-[#3A2A20] font-bold text-base hover:bg-white shadow-sm hover:shadow-md transition-all">Lihat Pratinjau</button>
               </div>
             </div>
