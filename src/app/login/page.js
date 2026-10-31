@@ -2,16 +2,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [cafeName, setCafeName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
@@ -71,20 +72,55 @@ export default function LoginPage() {
     return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
   }, []);
 
-  const handleLogin = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setErrorMsg('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (password !== confirmPassword) {
+      setErrorMsg('Password dan Konfirmasi Password tidak cocok!');
+      return;
+    }
 
-    if (error) {
-      setErrorMsg(error.message === 'Invalid login credentials' ? 'Email atau password salah.' : error.message);
+    if (password.length < 6) {
+      setErrorMsg('Password minimal 6 karakter.');
+      return;
+    }
+
+    setLoading(true);
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+
+    if (authError) {
+      setErrorMsg(authError.message);
       setLoading(false);
       return;
     }
 
-    router.push('/dashboard');
+    if (authData.user) {
+      const { data: newTenant, error: dbError } = await supabase.from('tenants').insert([{
+        name: cafeName,
+        subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true
+      }]).select().single();
+
+      if (dbError) {
+        setErrorMsg('Gagal membuat profil kafe: ' + dbError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (newTenant) {
+        await supabase.from('users').insert([{
+          id: authData.user.id,
+          tenant_id: newTenant.id,
+          email: email,
+          role: 'owner'
+        }]);
+      }
+
+      alert('Pendaftaran Berhasil! Silakan login dengan akun Anda.');
+      router.push('/login');
+    }
   };
 
   return (
@@ -104,28 +140,38 @@ export default function LoginPage() {
                 <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
-            <h2 className="text-4xl md:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Caffe<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
-            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu caffe Anda.</p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Langkah Baru Bisnis Anda</div>
+            <h2 className="text-4xl md:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Daftarkan<br /><span className="text-[#8C7A6B]">Caffe Anda.</span></h2>
+            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Mulai transformasi digital bisnis Anda. Gratis uji coba 7 hari. Tanpa kartu kredit, tanpa biaya tersembunyi.</p>
           </div>
         </div>
 
         <div className="w-full md:w-1/2 p-10 md:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
-            <h3 className="text-2xl font-black text-[#3A2A20] mb-2">Masuk Kasir</h3>
-            <p className="text-xs font-medium text-[#8C7A6B] mb-8">Silakan masukkan kredensial akun Anda.</p>
+            <h3 className="text-2xl font-black text-[#3A2A20] mb-2">Daftarkan Caffe</h3>
+            <p className="text-xs font-medium text-[#8C7A6B] mb-8">Mulai transformasi digital bisnis Anda.</p>
 
             {errorMsg && (<div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">{errorMsg}</div>)}
 
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="admin@kafe.com" required /></div>
-              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="••••••••" required /></div>
-              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2">{loading ? 'Memproses...' : 'Masuk Dashboard'} <Icons.ArrowRight /></button>
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Caffe</label><input type="text" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja" required /></div>
+              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="owner@nexaflow.id" required /></div>
+              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Minimal 6 karakter" required /></div>
+              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Konfirmasi Password</label><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required /></div>
+              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">{loading ? 'Memproses...' : 'Mulai Uji Coba Gratis'} <Icons.ArrowRight /></button>
             </form>
 
-            <div className="mt-8 text-center relative z-50">
+            {/* FIX: Menggunakan button onClick alih-alih Link */}
+            <div className="mt-6 text-center relative z-50">
               <p className="text-xs font-medium text-[#8C7A6B]">
-                Belum punya akun caffe? <Link href="/register" className="font-bold text-[#3A2A20] hover:underline cursor-pointer">Daftar di sini</Link>
+                Sudah punya akun? 
+                <button 
+                  type="button"
+                  onClick={() => router.push('/login')} 
+                  className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1"
+                >
+                  Masuk di sini
+                </button>
               </p>
             </div>
           </div>
