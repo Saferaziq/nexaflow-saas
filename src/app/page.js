@@ -7,7 +7,7 @@ const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda.
 
 const NexaLogo = ({ className = "w-8 h-8" }) => (
   <img 
-    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/Gemini_Generated_Image_kv5nevkv5nevkv5n%20(1).jpg" 
+    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/WhatsApp%20Image%202026-10-31%20at%2015.47.53.jpeg" 
     alt="NexaFlow Logo" 
     className={`${className} object-contain mix-blend-multiply`} 
   />
