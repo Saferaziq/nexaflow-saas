@@ -533,31 +533,65 @@ export default function DashboardPage() {
     printHTML(html);
   };
 
-  const printBillWithQRIS = (order) => {
+    const printBillWithQRIS = (order) => {
     if (!settings.qris_string) { showToast('QRIS belum diatur.', 'error'); return; }
     const dynamicQRIS = generateDynamicQRIS(settings.qris_string, order.total_price);
     if (!dynamicQRIS) { showToast('Gagal generate QRIS.', 'error'); return; }
     const subtotal = order.subtotal || order.total_price; const taxAmount = order.tax_amount || 0; const taxRate = settings.tax_percentage || 0;
     
+    // FORMAT STRUK THERMAL 58mm/80mm
     const html = `
       <html><head><title>Bill - Meja ${order.table_number}</title><style>
         * { margin: 0; padding: 0; box-sizing: border-box; } 
-        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; color: #000; max-width: 80mm; margin: 0 auto; } 
-        .center { text-align: center; } .bold { font-weight: bold; } h2 { font-size: 16px; margin-bottom: 4px; } 
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; } td { padding: 4px 0; vertical-align: top; } 
-        .right { text-align: right; } .line { border-top: 1px dashed #000; margin: 8px 0; } 
-        .total { font-size: 14px; font-weight: bold; margin-top: 8px; } 
-        .qris-box { text-align: center; margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; } 
-        .qris-box img { width: 180px; height: 180px; display: block; margin: 0 auto; } 
-        .qris-text { font-size: 10px; color: #555; margin-top: 5px; } 
-        @media print { body { padding: 0; max-width: 100%; } @page { margin: 5mm; } .qris-box { border: none; } }
+        body { font-family: 'Courier New', monospace; font-size: 11px; padding: 5px; color: #000; width: 100%; max-width: 72mm; margin: 0 auto; line-height: 1.2; } 
+        .center { text-align: center; } .bold { font-weight: bold; } 
+        h2 { font-size: 14px; margin-bottom: 2px; } 
+        table { width: 100%; border-collapse: collapse; margin: 5px 0; } 
+        td { padding: 2px 0; vertical-align: top; } 
+        .right { text-align: right; } 
+        .line { border-top: 1px dashed #000; margin: 5px 0; } 
+        .total { font-size: 13px; font-weight: bold; margin-top: 5px; } 
+        .qris-box { text-align: center; margin-top: 10px; } 
+        .qris-box img { width: 140px; height: 140px; display: block; margin: 0 auto; } 
+        .qris-text { font-size: 9px; color: #000; margin-top: 3px; } 
+        @media print { 
+          body { padding: 0; max-width: 100%; } 
+          @page { margin: 2mm; size: 80mm auto; } 
+        }
       </style></head><body>
-        <div class="center"><h2>${settings.name || 'Kafe'}</h2><p>${settings.address || ''}</p><p>WA: ${settings.wa || ''}</p></div><div class="line"></div>
-        <table><tr><td class="bold">Bill:</td><td class="right">#${order.id.slice(0,8).toUpperCase()}</td></tr><tr><td class="bold">Pelanggan:</td><td class="right">${order.customer_name || 'Tamu'}</td></tr><tr><td class="bold">Meja:</td><td class="right">${order.table_number}</td></tr><tr><td class="bold">Waktu:</td><td class="right">${new Date(order.created_at).toLocaleString('id-ID')}</td></tr></table><div class="line"></div>
-        <table>${order.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td class="right">${rp(i.price * i.qty)}</td></tr>`).join('')}</table><div class="line"></div>
-        <table><tr><td>Subtotal</td><td class="right">${rp(subtotal)}</td></tr>${taxAmount > 0 ? `<tr><td>PPN (${taxRate}%)</td><td class="right">${rp(taxAmount)}</td></tr>` : ''}<tr class="total"><td>TOTAL</td><td class="right">${rp(order.total_price)}</td></tr></table>
-        <div class="qris-box"><p class="bold" style="margin-bottom:8px;">BAYAR DENGAN QRIS</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicQRIS)}" alt="QRIS" /><p class="qris-text">Scan dengan aplikasi bank / e-wallet apa saja.</p><p class="qris-text">Nominal sudah otomatis terisi.</p><p class="qris-text bold" style="margin-top:5px;">Merchant: ${settings.name}</p></div>
-        <div class="line" style="margin-top:15px;"></div><p class="center" style="font-size:10px; margin-top:5px;">Terima Kasih</p></body></html>
+        <div class="center">
+          <h2>${settings.name || 'Kafe'}</h2>
+          <p>${settings.address || ''}</p>
+          <p>WA: ${settings.wa || ''}</p>
+        </div>
+        <div class="line"></div>
+        <table>
+          <tr><td class="bold">Bill:</td><td class="right">#${order.id.slice(0,8).toUpperCase()}</td></tr>
+          <tr><td class="bold">Pelanggan:</td><td class="right">${order.customer_name || 'Tamu'}</td></tr>
+          <tr><td class="bold">Meja:</td><td class="right">${order.table_number}</td></tr>
+          <tr><td class="bold">Waktu:</td><td class="right">${new Date(order.created_at).toLocaleString('id-ID', {hour: '2-digit', minute:'2-digit'})}</td></tr>
+        </table>
+        <div class="line"></div>
+        <table>
+          ${order.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td class="right">${rp(i.price * i.qty)}</td></tr>`).join('')}
+        </table>
+        <div class="line"></div>
+        <table>
+          <tr><td>Subtotal</td><td class="right">${rp(subtotal)}</td></tr>
+          ${taxAmount > 0 ? `<tr><td>PPN (${taxRate}%)</td><td class="right">${rp(taxAmount)}</td></tr>` : ''}
+          <tr class="total"><td>TOTAL</td><td class="right">${rp(order.total_price)}</td></tr>
+        </table>
+        
+        <div class="qris-box">
+          <p class="bold" style="margin-bottom:4px;">BAYAR DENGAN QRIS</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicQRIS)}" alt="QRIS" />
+          <p class="qris-text">Scan dengan aplikasi bank / e-wallet.</p>
+          <p class="qris-text bold">Merchant: ${settings.name}</p>
+        </div>
+        
+        <div class="line" style="margin-top:10px;"></div>
+        <p class="center" style="font-size:9px; margin-top:5px;">Terima Kasih 🙏</p>
+      </body></html>
     `;
     printHTML(html);
   };
