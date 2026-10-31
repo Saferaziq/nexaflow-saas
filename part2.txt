@@ -1,0 +1,47 @@
+  useEffect(() => { const onFsChange = () => setIsFullscreen(!!document.fullscreenElement); document.addEventListener('fullscreenchange', onFsChange); return () => document.removeEventListener('fullscreenchange', onFsChange); }, []);
+  useEffect(() => { const update = () => setNowTick(Date.now()); update(); const id = setInterval(update, 60000); return () => clearInterval(id); }, []);
+  useEffect(() => { const onOffline = () => setRealtimeStatus('offline'); const onOnline = () => setRealtimeStatus('connecting'); window.addEventListener('online', onOnline); window.addEventListener('offline', onOffline); return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); }; }, []);
+
+  useEffect(() => {
+    const now = new Date(); setTodayStr(now.toDateString()); setReportNow(now); setBaseUrl(window.location.origin);
+    const yyyy = now.getFullYear(); const mm = String(now.getMonth() + 1).padStart(2, '0'); const dd = String(now.getDate()).padStart(2, '0');
+    setReportDateStr(`${yyyy}-${mm}-${dd}`); setReportMonth(now.getMonth()); setReportYear(yyyy);
+    setReportStartDateStr(`${yyyy}-${mm}-01`); setReportEndDateStr(`${yyyy}-${mm}-${dd}`);
+
+    let channel, presenceChannel, isMounted = true;
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return router.push('/login'); if (!isMounted) return; setUserEmail(session.user.email);
+      const { data: userData } = await supabase.from('users').select('tenant_id, tenants(*)').eq('id', session.user.id).single();
+      if (!userData || !userData.tenants) {
+        if (session.user.email === 'dinamis.id.shop@gmail.com') return router.push('/admin');
+        else { showToast('Akun ini belum terhubung ke kafe manapun.', 'error'); await supabase.auth.signOut(); return router.push('/login'); }
+      }
+      if (userData.tenants.subscription_end_date) { const endDate = new Date(userData.tenants.subscription_end_date); if (endDate < now) setIsExpired(true); }
+      if (userData && userData.tenants && isMounted) {
+        const tId = userData.tenant_id; setTenantId(tId); setCafeName(userData.tenants.name);
+        setSettings({ name: userData.tenants.name, wa: userData.tenants.wa_number || '', address: userData.tenants.address || '', logo_url: userData.tenants.logo_url || '', qris_string: userData.tenants.qris_string || '', banner_url: userData.tenants.banner_url || '', tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11 });
+        if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url); else if (userData.tenants.logo_url) extractDominantColor(userData.tenants.logo_url);
+        await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
+        channel = supabase.channel('realtime-orders-' + Date.now()).on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId)).subscribe((status) => { if (status === 'SUBSCRIBED') setRealtimeStatus('online'); else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('offline'); else setRealtimeStatus('connecting'); });
+        presenceChannel = supabase.channel('online-rooms', { config: { presence: { key: session.user.id } } });
+        presenceChannel.subscribe(async (status) => { if (status === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() }); });
+      }
+    };
+    fetchData();
+    return () => { isMounted = false; if (channel) supabase.removeChannel(channel); if (presenceChannel) supabase.removeChannel(presenceChannel); };
+  }, [router]);
+
+  const fetchMenus = async (tId) => { const { data } = await supabase.from('menus').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }); if (data) setMenus(data); };
+  const fetchTables = async (tId) => { const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId).order('table_number', { ascending: true }); if (data) setTables(data); };
+  const fetchOrders = async (tId) => {
+    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+    if (data) {
+      const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).map(o => o.id)); const prevIds = prevOrderIdsRef.current;
+      if (prevIds !== null) { const newOnes = [...activeIds].filter(id => !prevIds.has(id)); if (newOnes.length > 0) { playBeep(); const firstNew = data.find(o => o.id === newOnes[0]); if (firstNew) showToast(`Pesanan baru! Meja ${firstNew.table_number} - ${rp(firstNew.total_price)}`, 'info'); } }
+      prevOrderIdsRef.current = activeIds; setOrders(data);
+    }
+  };
+
+  const handleLogout = () => askConfirm('Keluar dari Dashboard', 'Yakin ingin logout dari akun ini?', async () => { await supabase.auth.signOut(); router.push('/login'); }, true);
+  const openKitchenLink = async () => { try { const { data, error } = await supabase.from('tenants').select('kitchen_pin').eq('id', tenantId).
