@@ -1,17 +1,35 @@
-import './globals.css'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
+import './globals.css';
+import RegisterSW from '@/components/RegisterSW';
 
 export const metadata = {
-  title: 'NexaFlow SaaS - Restoran UMKM',
-  description: 'Sistem manajemen restoran modern dengan QR Code',
-}
+  title: 'NexaFlow — Kasir Restoran',
+  description: 'Sistem Kasir & Manajemen Restoran NexaFlow',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'NexaFlow',
+  },
+  icons: {
+    apple: '/icons/icon-192.png',
+  },
+};
+
+export const viewport = {
+  themeColor: '#F4EFE9', // Warna Cream Premium
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <body className={inter.className}>{children}</body>
+      <body>
+        {children}
+        <RegisterSW />
+      </body>
     </html>
-  )
+  );
 }
