@@ -83,15 +83,40 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // 1. Buat Promise untuk login
+    const loginPromise = supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      setErrorMsg(error.message === 'Invalid login credentials' ? 'Email atau password salah.' : error.message);
+    // 2. Buat Promise "Pengaman" (Timeout 4 detik)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(async () => {
+        // Jika timeout tercapai, cek apakah sesi sebenarnya sudah terbentuk
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Jika sesi ADA, berarti login sukses tapi promise hang. Kita paksa resolve!
+          resolve({ data: { session }, error: null });
+        } else {
+          reject(new Error('Waktu habis. Periksa koneksi internet Anda.'));
+        }
+      }, 4000) // 4 detik
+    );
+
+    try {
+      // 3. Balapan antara login asli vs timeout
+      const { error } = await Promise.race([loginPromise, timeoutPromise]);
+
+      if (error) {
+        setErrorMsg(error.message === 'Invalid login credentials' ? 'Email atau password salah.' : error.message);
+        setLoading(false);
+        return;
+      }
+
+      // 4. Jika berhasil (atau timeout tapi sesi ada), langsung ke dashboard
+      router.push('/dashboard');
+      
+    } catch (err) {
+      setErrorMsg(err.message);
       setLoading(false);
-      return;
     }
-
-    router.push('/dashboard');
   };
 
   return (
