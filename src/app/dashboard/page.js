@@ -564,7 +564,6 @@ export default function DashboardPage() {
           <p>${settings.address || ''}</p>
           <p>WA: ${settings.wa || ''}</p>
         </div>
-        <div class="line"></div>
         <table>
           <tr><td class="bold">Bill:</td><td class="right">#${order.id.slice(0,8).toUpperCase()}</td></tr>
           <tr><td class="bold">Pelanggan:</td><td class="right">${order.customer_name || 'Tamu'}</td></tr>
@@ -789,10 +788,13 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform ${theme === 'light' ? 'bg-[#F4EFE9]' : 'bg-slate-800/50'}`}></div><div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#5C4B3E]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}><Icons.Clipboard /></div><p className={`text-[11px] font-extrabold uppercase tracking-widest ${textSubClass}`}>Total Pesanan</p></div><h3 className={`text-4xl font-black tracking-tight ${textMainClass}`}>{stats.total}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Hari ini</p></div>
+          
           <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-[var(--primary-light)] rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] text-[var(--primary-color)] flex items-center justify-center shadow-sm border border-[var(--primary-color)]/20"><Icons.Clock /></div><p className="text-[11px] font-extrabold text-[var(--primary-color)] uppercase tracking-widest">Dimasak</p></div><h3 className="text-4xl font-black text-[var(--primary-color)] tracking-tight">{stats.cooking}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Sedang diproses</p></div>
+          
           <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}><div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm border border-emerald-300"><Icons.Grid /></div><p className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-widest">Siap Saji</p></div><h3 className="text-4xl font-black text-emerald-700 tracking-tight">{stats.ready}</h3><p className={`text-xs font-semibold mt-1 ${textSubClass}`}>Menunggu diantar</p></div>
+          
           <div className="rounded-[2rem] p-6 bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] shadow-[0_8px_30px_var(--primary-color)] relative overflow-hidden group text-white border-2 border-[var(--primary-dark)]"><div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner backdrop-blur-sm border border-white/20"><Icons.Chart /></div><p className="text-[11px] font-extrabold text-white/90 uppercase tracking-widest">Omset Hari Ini</p></div><h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats.revenue)}</h3><p className="text-xs text-white/90 font-semibold mt-1">Total pendapatan</p></div>
         </div>
 
