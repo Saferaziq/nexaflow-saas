@@ -10,7 +10,6 @@ export default function RegisterSW() {
     const register = async () => {
       try {
         await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        console.log('NexaFlow SW registered');
       } catch (err) {
         console.error('SW registration failed:', err);
       }

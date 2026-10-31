@@ -16,7 +16,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#F4EFE9', // Warna Cream Premium
+  themeColor: '#F4EFE9', 
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
