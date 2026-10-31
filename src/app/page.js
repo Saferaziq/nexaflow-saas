@@ -6,11 +6,12 @@ const WA_NUMBER = '6281389744957';
 const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
 const NexaLogo = ({ className = "w-8 h-8" }) => (
-  <img 
-    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/WhatsApp%20Image%202026-10-31%20at%2015.47.53.jpeg" 
-    alt="NexaFlow Logo" 
-    className={`${className} object-contain mix-blend-multiply`} 
-  />
+  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
+    <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
+    <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
+    <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
+  </svg>
 );
 
 const Icons = {
@@ -132,7 +133,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
-              <NexaLogo className="w-20 h-20 group-hover:scale-105 transition-transform" />
+              <NexaLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
               <div>
                 <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
@@ -332,7 +333,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-5">
-                <NexaLogo className="w-16 h-16" />
+                <NexaLogo className="w-12 h-12" />
                 <div><p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p><p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p></div>
               </div>
               <p className="text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.</p>
