@@ -7,14 +7,6 @@ import Link from 'next/link';
 const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
-  Logo: ({ className = "w-24 h-24" }) => (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
-      <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
-      <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
-      <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
-    </svg>
-  )
 };
 
 export default function RegisterPage() {
@@ -24,12 +16,9 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [year, setYear] = useState(2026);
   const router = useRouter();
 
-  useEffect(() => { setYear(new Date().getFullYear()); }, []);
-
-  // Animasi Canvas Network (Sama seperti Login)
+  // Animasi Canvas Network
   useEffect(() => {
     const canvas = document.getElementById('network-canvas');
     if (!canvas) return;
@@ -150,7 +139,11 @@ export default function RegisterPage() {
           
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
-              <Icons.Logo className="w-12 h-12" />
+              <img 
+                src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/logo%20nexa%20flow.jpg" 
+                alt="NexaFlow Logo" 
+                className="w-14 h-14 object-contain mix-blend-multiply" 
+              />
               <div>
                 <h1 className="text-2xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>

@@ -8,7 +8,11 @@ const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda.
 
 // Logo NexaFlow baru sesuai dengan gambar referensi NF (Digital/Pixel Blue)
 const NexaLogo = ({ className = "w-8 h-8" }) => (
-  <img src="/logo nexa flow.jpg" alt="NexaFlow Logo" className={`${className} object-contain rounded-lg shadow-sm`} />
+  <img 
+    src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/logo%20nexa%20flow.jpg" 
+    alt="NexaFlow Logo" 
+    className={`${className} object-contain mix-blend-multiply`} 
+  />
 );
 
 const Icons = {
@@ -131,7 +135,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
-              <NexaLogo className="w-10 h-10" />
+              <NexaLogo className="w-12 h-12" />
               <div>
                 <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
