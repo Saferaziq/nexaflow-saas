@@ -88,7 +88,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-4 relative font-sans">
-      {/* Canvas dibuat pointer-events-none agar tidak menghalangi klik */}
       <canvas id="network-canvas" className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
@@ -98,7 +97,12 @@ export default function LoginPage() {
           
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
-              <img src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/Gemini_Generated_Image_kv5nevkv5nevkv5n.jpg" alt="NexaFlow Logo" className="w-24 h-24 object-contain mix-blend-multiply" />
+              {/* LOGO DIPERBESAR */}
+              <img 
+                src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/Gemini_Generated_Image_kv5nevkv5nevkv5n%20(1).jpg" 
+                alt="NexaFlow Logo" 
+                className="w-32 h-32 object-contain mix-blend-multiply" 
+              />
               <div>
                 <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
                 <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
@@ -123,17 +127,10 @@ export default function LoginPage() {
               <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2">{loading ? 'Memproses...' : 'Masuk Dashboard'} <Icons.ArrowRight /></button>
             </form>
 
-            {/* FIX TOTAL: Menggunakan button onClick dengan z-index tertinggi */}
             <div className="mt-8 text-center relative z-[999]">
               <p className="text-xs font-medium text-[#8C7A6B]">
                 Belum punya akun caffe? 
-                <button 
-                  type="button"
-                  onClick={() => router.push('/register')} 
-                  className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2"
-                >
-                  Daftar di sini
-                </button>
+                <button type="button" onClick={() => router.push('/register')} className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2">Daftar di sini</button>
               </p>
             </div>
           </div>
