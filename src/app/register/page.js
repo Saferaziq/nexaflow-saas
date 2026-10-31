@@ -1,8 +1,13 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+const Icons = {
+  ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+};
 
 export default function RegisterPage() {
   const [cafeName, setCafeName] = useState('');
@@ -11,259 +16,226 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [mounted, setMounted] = useState(false);
-  
-  const canvasRef = useRef(null);
   const router = useRouter();
 
+  // Animasi Canvas Network
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const canvas = canvasRef.current;
+    const canvas = document.getElementById('network-canvas');
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
     let animationFrameId;
-    let width, height;
     let particles = [];
+    const particleCount = 50;
+    const maxDistance = 200;
 
     const resize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     window.addEventListener('resize', resize);
     resize();
 
-    class Particle {
-      constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 1.2; 
-        this.vy = (Math.random() - 0.5) * 1.2;
-        this.radius = Math.random() * 2.5 + 1.5;
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x < 0 || this.x > width) this.vx *= -1;
-        if (this.y < 0 || this.y > height) this.vy *= -1;
-      }
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(93, 64, 55, 0.7)'; 
-        ctx.fill();
-      }
-    }
-
-    const particleCount = Math.floor(width / 12); 
     for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle());
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: Math.random() * 2 + 1
+      });
     }
 
-    const animate = () => {
-      ctx.clearRect(0, 0, width, height);
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
-        particles[i].draw();
+        let p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(160, 140, 120, 0.4)';
+        ctx.fill();
         for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 160) {
-            ctx.beginPath();
-            const opacity = 1 - (distance / 160);
-            ctx.strokeStyle = `rgba(93, 64, 55, ${opacity * 0.4})`;
-            ctx.lineWidth = 1.2;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
+          let p2 = particles[j];
+          let dx = p.x - p2.x; let dy = p.y - p2.y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < maxDistance) {
+            let opacity = 1 - (distance / maxDistance);
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(160, 140, 120, ${opacity * 0.3})`;
+            ctx.lineWidth = 1; ctx.stroke();
           }
         }
       }
-      animationFrameId = requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(draw);
     };
-    animate();
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [mounted]);
+    draw();
+    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
+  }, []);
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    setSuccessMsg('');
 
     if (password !== confirmPassword) {
-      setErrorMsg('Konfirmasi password tidak cocok.');
+      setErrorMsg('Password dan Konfirmasi Password tidak cocok!');
       return;
     }
+
     if (password.length < 6) {
       setErrorMsg('Password minimal 6 karakter.');
       return;
     }
 
     setLoading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { cafe_name: cafeName, role: 'owner' } }
-      });
-      if (error) throw error;
 
-      setSuccessMsg('Pendaftaran berhasil! Mengarahkan ke login...');
-      setTimeout(() => router.push('/login'), 3000);
-    } catch (err) {
-      setErrorMsg(err.message || 'Terjadi kesalahan sistem.');
-    } finally {
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+
+    if (authError) {
+      setErrorMsg(authError.message);
       setLoading(false);
+      return;
+    }
+
+    if (authData.user) {
+      // Buat data tenant (kafe) baru dengan trial 7 hari
+      const { data: newTenant, error: dbError } = await supabase.from('tenants').insert([{
+        name: cafeName,
+        subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true
+      }]).select().single();
+
+      if (dbError) {
+        setErrorMsg('Gagal membuat profil kafe: ' + dbError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Hubungkan user auth dengan tenant
+      if (newTenant) {
+        await supabase.from('users').insert([{
+          id: authData.user.id,
+          tenant_id: newTenant.id,
+          email: email,
+          role: 'owner'
+        }]);
+      }
+
+      alert('Pendaftaran Berhasil! Silakan login dengan akun Anda.');
+      router.push('/login');
     }
   };
 
-  if (!mounted) return null;
-
   return (
-    <div className="min-h-screen bg-[#f5ebe0] flex flex-col lg:flex-row font-sans selection:bg-[#8d6e63]/30 selection:text-[#3e2723] overflow-hidden relative">
-      
-      <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
+    <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      <canvas id="network-canvas" className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
-      <div className="w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-between relative z-10 border-b lg:border-b-0 lg:border-r border-[#8d6e63]/20 text-center lg:text-left items-center lg:items-start">
-        <div className="flex flex-col items-center lg:items-start flex-1 justify-center w-full max-w-lg">
+      <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        
+        {/* BAGIAN KIRI (Visual & Branding) */}
+        <div className="w-full md:w-1/2 p-10 md:p-14 flex flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
-          <div className="flex items-center gap-4 mb-10">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#5d4037" />
-                  <stop offset="100%" stopColor="#8d6e63" />
-                </linearGradient>
-              </defs>
-              <path d="M20 80 V20 L50 60 V20 H70 V60 L50 80 L50 60 L35 40 V80 H20 Z" fill="url(#grad1)"/>
-              <rect x="75" y="65" width="8" height="8" fill="#8d6e63" rx="2" />
-              <rect x="85" y="75" width="6" height="6" fill="#8d6e63" opacity="0.6" rx="1"/>
-            </svg>
-            <div className="flex flex-col">
-              <span className="text-3xl font-black tracking-[0.2em] text-[#3e2723] drop-shadow-sm leading-none">NEXAFLOW</span>
-              <span className="text-[10px] font-bold text-[#8d6e63] tracking-widest uppercase mt-1">SaaS Restaurant</span>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+              <img 
+                src="https://nbthyktmfnppruovxots.supabase.co/storage/v1/object/public/public-assets/logo%20nexa%20flow.jpg" 
+                alt="NexaFlow Logo" 
+                className="w-14 h-14 object-contain mix-blend-multiply" 
+              />
+              <div>
+                <h1 className="text-2xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
+                <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
+              </div>
             </div>
-          </div>
 
-          <div className="inline-block px-4 py-2 rounded-full bg-[#8d6e63]/10 border-2 border-[#8d6e63]/30 text-[#5d4037] text-xs font-extrabold tracking-widest uppercase mb-6">
-            ✦ LANGKAH BARU BISNIS ANDA
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm">
+              <Icons.Sparkles /> Langkah Baru Bisnis Anda
+            </div>
+
+            <h2 className="text-4xl md:text-5xl font-black text-[#3A2A20] leading-tight mb-4">
+              Daftarkan<br />
+              <span className="text-[#8C7A6B]">Caffe Anda.</span>
+            </h2>
+            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">
+              Mulai transformasi digital bisnis Anda. Gratis uji coba 7 hari. Tanpa kartu kredit, tanpa biaya tersembunyi.
+            </p>
           </div>
-          
-          <h1 className="text-5xl lg:text-6xl font-black text-[#2d1a11] leading-[1.1] mb-6 tracking-tight">
-            Ubah Cara Caffe<br/>
-            <span className="text-[#8d6e63]">Bekerja Hari Ini.</span>
-          </h1>
-          
-          <p className="text-lg text-[#4e342e] leading-relaxed font-semibold mb-10">
-            Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.
-          </p>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 mt-10 text-sm font-extrabold text-[#6d4c41]">
-          Powered by 
-          <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[#8d6e63] flex items-center gap-1.5 border-b-2 border-transparent hover:text-[#3e2723] hover:border-[#3e2723] transition-all pb-0.5">
-            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            NexaFlow
-          </a>
-        </div>
-      </div>
+        {/* BAGIAN KANAN (Form Register) */}
+        <div className="w-full md:w-1/2 p-10 md:p-14 bg-white flex flex-col justify-center">
+          <div className="max-w-sm mx-auto w-full">
+            <h3 className="text-2xl font-black text-[#3A2A20] mb-2">Daftarkan Caffe</h3>
+            <p className="text-xs font-medium text-[#8C7A6B] mb-8">Mulai transformasi digital bisnis Anda.</p>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-20">
-        <div className="w-full max-w-md bg-white/75 backdrop-blur-xl border-2 border-white/90 rounded-[2rem] p-8 sm:p-10 shadow-[0_25px_50px_-12px_rgba(109,76,65,0.2)] transition-transform duration-500 hover:-translate-y-2 hover:shadow-[0_35px_60px_-15px_rgba(109,76,65,0.25)]">
-          
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-black text-[#2d1a11] tracking-tight">Daftarkan Caffe</h2>
-            <p className="text-sm font-bold text-[#4e342e] mt-2">Mulai transformasi digital bisnis Anda.</p>
-          </div>
+            {errorMsg && (
+              <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">
+                {errorMsg}
+              </div>
+            )}
 
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-2xl bg-rose-100 border border-rose-300 text-rose-700 text-sm font-bold flex items-center gap-3">
-              <span className="text-lg">⚠️</span> {errorMsg}
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Caffe</label>
+                <input 
+                  type="text" 
+                  value={cafeName}
+                  onChange={(e) => setCafeName(e.target.value)}
+                  className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" 
+                  placeholder="Contoh: Kopi Senja" 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" 
+                  placeholder="owner@nexaflow.id" 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" 
+                  placeholder="Minimal 6 karakter" 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Konfirmasi Password</label>
+                <input 
+                  type="password" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" 
+                  placeholder="Ulangi password" 
+                  required 
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4"
+              >
+                {loading ? 'Memproses...' : 'Mulai Uji Coba Gratis'} <Icons.ArrowRight />
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-xs font-medium text-[#8C7A6B]">
+                Sudah punya akun? <Link href="/login" className="font-bold text-[#3A2A20] hover:underline">Masuk di sini</Link>
+              </p>
             </div>
-          )}
-          {successMsg && (
-            <div className="mb-6 p-4 rounded-2xl bg-[#8d6e63]/10 border border-[#8d6e63]/30 text-[#5d4037] text-sm font-bold flex items-center gap-3">
-              <span className="text-lg">✅</span> {successMsg}
-            </div>
-          )}
-
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-black text-[#4e342e] uppercase tracking-widest mb-2">Nama Caffe</label>
-              <input 
-                type="text" 
-                required 
-                value={cafeName}
-                onChange={(e) => setCafeName(e.target.value)}
-                placeholder="Contoh: Kopi Senja" 
-                className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-3.5 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-[#4e342e] uppercase tracking-widest mb-2">Email Address</label>
-              <input 
-                type="email" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@nexaflow.id" 
-                className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-3.5 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-[#4e342e] uppercase tracking-widest mb-2">Password</label>
-              <input 
-                type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimal 6 karakter" 
-                className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-3.5 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-[#4e342e] uppercase tracking-widest mb-2">Konfirmasi Password</label>
-              <input 
-                type="password" 
-                required 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Ulangi password" 
-                className="w-full bg-white border-2 border-[#d7ccc8] rounded-2xl px-5 py-3.5 text-base font-bold text-[#2d1a11] placeholder:text-[#a1887f] placeholder:font-medium focus:outline-none focus:border-[#6d4c41] focus:ring-4 focus:ring-[#6d4c41]/15 transition-all shadow-inner" 
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-[#5d4037] to-[#8d6e63] hover:from-[#8d6e63] hover:to-[#4e342e] text-white font-black py-4 rounded-2xl text-base tracking-wide shadow-[0_10px_20px_-10px_rgba(93,64,55,0.6)] hover:shadow-[0_15px_30px_-10px_rgba(93,64,55,0.8)] active:scale-[0.98] transition-all flex justify-center items-center mt-2"
-            >
-              {loading ? 'Memproses...' : 'MULAI SEKARANG'}
-            </button>
-          </form>
-
-          <p className="text-center text-sm font-bold text-[#4e342e] mt-6">
-            Sudah memiliki akun?{' '}
-            <Link href="/login" className="text-[#5d4037] font-black hover:text-[#2d1a11] transition-colors">
-              Masuk Dashboard
-            </Link>
-          </p>
-
-          <div className="lg:hidden text-center mt-8 text-sm font-extrabold text-[#6d4c41]">
-            Powered by <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[#5d4037] border-b-2 border-[#5d4037]">NexaFlow</a>
           </div>
         </div>
       </div>
