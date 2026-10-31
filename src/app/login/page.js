@@ -86,8 +86,8 @@ export default function LoginPage() {
     // 1. Buat Promise untuk login
     const loginPromise = supabase.auth.signInWithPassword({ email, password });
 
-    // 2. Buat Promise "Pengaman" (Timeout 4 detik)
-    const timeoutPromise = new Promise((_, reject) =>
+    // 2. Buat Promise "Pengaman" (Timeout 2 detik)
+    const timeoutPromise = new Promise((resolve, reject) =>
       setTimeout(async () => {
         // Jika timeout tercapai, cek apakah sesi sebenarnya sudah terbentuk
         const { data: { session } } = await supabase.auth.getSession();
@@ -95,9 +95,9 @@ export default function LoginPage() {
           // Jika sesi ADA, berarti login sukses tapi promise hang. Kita paksa resolve!
           resolve({ data: { session }, error: null });
         } else {
-          reject(new Error('Waktu habis. Periksa koneksi internet Anda.'));
+          reject(new Error('Waktu habis. Periksa koneksi internet Anda atau coba lagi.'));
         }
-      }, 4000) // 4 detik
+      }, 2000) // 2 detik (lebih agresif)
     );
 
     try {
