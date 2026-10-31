@@ -4,9 +4,12 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// Logo NexaFlow baru
+// Logo NF Vektor Presisi (Dijamin 100% Tampil Tanpa Gagal)
 const NexaLogo = ({ className = "w-10 h-10" }) => (
-  <img src="/logo.jpg" alt="NexaFlow Logo" className={`${className} object-contain rounded-xl shadow-md`} />
+  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect width="100" height="100" rx="22" fill="#0A2540"/>
+    <path d="M28 72V32C28 29.7909 29.7909 28 32 28H40C42.2091 28 44 29.7909 44 32V53L62 29.2857C63.1537 27.7484 65.0505 27 67 27H72C74.2091 27 76 28.7909 76 31V71C76 73.2091 74.2091 75 72 75H64C61.7909 75 60 73.2091 60 71V50L42 73.7143C40.8463 75.2516 38.9495 76 37 76H32C29.7909 76 28 74.2091 28 72Z" fill="#00D4FF"/>
+  </svg>
 );
 
 const Icons = {
@@ -22,7 +25,6 @@ export default function LoginPage() {
   const router = useRouter();
   const canvasRef = useRef(null);
 
-  // Animasi Canvas Network Background (Tema sama seperti Landing Page)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -83,7 +85,7 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (email === 'dinamis.id.shop@gmail.com') router.push('/admin');
       else router.push('/dashboard');
@@ -98,12 +100,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F4EFE9] text-[#3A2A20] font-sans flex items-center justify-center p-6 relative overflow-hidden">
       <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
-      <div className="relative z-10 max-w-5xl w-full grid lg:grid-cols-2 gap-12 items-center bg-white/80 backdrop-blur-md border border-[#E3DCD1] rounded-[2.5rem] shadow-2xl p-8 sm:p-12">
-        
-        {/* Sisi Kiri: Branding & Informasi */}
+      <div className="relative z-10 max-w-5xl w-full grid lg:grid-cols-2 gap-12 items-center bg-white/85 backdrop-blur-md border border-[#E3DCD1] rounded-[2.5rem] shadow-2xl p-8 sm:p-12">
         <div className="space-y-6 text-center lg:text-left">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <NexaLogo className="w-12 h-12" />
+            <NexaLogo className="w-12 h-12 shadow-md rounded-xl" />
             <div>
               <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
               <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
@@ -116,7 +116,6 @@ export default function LoginPage() {
           <p className="text-[#7A6A5F] font-medium text-base">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu caffe Anda.</p>
         </div>
 
-        {/* Sisi Kanan: Form Login */}
         <div className="bg-white rounded-3xl border border-[#E3DCD1] p-8 shadow-lg">
           <h2 className="text-2xl font-black text-[#3A2A20] mb-2">Masuk Kasir</h2>
           <p className="text-sm text-[#7A6A5F] font-medium mb-6">Silakan masukkan kredensial akun Anda.</p>
@@ -165,7 +164,6 @@ export default function LoginPage() {
             Belum punya akun caffe? <Link href="/register" className="text-[#3A2A20] font-black hover:underline">Daftar di sini</Link>
           </div>
         </div>
-
       </div>
     </div>
   );
