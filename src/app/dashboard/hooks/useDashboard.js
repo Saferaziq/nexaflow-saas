@@ -102,9 +102,15 @@ export function useDashboard() {
     if (data) setMenus(data);
   };
 
-  const fetchTables = async (tId) => {
-    const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId).order('table_number', { ascending: true });
-    if (data) setTables(data);
+    const fetchTables = async (tId) => {
+    const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId);
+    if (data) {
+      // Sort secara numerik (angka), bukan teks
+      const sorted = [...data].sort((a, b) => 
+        a.table_number.localeCompare(b.table_number, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setTables(sorted);
+    }
   };
 
   const fetchOrders = async (tId) => {
