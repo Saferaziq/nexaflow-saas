@@ -275,7 +275,7 @@ function OrderContent() {
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-32">
+    <div className="min-h-screen bg-slate-50 font-sans pb-32" onClick={unlockAudio}>
       {/* HERO HEADER (Banner Background) */}
       <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
         {cafe.banner_url ? (
