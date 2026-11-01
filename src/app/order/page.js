@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
 
@@ -64,6 +64,12 @@ function OrderContent() {
   const [customerName, setCustomerName] = useState('');
   const [globalNote, setGlobalNote] = useState('');
 
+  // --- STATE & REF UNTUK NOTIFIKASI SUARA ---
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const audioCtxRef = useRef(null);
+  const intervalRef = useRef(null);
+  // ------------------------------------------
+
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
     document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
@@ -77,7 +83,6 @@ function OrderContent() {
         else if (cafeData.logo_url) extractDominantColor(cafeData.logo_url);
       }
       
-      // MENGAMBIL SEMUA MENU YANG TERSEDIA (TANPA FILTER STOK YANG RUMIT)
       const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
       if (menuData) setMenus(menuData);
       
@@ -110,12 +115,73 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
+  // --- LOGIKA SUARA NOTIFIKASI ---
+  const playReadySound = () => {
+    if (!audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const playOne = (t) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 880; // Frekuensi tinggi (nada siap)
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + 0.18);
+      };
+      playOne(0); playOne(0.22); playOne(0.44); // Bunyi "Ting Ting Ting"
+    } catch (e) { console.log('Audio error:', e); }
+  };
+
+  const unlockAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    setAudioUnlocked(true);
+  };
+
+  const checkReadyOrders = () => {
+    if (!audioUnlocked) return; 
+    
+    const hasReadyOrder = myOrders.some(o => o.status === 'ready');
+    
+    if (hasReadyOrder) {
+      if (!intervalRef.current) {
+        playReadySound(); // Bunyi instan saat status berubah
+        intervalRef.current = setInterval(() => {
+          playReadySound(); // Bunyi berulang tiap 30 detik
+        }, 30000); 
+      }
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  };
+
+  // Jalankan pengecekan setiap kali data pesanan berubah atau audio di-unlock
+  useEffect(() => {
+    checkReadyOrders();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [myOrders, audioUnlocked]);
+  // -------------------------------
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
   };
 
   const addToCart = (menu) => {
+    unlockAudio(); // Buka kunci audio saat interaksi pertama
     setCart(prev => {
       const ex = prev.find(i => i.id === menu.id);
       if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i);
@@ -144,6 +210,7 @@ function OrderContent() {
 
   const openConfirmation = () => {
     if (cart.length === 0) return;
+    unlockAudio(); // Pastikan unlock lagi jika perlu
     setShowConfirmModal(true);
   };
 
@@ -495,7 +562,7 @@ function OrderContent() {
         </div>
       )}
 
-      {/* CONFIRMATION MODAL */}
+           {/* CONFIRMATION MODAL */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
