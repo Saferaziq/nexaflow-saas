@@ -15,7 +15,8 @@ export function useDashboard() {
   const [menus, setMenus] = useState([]);
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
-  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11 });
+  // TAMBAHAN: notify_order_ready
+  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11, notify_order_ready: true });
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
@@ -197,6 +198,7 @@ export function useDashboard() {
           qris_string: userData.tenants.qris_string || '',
           banner_url: userData.tenants.banner_url || '',
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
+          notify_order_ready: userData.tenants.notify_order_ready !== false, // TAMBAHAN
         });
 
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
@@ -308,6 +310,7 @@ export function useDashboard() {
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
+      notify_order_ready: settings.notify_order_ready, // TAMBAHAN
     }).eq('id', tenantId);
     setCafeName(settings.name);
     showToast('Pengaturan disimpan', 'success');

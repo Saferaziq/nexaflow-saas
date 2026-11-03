@@ -49,7 +49,7 @@ function OrderContent() {
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0 });
+  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -149,6 +149,15 @@ function OrderContent() {
   const checkReadyOrders = () => {
     if (!audioUnlocked) return; 
     
+    // TAMBAHAN: JIKA TOGGLE OFF, MATIKAN SUARA
+    if (cafe.notify_order_ready === false) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
     const hasReadyOrder = myOrders.some(o => o.status === 'ready');
     
     if (hasReadyOrder) {
@@ -172,7 +181,7 @@ function OrderContent() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [myOrders, audioUnlocked]);
+  }, [myOrders, audioUnlocked, cafe.notify_order_ready]); // TAMBAHAN: cafe.notify_order_ready
   // -------------------------------
 
   const showToast = (msg) => {
@@ -456,6 +465,17 @@ function OrderContent() {
                     </div>
                     <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase text-white shadow-sm border-2 border-black/10 ${statusColors[statusIdx]}`}>{o.status}</span>
                   </div>
+
+                  {/* TAMBAHAN: BANNER VISUAL PESANAN SIAP */}
+                  {o.status === 'ready' && cafe.notify_order_ready !== false && (
+                    <div className="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-4 mb-4 flex items-center gap-3 animate-pulse shadow-sm">
+                      <div className="text-2xl">🍽️</div>
+                      <div>
+                        <p className="text-emerald-800 font-black text-sm uppercase tracking-wide">Pesanan Siap!</p>
+                        <p className="text-emerald-700 font-bold text-xs mt-0.5">Pesanan sudah siap di ambil di kasir</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2 mb-4">
                     {o.items.map((i, idx) => (

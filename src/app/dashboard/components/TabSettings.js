@@ -153,6 +153,33 @@ export default function TabSettings({
         </button>
 
       </form>
+
+      {/* TAMBAHAN: Notifikasi Pesanan Siap */}
+      <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className={`font-black text-lg ${textMainClass}`}>Notifikasi Pesanan Siap</h3>
+            <p className={`text-xs font-semibold mt-1 max-w-md ${textSubClass}`}>
+              Jika diaktifkan, pelanggan akan menerima notifikasi suara berulang saat pesanan berstatus &quot;Siap&quot;. 
+              Matikan jika kafe Anda menggunakan sistem pengantaran (delivery).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettings({ ...settings, notify_order_ready: !settings.notify_order_ready })}
+            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 ${
+              settings.notify_order_ready ? 'bg-[var(--primary-color)]' : theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-600'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                settings.notify_order_ready ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
