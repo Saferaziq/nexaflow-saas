@@ -329,7 +329,7 @@ function OrderContent() {
             </div>
             <div>
               <p className="text-emerald-900 font-black text-sm uppercase tracking-wide">Pesanan Siap!</p>
-              <p className="text-emerald-700 font-bold text-xs mt-0.5">Pesanan sudah siap di ambil di kasir</p>
+              <p className="text-emerald-700 font-bold text-xs mt-0.5">"Yeay! Pesanan Anda sudah siap. Silakan menuju kasir untuk mengambilnya."</p>
             </div>
           </div>
         </div>
