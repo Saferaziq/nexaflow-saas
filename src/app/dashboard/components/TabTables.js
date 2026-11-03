@@ -9,7 +9,6 @@ export default function TabTables({
   onAddTable,
   onDeleteTable,
   onPrintQR,
-  onDownloadQR,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -52,9 +51,6 @@ export default function TabTables({
               <div className="flex gap-2 w-full mt-auto">
                 <button onClick={() => onPrintQR(table)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg border-2 border-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1" title="Cetak QR">
                   <Icons.Printer />
-                </button>
-                <button onClick={() => onDownloadQR(table)} className="flex-1 bg-emerald-50 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center justify-center text-xs gap-1">
-                  ⬇️ Download
                 </button>
                 <button onClick={() => onDeleteTable(table.id)} className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" title="Hapus Meja">
                   ✕
