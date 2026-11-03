@@ -1,141 +1,108 @@
 'use client';
 
-import { useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icons } from '../helpers/icons';
 
-export default function MenuModal({
-  theme,
-  open,
-  currentMenu,
-  setCurrentMenu,
-  onClose,
-  onSave,
-  onUploadImage,
-  uploading,
-}) {
+export default function MenuModal({ theme, mode, initialData, onClose, onSave, onUploadImage }) {
+  const [formData, setFormData] = useState({
+    id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: ''
+  });
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
-  if (!open) return null;
+
+  // KUNCI PERBAIKAN: Memastikan form terisi saat tombol Edit diklik
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      setFormData({
+        id: initialData.id || null,
+        name: initialData.name || '',
+        category: initialData.category || 'makanan',
+        price: initialData.price || '',
+        desc: initialData.description || '',
+        status: initialData.status || 'available',
+        image_url: initialData.image_url || ''
+      });
+    } else {
+      setFormData({
+        id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: ''
+      });
+    }
+  }, [mode, initialData]);
 
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
   const inputClass = `w-full border-2 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`;
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 print:hidden">
-      <div className={`rounded-[2rem] max-w-3xl w-full p-8 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto border-2 animate-in zoom-in-95 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.price) return;
+    onSave(formData, (newData) => setFormData(newData));
+    onClose();
+  };
 
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h3 className={`font-black text-2xl ${textMainClass}`}>{currentMenu.id ? 'Edit Menu' : 'Tambah Menu'}</h3>
-            <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Isi informasi menu baru</p>
-          </div>
-          <button onClick={onClose} className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'}`}>
-            <Icons.X />
-          </button>
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    await onUploadImage(e, 'menu', setUploading, setFormData);
+    setUploading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'} max-h-[90vh] flex flex-col`}>
+        
+        <div className={`p-5 border-b-2 flex justify-between items-center shrink-0 ${theme === 'light' ? 'border-[#E8DFD3]' : 'border-slate-700'}`}>
+          <h2 className={`font-black text-xl ${textMainClass}`}>{mode === 'edit' ? 'Edit Menu' : 'Tambah Menu Baru'}</h2>
+          <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-lg ${theme === 'light' ? 'bg-[#F4EFE9] text-[#5C4B3E] hover:bg-[#E8DFD3]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>×</button>
         </div>
 
-        <form onSubmit={onSave} className="space-y-6">
-
-          {/* Foto Menu */}
+        <div className="p-5 overflow-y-auto space-y-4">
+          {/* Upload Foto */}
           <div>
-            <label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Foto Menu</label>
-            <div className="flex items-center gap-6">
-              <div className={`w-32 h-32 rounded-2xl overflow-hidden flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
-                {currentMenu.image_url
-                  ? <img src={currentMenu.image_url} className="w-full h-full object-cover" alt="Menu" />
-                  : <Icons.Utensils />}
+            <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Foto Menu</label>
+            <div className="flex items-center gap-4">
+              <div className={`w-20 h-20 rounded-xl overflow-hidden border-2 flex items-center justify-center shrink-0 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+                {formData.image_url ? <img src={formData.image_url} alt="Menu" className="w-full h-full object-cover" /> : <Icons.Utensils />}
               </div>
               <div className="flex-1">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={e => onUploadImage(e, 'menu')}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}
-                >
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
                   {uploading ? 'Mengupload...' : 'Pilih Foto'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Nama & Harga */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Nama Menu</label>
-              <input
-                required
-                type="text"
-                value={currentMenu.name}
-                onChange={e => setCurrentMenu({ ...currentMenu, name: e.target.value })}
-                className={inputClass}
-                placeholder="Contoh: Nasi Goreng Spesial"
-              />
+          {/* Form Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Nama Menu <span className="text-rose-500">*</span></label>
+              <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Contoh: Nasi Goreng Spesial" required />
             </div>
             <div>
-              <label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Harga (Rp)</label>
-              <input
-                required
-                type="number"
-                value={currentMenu.price}
-                onChange={e => setCurrentMenu({ ...currentMenu, price: e.target.value })}
-                className={inputClass}
-                placeholder="25000"
-              />
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Harga (Rp) <span className="text-rose-500">*</span></label>
+              <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className={inputClass} placeholder="15000" required />
             </div>
-          </div>
-
-          {/* Kategori */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Kategori</label>
-              <select
-                value={currentMenu.category}
-                onChange={e => setCurrentMenu({ ...currentMenu, category: e.target.value })}
-                className={inputClass}
-              >
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Kategori</label>
+              <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
                 <option value="makanan">Makanan</option>
                 <option value="minuman">Minuman</option>
                 <option value="cemilan">Cemilan</option>
               </select>
             </div>
+            <div className="col-span-2">
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Deskripsi (Opsional)</label>
+              <textarea value={formData.desc} onChange={e => setFormData({ ...formData, desc: e.target.value })} className={`${inputClass} resize-none`} rows="2" placeholder="Deskripsi singkat menu..."></textarea>
+            </div>
           </div>
+        </div>
 
-          {/* Deskripsi */}
-          <div>
-            <label className={`block text-sm font-bold mb-2 ${textSubClass}`}>Deskripsi</label>
-            <textarea
-              value={currentMenu.desc}
-              onChange={e => setCurrentMenu({ ...currentMenu, desc: e.target.value })}
-              className={inputClass}
-              rows="3"
-              placeholder="Deskripsi singkat menu"
-            ></textarea>
-          </div>
-
-          {/* Actions */}
-          <div className={`flex gap-3 pt-4 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
-            <button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3.5 rounded-xl text-base shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 transition-all border-2 border-[var(--primary-dark)]"
-            >
-              Simpan Menu
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className={`font-extrabold px-8 py-3.5 rounded-xl text-base transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}
-            >
-              Batal
-            </button>
-          </div>
-
-        </form>
+        <div className={`p-5 border-t-2 flex gap-3 shrink-0 ${theme === 'light' ? 'border-[#E8DFD3]' : 'border-slate-700'}`}>
+          <button onClick={onClose} className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}>Batal</button>
+          <button onClick={handleSubmit} disabled={uploading || !formData.name || !formData.price} className="flex-[2] bg-[var(--primary-color)] text-white font-black py-3 rounded-xl text-sm shadow-md active:scale-95 transition-transform disabled:opacity-50">Simpan Menu</button>
+        </div>
       </div>
     </div>
   );
