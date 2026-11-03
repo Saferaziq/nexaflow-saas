@@ -19,7 +19,7 @@ export default function StatsCards({ theme, stats, rp }) {
           </div>
           <p className={`text-[11px] font-extrabold uppercase tracking-widest ${theme === 'light' ? 'text-[#2A1F17]' : 'text-slate-300'}`}>Total Pesanan</p>
         </div>
-        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-[#2A1F17]' : 'text-white'}`}>{stats.total}</h3>
+        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-[#2A1F17]' : 'text-white'}`}>{stats?.total || 0}</h3>
         <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-400'}`}>Hari ini</p>
       </div>
 
@@ -32,7 +32,7 @@ export default function StatsCards({ theme, stats, rp }) {
           </div>
           <p className={`text-[11px] font-extrabold uppercase tracking-widest ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>Siap Saji</p>
         </div>
-        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>{stats.ready}</h3>
+        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>{stats?.ready || 0}</h3>
         <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-400'}`}>Menunggu diantar</p>
       </div>
 
@@ -45,7 +45,7 @@ export default function StatsCards({ theme, stats, rp }) {
           </div>
           <p className={`text-[11px] font-extrabold uppercase tracking-widest ${theme === 'light' ? 'text-amber-700' : 'text-amber-400'}`}>Dimasak</p>
         </div>
-        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-amber-700' : 'text-amber-400'}`}>{stats.cooking}</h3>
+        <h3 className={`text-4xl font-black tracking-tight ${theme === 'light' ? 'text-amber-700' : 'text-amber-400'}`}>{stats?.cooking || 0}</h3>
         <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-400'}`}>Sedang diproses</p>
       </div>
 
@@ -58,7 +58,7 @@ export default function StatsCards({ theme, stats, rp }) {
           </div>
           <p className="text-[11px] font-extrabold text-white/80 uppercase tracking-widest">Omset Hari Ini</p>
         </div>
-        <h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats.revenue)}</h3>
+        <h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats?.revenue || 0)}</h3>
         <p className="text-xs text-white/80 font-semibold mt-1">Total pendapatan</p>
       </div>
 

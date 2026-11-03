@@ -15,7 +15,6 @@ function DashboardContent() {
   const d = useDashboard();
   const [activeTab, setActiveTab] = useState('queue');
   
-  // State modal
   const [menuModal, setMenuModal] = useState({ open: false, mode: 'add', data: null });
   const [kitchenModal, setKitchenModal] = useState({ open: false, url: '', pin: '' });
   const [newTableNum, setNewTableNum] = useState('');
@@ -35,6 +34,14 @@ function DashboardContent() {
     d.handleImageUpload(e, type, setUploading, null);
   };
 
+  const todayOrders = d.orders ? d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()) : [];
+  const stats = {
+    total: todayOrders.length,
+    ready: todayOrders.filter(o => o.status === 'ready').length,
+    cooking: todayOrders.filter(o => o.status === 'cooking').length,
+    revenue: todayOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price || 0), 0)
+  };
+
   if (d.isExpired) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -51,7 +58,6 @@ function DashboardContent() {
   return (
     <div className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-950 text-white'}`}>
       
-      {/* HEADER */}
       <Header 
         theme={d.theme} 
         toggleTheme={d.toggleTheme} 
@@ -70,15 +76,12 @@ function DashboardContent() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">
         
-        {/* STATS CARDS - Pastikan orders tidak undefined */}
         <StatsCards 
           theme={d.theme} 
-          orders={d.orders || []} 
+          stats={stats} 
           rp={d.rp} 
-          todayStr={d.todayStr} 
         />
 
-        {/* TAB CONTENT */}
         <div className="mt-6">
           <TabContent 
             activeTab={activeTab} 
@@ -130,7 +133,6 @@ function DashboardContent() {
         </div>
       </main>
 
-      {/* MODALS */}
       {menuModal.open && (
         <MenuModal 
           theme={d.theme}
@@ -152,7 +154,6 @@ function DashboardContent() {
         />
       )}
 
-      {/* NOTIFIKASI & DIALOG */}
       <Toast toasts={d.toasts || []} />
       <ConfirmDialog 
         theme={d.theme} 
@@ -163,7 +164,6 @@ function DashboardContent() {
   );
 }
 
-// --- TAMBAHAN: Mencegah Prerender Error di Next.js 16 ---
 export default dynamic(() => Promise.resolve(DashboardContent), {
   ssr: false,
   loading: () => (
