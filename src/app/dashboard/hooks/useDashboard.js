@@ -39,6 +39,7 @@ export function useDashboard() {
 
   const audioCtxRef = useRef(null);
   const prevOrderIdsRef = useRef(null);
+  const beepIntervalRef = useRef(null); // TAMBAHAN: Ref untuk interval suara
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -50,7 +51,6 @@ export function useDashboard() {
     setConfirmDialog({ open: true, title, message, onConfirm, danger });
   };
 
-  // FUNGSI BARU: Membuka kunci suara secara otomatis saat layar di-klik
   const unlockAudio = () => {
     if (!audioCtxRef.current) {
       try {
@@ -118,7 +118,7 @@ export function useDashboard() {
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
-          playBeep(); // Suara sekarang WAJIB bunyi jika ada orderan baru
+          playBeep(); // Bunyi instan saat pesanan baru masuk
           const first = data.find(o => o.id === newOnes[0]);
           if (first) showToast(`Pesanan baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
@@ -127,6 +127,30 @@ export function useDashboard() {
       setOrders(data);
     }
   };
+
+  // TAMBAHAN BARU: Efek untuk bunyi berulang tiap 15 detik jika ada pesanan berstatus 'pending'
+  useEffect(() => {
+    const hasPendingOrder = orders.some(o => o.status === 'pending');
+
+    if (hasPendingOrder) {
+      if (!beepIntervalRef.current) {
+        beepIntervalRef.current = setInterval(() => {
+          playBeep();
+        }, 15000); // Bunyi tiap 15 detik
+      }
+    } else {
+      if (beepIntervalRef.current) {
+        clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (beepIntervalRef.current) {
+        clearInterval(beepIntervalRef.current);
+      }
+    };
+  }, [orders]);
 
   useEffect(() => {
     setTheme(localStorage.getItem('nexaflow_theme') || 'light');
