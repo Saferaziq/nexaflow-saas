@@ -1,5 +1,4 @@
 'use client';
-import { Icons } from '../helpers/icons';
 
 export default function TabTables({
   theme,
