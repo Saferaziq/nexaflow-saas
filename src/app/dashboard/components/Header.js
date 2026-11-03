@@ -12,10 +12,7 @@ export default function Header({
   isFullscreen,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
-  audioUnlocked,
-  soundEnabled,
   onToggleTheme,
-  onToggleSound,
   onToggleFullscreen,
   onLogout,
   onOpenKitchen,
@@ -103,26 +100,6 @@ export default function Header({
               className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}
             >
               {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
-            </button>
-
-            <button
-              onClick={onToggleSound}
-              title="Notifikasi Suara"
-              className={`p-2.5 rounded-2xl border-2 transition-all ${
-                !audioUnlocked
-                  ? 'bg-[var(--primary-color)] border-[var(--primary-dark)] text-white shadow-md shadow-[var(--primary-color)]/30'
-                  : soundEnabled
-                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-600'
-                    : theme === 'light'
-                      ? 'bg-white border-[#D4C5B8] text-[#5C4B3E]'
-                      : 'bg-slate-800 border-slate-600 text-slate-300'
-              }`}
-            >
-              {!audioUnlocked
-                ? <span className="text-[10px] font-bold">OFF</span>
-                : soundEnabled
-                  ? <span className="text-lg leading-none">ON</span>
-                  : <span className="text-lg leading-none">OFF</span>}
             </button>
 
             <button

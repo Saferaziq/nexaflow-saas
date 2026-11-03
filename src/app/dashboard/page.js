@@ -59,7 +59,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-950 text-white'}`}>
+    <div onClick={d.unlockAudio} className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-950 text-white'}`}>
       
       <Header 
         theme={d.theme} 
@@ -71,14 +71,10 @@ function DashboardContent() {
         isFullscreen={d.isFullscreen}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
-        audioUnlocked={d.audioUnlocked}
-        soundEnabled={d.soundEnabled}
         onToggleTheme={d.toggleTheme}       
-        onToggleSound={d.handleSoundToggle} 
         onToggleFullscreen={d.toggleFullscreen}
         onLogout={d.handleLogout}
         onOpenKitchen={() => d.openKitchenLink(setKitchenModal)}
-        onPrintDaily={d.handlePrintDaily}
       />
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">

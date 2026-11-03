@@ -21,8 +21,6 @@ export function useDashboard() {
   const [isExpired, setIsExpired] = useState(false);
   const [theme, setTheme] = useState('light');
   const [nowTick, setNowTick] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
@@ -32,7 +30,6 @@ export function useDashboard() {
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
   const [queueFilter, setQueueFilter] = useState("active");
 
-  // STATE UNTUK LAPORAN
   const [reportMode, setReportMode] = useState('daily');
   const [reportDateStr, setReportDateStr] = useState('');
   const [reportMonth, setReportMonth] = useState(new Date().getMonth());
@@ -41,8 +38,6 @@ export function useDashboard() {
   const [reportEndDateStr, setReportEndDateStr] = useState('');
 
   const audioCtxRef = useRef(null);
-  const soundEnabledRef = useRef(true);
-  const audioUnlockedRef = useRef(false);
   const prevOrderIdsRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
@@ -55,8 +50,20 @@ export function useDashboard() {
     setConfirmDialog({ open: true, title, message, onConfirm, danger });
   };
 
+  // FUNGSI BARU: Membuka kunci suara secara otomatis saat layar di-klik
+  const unlockAudio = () => {
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      } catch { }
+    }
+    if (audioCtxRef.current?.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
+
   const playBeep = () => {
-    if (!soundEnabledRef.current || !audioCtxRef.current) return;
+    if (!audioCtxRef.current) return;
     try {
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
@@ -79,27 +86,6 @@ export function useDashboard() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('nexaflow_theme', newTheme);
-  };
-
-  const handleSoundToggle = () => {
-    if (!audioUnlockedRef.current) {
-      try {
-        if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        audioCtxRef.current.resume();
-        audioUnlockedRef.current = true;
-        setAudioUnlocked(true);
-        soundEnabledRef.current = true;
-        setSoundEnabled(true);
-        playBeep();
-        showToast('Notifikasi suara aktif', 'success');
-      } catch { showToast('Browser tidak mendukung suara', 'error'); }
-    } else {
-      const n = !soundEnabledRef.current;
-      soundEnabledRef.current = n;
-      setSoundEnabled(n);
-      if (n) { playBeep(); showToast('Suara aktif', 'info'); }
-      else showToast('Suara dimatikan', 'info');
-    }
   };
 
   const toggleFullscreen = async () => {
@@ -132,7 +118,7 @@ export function useDashboard() {
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
-          playBeep();
+          playBeep(); // Suara sekarang WAJIB bunyi jika ada orderan baru
           const first = data.find(o => o.id === newOnes[0]);
           if (first) showToast(`Pesanan baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
@@ -240,11 +226,6 @@ export function useDashboard() {
     };
   }, [router]);
 
-  // =========================================================================
-  // PERBAIKAN LAPORAN: MENGGUNAKAN WAKTU LOKAL (WIB) & HANYA HITUNG ORDER COMPLETED
-  // =========================================================================
-  
-  // Helper untuk mengubah waktu database (UTC) ke format tanggal lokal (Yogyakarta/WIB)
   const getLocalDateStr = (dateStr) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
@@ -268,7 +249,6 @@ export function useDashboard() {
       label = `${new Date(start).toLocaleDateString('id-ID')} - ${new Date(end).toLocaleDateString('id-ID')}`;
     }
 
-    // Filter berdasarkan tanggal LOKAL (WIB) dan abaikan pesanan yang dibatalkan
     const filtered = orders.filter(o => {
       if (o.status === 'cancelled') return false;
       const localDate = getLocalDateStr(o.created_at);
@@ -299,7 +279,6 @@ export function useDashboard() {
 
     const reportStats = { totalOrders, revenue, avgOrder, totalItems };
 
-    // Chart 7 Hari Terakhir
     const chartData = [];
     let maxChartRev = 0;
     let totalChartRev = 0;
@@ -369,7 +348,6 @@ export function useDashboard() {
       showToast('Gagal memuat fungsi cetak laporan: ' + err.message, 'error');
     }
   };
-  // =========================================================================
 
   const handleLogout = () => askConfirm('Keluar dari Dashboard', 'Yakin ingin logout?', async () => {
     await supabase.auth.signOut();
@@ -612,11 +590,11 @@ export function useDashboard() {
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings,
-    todayStr, baseUrl, isExpired, theme, nowTick, soundEnabled, audioUnlocked,
+    todayStr, baseUrl, isExpired, theme, nowTick,
     realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
-    rp, showToast, askConfirm,
-    toggleTheme, handleSoundToggle, toggleFullscreen, handleLogout,
+    rp, showToast, askConfirm, unlockAudio,
+    toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink,
@@ -625,7 +603,6 @@ export function useDashboard() {
     menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
     
-    // RETURN UNTUK LAPORAN
     reportMode, setReportMode, reportDateStr, setReportDateStr, 
     reportMonth, setReportMonth, reportYear, setReportYear, 
     reportStartDateStr, setReportStartDateStr, reportEndDateStr, setReportEndDateStr,
