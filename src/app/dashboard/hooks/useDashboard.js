@@ -347,12 +347,20 @@ export function useDashboard() {
   const handlePrintBill = async (order) => {
     try {
       const printModule = await import('../helpers/print');
-      const printFn = printModule.printBill || printModule.default;
+      const qrisModule = await import('../helpers/qris');
       
-      if (printFn) {
-        printFn(order, cafeName, settings.address, settings.wa);
+      const printFn = printModule.printBillWithQRIS;
+      const qrisFn = qrisModule.generateDynamicQRIS;
+
+      if (printFn && qrisFn) {
+        printFn({
+          order,
+          settings,
+          generateDynamicQRIS: qrisFn,
+          showToast
+        });
       } else {
-        showToast('Fungsi printBill tidak ditemukan di helpers/print.js', 'error');
+        showToast('Fungsi cetak tidak ditemukan di print.js', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -363,16 +371,14 @@ export function useDashboard() {
   const handlePrintDaily = async () => {
     try {
       const printModule = await import('../helpers/print');
-      const printFn = printModule.printDailyReport || printModule.printReport;
-      
-      const todayOrders = orders.filter(o => 
-        o.created_at && 
-        new Date(o.created_at).toDateString() === todayStr && 
-        o.status !== 'cancelled'
-      );
+      const printFn = printModule.printDailyReport;
 
       if (printFn) {
-        printFn(todayOrders, cafeName, settings.address);
+        printFn({
+          orders,
+          settings,
+          userEmail
+        });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
