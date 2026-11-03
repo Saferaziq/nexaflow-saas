@@ -79,10 +79,12 @@ export default function DashboardPage() {
         <StatsCards
           theme={d.theme}
           stats={{
-            total: d.orders.length,
-            cooking: d.orders.filter(o => o.status === 'cooking').length,
-            ready: d.orders.filter(o => o.status === 'ready').length,
-            revenue: d.orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + (o.total_price || 0), 0)
+            total: d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()).length,
+            cooking: d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString() && o.status === 'cooking').length,
+            ready: d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString() && o.status === 'ready').length,
+            revenue: d.orders
+              .filter(o => new Date(o.created_at).toDateString() === new Date().toDateString() && o.status === 'completed')
+              .reduce((sum, o) => sum + (o.total_price || 0), 0)
           }}
           rp={d.rp}
         />
