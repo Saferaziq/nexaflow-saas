@@ -344,35 +344,88 @@ export function useDashboard() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
-  // --- FUNGSI DOWNLOAD QR (FETCH + BLOB) ---
+  // --- FUNGSI DOWNLOAD QR DENGAN GAMBAR & NAMA KAFE (CANVAS) ---
   const handleDownloadQR = async (table) => {
     if (!table || !table.table_number) return;
-    const url = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(url)}`;
     
     try {
       showToast('Menyiapkan gambar QR...', 'info');
       
-      const response = await fetch(qrApiUrl);
-      if (!response.ok) throw new Error('Gagal mengambil gambar');
+      const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(orderUrl)}`;
       
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
+      // 1. Siapkan Canvas ukuran 1000x1300 (Beri ruang bawah untuk teks)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1000;
+      canvas.height = 1300;
+      const ctx = canvas.getContext('2d');
+
+      // 2. Warnai Background Putih
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 3. Gambar Logo Kafe (Jika ada)
+      if (settings.logo_url) {
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'Anonymous';
+        logoImg.src = settings.logo_url;
+        await new Promise((resolve) => {
+          logoImg.onload = () => {
+            // Gambar logo di tengah atas (kotak 200x200)
+            ctx.drawImage(logoImg, 400, 80, 200, 200); 
+            resolve();
+          };
+          logoImg.onerror = resolve; // Lanjut meski logo gagal dimuat
+        });
+      }
+
+      // 4. Tulis Nama Kafe
+      ctx.fillStyle = '#2A1F17'; // Warna Espresso gelap
+      ctx.font = 'bold 50px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(settings.name.toUpperCase(), 500, 350);
+
+      // 5. Gambar QR Code dari API
+      const qrImg = new Image();
+      qrImg.crossOrigin = 'Anonymous';
+      qrImg.src = qrApiUrl;
       
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `QR_Meja_${table.table_number}.png`;
-      document.body.appendChild(link);
-      link.click();
-      
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-      
-      showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
+      await new Promise((resolve, reject) => {
+        qrImg.onload = () => {
+          // Gambar QR di tengah (kotak 700x700)
+          ctx.drawImage(qrImg, 150, 400, 700, 700);
+          resolve();
+        };
+        qrImg.onerror = reject;
+      });
+
+      // 6. Tulis Nomor Meja (di bawah QR)
+      ctx.fillStyle = '#2A1F17';
+      ctx.font = 'bold 70px Arial';
+      ctx.fillText(`MEJA ${table.table_number}`, 500, 1200);
+
+      // 7. Tulis Petunjuk Kecil
+      ctx.fillStyle = '#5C4B3E';
+      ctx.font = '30px Arial';
+      ctx.fillText('Scan untuk memesan menu', 500, 1260);
+
+      // 8. Konversi Canvas ke Blob dan Unduh
+      canvas.toBlob((blob) => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `QR_Meja_${table.table_number}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+        
+        showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
+      }, 'image/png');
+
     } catch (error) {
       console.error(error);
-      showToast('Gagal mengunduh otomatis, membuka gambar...', 'warning');
-      window.open(qrApiUrl, '_blank');
+      showToast('Gagal membuat gambar QR.', 'error');
     }
   };
 
