@@ -344,20 +344,36 @@ export function useDashboard() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
-  // FUNGSI SIMPAN QR
-  const handleDownloadQR = (table) => {
+  // --- FUNGSI DOWNLOAD QR (FETCH + BLOB) ---
+  const handleDownloadQR = async (table) => {
     if (!table || !table.table_number) return;
     const url = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(url)}`;
     
-    const link = document.createElement('a');
-    link.href = qrApiUrl;
-    link.download = `QR_Meja_${table.table_number}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
+    try {
+      showToast('Menyiapkan gambar QR...', 'info');
+      
+      const response = await fetch(qrApiUrl);
+      if (!response.ok) throw new Error('Gagal mengambil gambar');
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `QR_Meja_${table.table_number}.png`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      
+      showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('Gagal mengunduh otomatis, membuka gambar...', 'warning');
+      window.open(qrApiUrl, '_blank');
+    }
   };
 
   const displayOrders = orders.filter(o => 
@@ -376,7 +392,7 @@ export function useDashboard() {
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink,
-    handleDownloadQR, // Ekspor fungsi simpan QR
+    handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables,
     menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
