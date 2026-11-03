@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useDashboard } from './hooks/useDashboard';
 import Header from './components/Header';
 import StatsCards from './components/StatsCards';
@@ -10,7 +11,7 @@ import TabContent from './components/TabContent';
 import MenuModal from './components/MenuModal';
 import KitchenModal from './components/KitchenModal';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const d = useDashboard();
   const [activeTab, setActiveTab] = useState('queue');
   
@@ -69,10 +70,10 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">
         
-        {/* STATS CARDS */}
+        {/* STATS CARDS - Pastikan orders tidak undefined */}
         <StatsCards 
           theme={d.theme} 
-          orders={d.orders} 
+          orders={d.orders || []} 
           rp={d.rp} 
           todayStr={d.todayStr} 
         />
@@ -84,7 +85,7 @@ export default function DashboardPage() {
             theme={d.theme} 
             d={d} 
             rp={d.rp} 
-            displayOrders={d.displayOrders}
+            displayOrders={d.displayOrders || []}
             queueFilter={d.queueFilter}
             setQueueFilter={d.setQueueFilter}
             menuSearch={d.menuSearch}
@@ -99,26 +100,25 @@ export default function DashboardPage() {
             onDownloadQR={d.handleDownloadQR}
             onPrintBill={d.handlePrintBill}
             
-            {/* PROPS LAPORAN (INI YANG SEBELUMNYA HILANG/BERBEDA) */}
-            reportMode={d.reportMode}
+            reportMode={d.reportMode || 'daily'}
             setReportMode={d.setReportMode}
-            reportDateStr={d.reportDateStr}
+            reportDateStr={d.reportDateStr || ''}
             setReportDateStr={d.setReportDateStr}
-            reportMonth={d.reportMonth}
+            reportMonth={d.reportMonth || 0}
             setReportMonth={d.setReportMonth}
-            reportYear={d.reportYear}
+            reportYear={d.reportYear || new Date().getFullYear()}
             setReportYear={d.setReportYear}
-            reportStartDateStr={d.reportStartDateStr}
+            reportStartDateStr={d.reportStartDateStr || ''}
             setReportStartDateStr={d.setReportStartDateStr}
-            reportEndDateStr={d.reportEndDateStr}
+            reportEndDateStr={d.reportEndDateStr || ''}
             setReportEndDateStr={d.setReportEndDateStr}
-            reportLabel={d.reportLabel}
-            reportStats={d.reportStats}
-            topMenus={d.topMenus}
-            chartData={d.chartData}
-            maxChartRev={d.maxChartRev}
-            totalChartRev={d.totalChartRev}
-            activeDays={d.activeDays}
+            reportLabel={d.reportLabel || ''}
+            reportStats={d.reportStats || { totalOrders: 0, revenue: 0, avgOrder: 0, totalItems: 0 }}
+            topMenus={d.topMenus || []}
+            chartData={d.chartData || []}
+            maxChartRev={d.maxChartRev || 1}
+            totalChartRev={d.totalChartRev || 0}
+            activeDays={d.activeDays || []}
             handleExportCSV={d.onExportCSV}
             handlePrintReport={d.onPrintReport}
             
@@ -153,12 +153,25 @@ export default function DashboardPage() {
       )}
 
       {/* NOTIFIKASI & DIALOG */}
-      <Toast toasts={d.toasts} />
+      <Toast toasts={d.toasts || []} />
       <ConfirmDialog 
         theme={d.theme} 
-        dialog={d.confirmDialog} 
+        dialog={d.confirmDialog || { open: false }} 
         onClose={() => d.setConfirmDialog({ ...d.confirmDialog, open: false })} 
       />
     </div>
   );
 }
+
+// --- TAMBAHAN: Mencegah Prerender Error di Next.js 16 ---
+export default dynamic(() => Promise.resolve(DashboardContent), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9]">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-[#D4C5B8] rounded-full animate-spin mx-auto border-t-[#3A2A20]"></div>
+        <p className="mt-4 text-[#3A2A20] font-bold text-sm">Memuat Dashboard...</p>
+      </div>
+    </div>
+  ),
+});
