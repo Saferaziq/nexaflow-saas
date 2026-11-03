@@ -8,6 +8,8 @@ export default function TabTables({
   onAddTable,
   onDeleteTable,
   onDownloadQR,
+  baseUrl,
+  tenantId,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -42,29 +44,44 @@ export default function TabTables({
           <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Tambahkan meja pertama Anda di atas.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {tables.map((table) => (
-            <div key={table.id} className={`rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-sm border-2 ${cardClass}`}>
-              <span className={`text-3xl font-black mb-3 ${textMainClass}`}>{table.table_number}</span>
-              
-              <div className="flex gap-2 w-full mt-auto">
-                <button 
-                  onClick={() => onDownloadQR(table)} 
-                  className="flex-1 bg-emerald-50 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1 text-xs" 
-                  title="Simpan QR"
-                >
-                  ⬇️ Simpan
-                </button>
-                <button 
-                  onClick={() => onDeleteTable(table.id)} 
-                  className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" 
-                  title="Hapus Meja"
-                >
-                  ✕
-                </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {tables.map((table) => {
+            const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(orderUrl)}`;
+
+            return (
+              <div key={table.id} className={`rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-sm border-2 ${cardClass}`}>
+                
+                <span className={`text-2xl font-black mb-3 ${textMainClass}`}>Meja {table.table_number}</span>
+                
+                {/* TAMPILAN QR CODE DI LAYAR */}
+                <div className={`p-2 bg-white rounded-xl border-2 mb-3 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-600'}`}>
+                  <img 
+                    src={qrImageUrl} 
+                    alt={`QR Meja ${table.table_number}`} 
+                    className="w-32 h-32 object-contain"
+                  />
+                </div>
+
+                <div className="flex gap-2 w-full mt-auto">
+                  <button 
+                    onClick={() => onDownloadQR(table)} 
+                    className="flex-1 bg-emerald-50 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1 text-xs" 
+                    title="Simpan QR"
+                  >
+                    ⬇️ Simpan
+                  </button>
+                  <button 
+                    onClick={() => onDeleteTable(table.id)} 
+                    className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" 
+                    title="Hapus Meja"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
