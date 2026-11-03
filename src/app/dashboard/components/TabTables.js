@@ -1,4 +1,5 @@
 'use client';
+import { Icons } from '../helpers/icons';
 
 export default function TabTables({
   theme,
@@ -7,7 +8,7 @@ export default function TabTables({
   setNewTableNum,
   onAddTable,
   onDeleteTable,
-  onPrintQR,
+  onDownloadQR,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -48,10 +49,18 @@ export default function TabTables({
               <span className={`text-3xl font-black mb-3 ${textMainClass}`}>{table.table_number}</span>
               
               <div className="flex gap-2 w-full mt-auto">
-                <button onClick={() => onPrintQR(table)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg border-2 border-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1" title="Cetak QR">
-                  🖨️ Cetak
+                <button 
+                  onClick={() => onDownloadQR(table)} 
+                  className="flex-1 bg-emerald-50 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1 text-xs" 
+                  title="Simpan QR"
+                >
+                  ⬇️ Simpan
                 </button>
-                <button onClick={() => onDeleteTable(table.id)} className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" title="Hapus Meja">
+                <button 
+                  onClick={() => onDeleteTable(table.id)} 
+                  className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" 
+                  title="Hapus Meja"
+                >
                   ✕
                 </button>
               </div>

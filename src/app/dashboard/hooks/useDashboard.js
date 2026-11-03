@@ -344,6 +344,7 @@ export function useDashboard() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
+  // FUNGSI SIMPAN QR
   const handleDownloadQR = (table) => {
     if (!table || !table.table_number) return;
     const url = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
@@ -375,7 +376,7 @@ export function useDashboard() {
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink,
-    handleDownloadQR,
+    handleDownloadQR, // Ekspor fungsi simpan QR
     fetchMenus, fetchOrders, fetchTables,
     menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
