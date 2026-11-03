@@ -15,7 +15,6 @@ export function useDashboard() {
   const [menus, setMenus] = useState([]);
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
-  // TAMBAHAN: notify_order_ready
   const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11, notify_order_ready: true });
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -32,6 +31,17 @@ export function useDashboard() {
   const [menuSearch, setMenuSearch] = useState("");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
   const [queueFilter, setQueueFilter] = useState("active");
+
+  // =========================================================================
+  // TAMBAHAN STATE UNTUK LAPORAN
+  // =========================================================================
+  const [reportMode, setReportMode] = useState('daily');
+  const [reportDateStr, setReportDateStr] = useState('');
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth());
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [reportStartDateStr, setReportStartDateStr] = useState('');
+  const [reportEndDateStr, setReportEndDateStr] = useState('');
+  // =========================================================================
 
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(true);
@@ -137,6 +147,11 @@ export function useDashboard() {
 
   useEffect(() => {
     setTheme(localStorage.getItem('nexaflow_theme') || 'light');
+    // Set tanggal default untuk laporan (format YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+    setReportDateStr(today);
+    setReportStartDateStr(today);
+    setReportEndDateStr(today);
   }, []);
 
   useEffect(() => {
@@ -198,7 +213,7 @@ export function useDashboard() {
           qris_string: userData.tenants.qris_string || '',
           banner_url: userData.tenants.banner_url || '',
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
-          notify_order_ready: userData.tenants.notify_order_ready !== false, // TAMBAHAN
+          notify_order_ready: userData.tenants.notify_order_ready !== false,
         });
 
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
@@ -228,6 +243,137 @@ export function useDashboard() {
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
   }, [router]);
+
+  // =========================================================================
+  // LOGIKA PERHITUNGAN LAPORAN (TAMBAHAN BARU)
+  // =========================================================================
+  const filterOrdersByDate = (ordersList, startStr, endStr) => {
+    if (!startStr || !endStr) return [];
+    const start = new Date(startStr);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endStr);
+    end.setHours(23, 59, 59, 999);
+    
+    return ordersList.filter(o => {
+      const oDate = new Date(o.created_at);
+      return oDate >= start && oDate <= end;
+    });
+  };
+
+  const getReportData = () => {
+    let start = '', end = '', label = '';
+    const today = new Date();
+
+    if (reportMode === 'daily') {
+      start = reportDateStr;
+      end = reportDateStr;
+      label = new Date(reportDateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } else if (reportMode === 'monthly') {
+      const firstDay = new Date(reportYear, reportMonth, 1);
+      const lastDay = new Date(reportYear, reportMonth + 1, 0);
+      start = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01`;
+      end = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+      label = `${['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][reportMonth]} ${reportYear}`;
+    } else {
+      start = reportStartDateStr;
+      end = reportEndDateStr;
+      label = `${new Date(start).toLocaleDateString('id-ID')} - ${new Date(end).toLocaleDateString('id-ID')}`;
+    }
+
+    const filtered = filterOrdersByDate(orders, start, end);
+    const validOrders = filtered.filter(o => o.status !== 'cancelled');
+
+    let revenue = 0;
+    let totalItems = 0;
+    const menuMap = new Map();
+
+    validOrders.forEach(o => {
+      revenue += Number(o.total_price);
+      if (o.items && Array.isArray(o.items)) {
+        o.items.forEach(item => {
+          totalItems += Number(item.qty);
+          const existing = menuMap.get(item.name) || { qty: 0, revenue: 0 };
+          menuMap.set(item.name, {
+            qty: existing.qty + Number(item.qty),
+            revenue: existing.revenue + (Number(item.price) * Number(item.qty))
+          });
+        });
+      }
+    });
+
+    const topMenus = Array.from(menuMap.entries()).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
+    const totalOrders = validOrders.length;
+    const avgOrder = totalOrders > 0 ? revenue / totalOrders : 0;
+
+    const reportStats = { totalOrders, revenue, avgOrder, totalItems };
+
+    // Chart 7 Hari Terakhir
+    const chartData = [];
+    let maxChartRev = 0;
+    let totalChartRev = 0;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dStr = d.toISOString().split('T')[0];
+      const dayOrders = orders.filter(o => o.created_at.startsWith(dStr) && o.status !== 'cancelled');
+      const dayRev = dayOrders.reduce((sum, o) => sum + Number(o.total_price), 0);
+      if (dayRev > maxChartRev) maxChartRev = dayRev;
+      totalChartRev += dayRev;
+      chartData.push({
+        label: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+        revenue: dayRev
+      });
+    }
+
+    return { reportStats, topMenus, chartData, maxChartRev, totalChartRev, label };
+  };
+
+  const reportData = getReportData();
+
+  const handleExportCSV = () => {
+    const { reportStats, topMenus, label } = reportData;
+    let csv = `Laporan: ${label}\n\n`;
+    csv += `Total Pesanan,${reportStats.totalOrders}\n`;
+    csv += `Total Omset,${reportStats.revenue}\n`;
+    csv += `Rata-rata/Order,${reportStats.avgOrder}\n`;
+    csv += `Item Terjual,${reportStats.totalItems}\n\n`;
+    csv += `Menu Terlaris,Qty,Omset\n`;
+    topMenus.forEach(([name, data]) => {
+      csv += `"${name}",${data.qty},${data.revenue}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Laporan_${label.replace(/\s/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Laporan CSV berhasil diunduh', 'success');
+  };
+
+  const handlePrintReport = async () => {
+    try {
+      const printModule = await import('../helpers/print');
+      const printFn = printModule.printDailyReport;
+
+      if (printFn) {
+        printFn({
+          orders: filterOrdersByDate(orders, reportMode === 'daily' ? reportDateStr : reportMode === 'monthly' ? `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01` : reportStartDateStr, reportMode === 'daily' ? reportDateStr : reportMode === 'monthly' ? `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-31` : reportEndDateStr),
+          settings,
+          userEmail
+        });
+      } else {
+        showToast('Fungsi cetak laporan tidak ditemukan', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal memuat fungsi cetak laporan: ' + err.message, 'error');
+    }
+  };
+  // =========================================================================
 
   const handleLogout = () => askConfirm('Keluar dari Dashboard', 'Yakin ingin logout?', async () => {
     await supabase.auth.signOut();
@@ -310,7 +456,7 @@ export function useDashboard() {
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
-      notify_order_ready: settings.notify_order_ready, // TAMBAHAN
+      notify_order_ready: settings.notify_order_ready,
     }).eq('id', tenantId);
     setCafeName(settings.name);
     showToast('Pengaturan disimpan', 'success');
@@ -482,5 +628,20 @@ export function useDashboard() {
     fetchMenus, fetchOrders, fetchTables,
     menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
+    
+    // RETURN UNTUK LAPORAN
+    reportMode, setReportMode, reportDateStr, setReportDateStr, 
+    reportMonth, setReportMonth, reportYear, setReportYear, 
+    reportStartDateStr, setReportStartDateStr, reportEndDateStr, setReportEndDateStr,
+    reportLabel: reportData.label,
+    reportStats: reportData.reportStats,
+    topMenus: reportData.topMenus,
+    chartData: reportData.chartData,
+    maxChartRev: reportData.maxChartRev,
+    totalChartRev: reportData.totalChartRev,
+    showDailyBreakdown: false,
+    activeDays: [],
+    onExportCSV: handleExportCSV,
+    onPrintReport: handlePrintReport,
   };
 }
