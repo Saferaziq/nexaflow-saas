@@ -39,7 +39,7 @@ export function useDashboard() {
 
   const audioCtxRef = useRef(null);
   const prevOrderIdsRef = useRef(null);
-  const beepIntervalRef = useRef(null); // TAMBAHAN 1: Ref untuk suara berulang
+  const beepIntervalRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -51,7 +51,6 @@ export function useDashboard() {
     setConfirmDialog({ open: true, title, message, onConfirm, danger });
   };
 
-  // TAMBAHAN 2: Fungsi buka kunci audio
   const unlockAudio = () => {
     if (!audioCtxRef.current) {
       try {
@@ -129,7 +128,6 @@ export function useDashboard() {
     }
   };
 
-  // TAMBAHAN 3: Efek suara berulang tiap 15 detik untuk pesanan 'pending'
   useEffect(() => {
     const hasPendingOrder = orders.some(o => o.status === 'pending');
 
@@ -137,7 +135,7 @@ export function useDashboard() {
       if (!beepIntervalRef.current) {
         beepIntervalRef.current = setInterval(() => {
           playBeep();
-        }, 15000); // 15 detik
+        }, 15000);
       }
     } else {
       if (beepIntervalRef.current) {
@@ -449,24 +447,25 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // PERBAIKAN: Tambahan pengecekan error (RLS) untuk simpan pengaturan/banner
+  // BYPASS CACHE SUPABASE DENGAN RPC
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
-    const { data, error } = await supabase.from('tenants').update({
-      name: settings.name, wa_number: settings.wa, address: settings.address,
-      logo_url: settings.logo_url, qris_string: settings.qris_string,
-      banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
-      notify_order_ready: settings.notify_order_ready,
-    }).eq('id', tenantId).select();
+    const { error } = await supabase.rpc('update_tenant_settings', {
+      p_tenant_id: tenantId,
+      p_name: settings.name,
+      p_wa: settings.wa,
+      p_address: settings.address,
+      p_logo_url: settings.logo_url,
+      p_qris_string: settings.qris_string,
+      p_banner_url: settings.banner_url,
+      p_tax_percentage: settings.tax_percentage,
+      p_notify_order_ready: settings.notify_order_ready,
+    });
 
     if (error) {
       showToast('Gagal simpan: ' + error.message, 'error');
       console.error("Supabase Error:", error);
-      return;
-    }
-    if (data.length === 0) {
-      showToast('Gagal simpan: Anda tidak memiliki akses (RLS).', 'error');
       return;
     }
 
@@ -631,7 +630,7 @@ export function useDashboard() {
     todayStr, baseUrl, isExpired, theme, nowTick,
     realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
-    rp, showToast, askConfirm, unlockAudio, // TAMBAHAN: unlockAudio dikembalikan
+    rp, showToast, askConfirm, unlockAudio,
     toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
