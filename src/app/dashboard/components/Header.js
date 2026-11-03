@@ -19,7 +19,6 @@ export default function Header({
   onToggleFullscreen,
   onLogout,
   onOpenKitchen,
-  onPrintDaily,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const headerClass = theme === 'light'
@@ -96,15 +95,6 @@ export default function Header({
               <span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
             </div>
 
-            <button
-              onClick={onPrintDaily}
-              title="Cetak Laporan Harian"
-              className={`flex items-center justify-center px-3 py-2.5 rounded-2xl shadow-sm transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'}`}
-            >
-              <Icons.Print />
-              <span className="hidden xl:inline ml-1.5">Lap. Harian</span>
-            </button>
-
             <div className={`w-0.5 h-6 mx-1 ${theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-700'}`}></div>
 
             <button
@@ -173,12 +163,6 @@ export default function Header({
               {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
             </button>
           ))}
-          <button
-            onClick={() => { onPrintDaily(); setIsMobileMenuOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-extrabold transition-all bg-emerald-600 text-white border-2 border-emerald-700"
-          >
-            <Icons.Print /> Cetak Laporan Harian
-          </button>
         </div>
       )}
     </header>
