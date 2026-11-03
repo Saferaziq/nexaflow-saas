@@ -81,7 +81,8 @@ export default function TabSettings({
               <button
                 type="button"
                 onClick={() => logoInputRef.current?.click()}
-                className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}
+                disabled={uploadingLogo || uploadingBanner}
+                className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
               >
                 {uploadingLogo ? 'Mengupload...' : 'Upload Logo'}
               </button>
@@ -107,7 +108,8 @@ export default function TabSettings({
           <button
             type="button"
             onClick={() => bannerInputRef.current?.click()}
-            className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}
+            disabled={uploadingLogo || uploadingBanner}
+            className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
           >
             {uploadingBanner ? 'Mengupload...' : 'Upload Banner'}
           </button>
@@ -145,16 +147,18 @@ export default function TabSettings({
           </p>
         </div>
 
+        {/* TOMBOL SIMPAN DENGAN PROTEKSI UPLOAD */}
         <button
           type="submit"
-          className={`w-full font-extrabold py-4 rounded-2xl shadow-lg transition-all mt-4 border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'}`}
+          disabled={uploadingLogo || uploadingBanner}
+          className={`w-full font-extrabold py-4 rounded-2xl shadow-lg transition-all mt-4 border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          Simpan Pengaturan
+          {uploadingLogo || uploadingBanner ? 'Tunggu Upload Selesai...' : 'Simpan Pengaturan'}
         </button>
 
       </form>
 
-      {/* TAMBAHAN: Notifikasi Pesanan Siap */}
+      {/* Notifikasi Pesanan Siap */}
       <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>

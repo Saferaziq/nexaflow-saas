@@ -39,7 +39,7 @@ export function useDashboard() {
 
   const audioCtxRef = useRef(null);
   const prevOrderIdsRef = useRef(null);
-  const beepIntervalRef = useRef(null); // TAMBAHAN: Ref untuk interval suara
+  const beepIntervalRef = useRef(null); // TAMBAHAN 1: Ref untuk suara berulang
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -51,6 +51,7 @@ export function useDashboard() {
     setConfirmDialog({ open: true, title, message, onConfirm, danger });
   };
 
+  // TAMBAHAN 2: Fungsi buka kunci audio
   const unlockAudio = () => {
     if (!audioCtxRef.current) {
       try {
@@ -118,7 +119,7 @@ export function useDashboard() {
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
-          playBeep(); // Bunyi instan saat pesanan baru masuk
+          playBeep(); 
           const first = data.find(o => o.id === newOnes[0]);
           if (first) showToast(`Pesanan baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
@@ -128,7 +129,7 @@ export function useDashboard() {
     }
   };
 
-  // TAMBAHAN BARU: Efek untuk bunyi berulang tiap 15 detik jika ada pesanan berstatus 'pending'
+  // TAMBAHAN 3: Efek suara berulang tiap 15 detik untuk pesanan 'pending'
   useEffect(() => {
     const hasPendingOrder = orders.some(o => o.status === 'pending');
 
@@ -136,7 +137,7 @@ export function useDashboard() {
       if (!beepIntervalRef.current) {
         beepIntervalRef.current = setInterval(() => {
           playBeep();
-        }, 15000); // Bunyi tiap 15 detik
+        }, 15000); // 15 detik
       }
     } else {
       if (beepIntervalRef.current) {
@@ -448,14 +449,27 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
+  // PERBAIKAN: Tambahan pengecekan error (RLS) untuk simpan pengaturan/banner
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    await supabase.from('tenants').update({
+    
+    const { data, error } = await supabase.from('tenants').update({
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
       notify_order_ready: settings.notify_order_ready,
-    }).eq('id', tenantId);
+    }).eq('id', tenantId).select();
+
+    if (error) {
+      showToast('Gagal simpan: ' + error.message, 'error');
+      console.error("Supabase Error:", error);
+      return;
+    }
+    if (data.length === 0) {
+      showToast('Gagal simpan: Anda tidak memiliki akses (RLS).', 'error');
+      return;
+    }
+
     setCafeName(settings.name);
     showToast('Pengaturan disimpan', 'success');
   };
@@ -617,7 +631,7 @@ export function useDashboard() {
     todayStr, baseUrl, isExpired, theme, nowTick,
     realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
-    rp, showToast, askConfirm, unlockAudio,
+    rp, showToast, askConfirm, unlockAudio, // TAMBAHAN: unlockAudio dikembalikan
     toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
