@@ -60,30 +60,33 @@ export default function TabReports({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Pesanan</p><p className={`text-3xl font-black ${textMainClass}`}>{reportStats.totalOrders}</p></div>
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Omset</p><p className="text-2xl font-black text-[var(--primary-color)]">{rp(reportStats.revenue)}</p></div>
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Rata-rata / Order</p><p className={`text-2xl font-black ${textMainClass}`}>{rp(reportStats.avgOrder)}</p></div>
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Item Terjual</p><p className={`text-3xl font-black ${textMainClass}`}>{reportStats.totalItems}</p></div>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Pesanan</p><p className={`text-3xl font-black ${textMainClass}`}>{reportStats?.totalOrders || 0}</p></div>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Omset</p><p className="text-2xl font-black text-[var(--primary-color)]">{rp(reportStats?.revenue || 0)}</p></div>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Rata-rata / Order</p><p className={`text-2xl font-black ${textMainClass}`}>{rp(reportStats?.avgOrder || 0)}</p></div>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}><p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Item Terjual</p><p className={`text-3xl font-black ${textMainClass}`}>{reportStats?.totalItems || 0}</p></div>
       </div>
 
       <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-black text-lg ${textMainClass}`}>7 Hari Terakhir</h3>
-          <p className={`text-sm font-bold ${textSubClass}`}>Total: {rp(totalChartRev)}</p>
+          <p className={`text-sm font-bold ${textSubClass}`}>Total: {rp(totalChartRev || 0)}</p>
         </div>
-        <div className="flex items-end gap-2 h-40">
-          {chartData.map((d, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full flex-1 flex items-end">
-                <div className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-dark)] to-[var(--primary-color)] transition-all" style={{ height: `${Math.max((d.revenue / maxChartRev) * 100, 4)}%` }}></div>
+        <div className="flex items-end gap-2 h-40 pt-4">
+          {(chartData || []).map((d, i) => {
+            // PERBAIKAN GRAFIK: Menghindari pembagian dengan 0 (NaN)
+            const safeMax = maxChartRev > 0 ? maxChartRev : 1;
+            const heightPct = Math.max((d.revenue / safeMax) * 100, 4);
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                <div className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-dark)] to-[var(--primary-color)] transition-all" style={{ height: `${heightPct}%` }}></div>
+                <span className={`text-[9px] font-bold mt-1 ${textSubClass}`}>{d.label}</span>
               </div>
-              <span className={`text-[9px] font-bold ${textSubClass}`}>{d.label}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {topMenus.length > 0 && (
+      {topMenus && topMenus.length > 0 && (
         <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
           <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Menu Terlaris</h3>
           <div className="space-y-2">
@@ -94,8 +97,8 @@ export default function TabReports({
                   <span className={`font-bold text-sm ${textMainClass}`}>{name}</span>
                 </div>
                 <div className="text-right">
-                  <p className={`font-black text-sm ${textMainClass}`}>{data.qty}x</p>
-                  <p className={`text-[11px] font-semibold ${textSubClass}`}>{rp(data.revenue)}</p>
+                  <p className={`font-black text-sm ${textMainClass}`}>{data?.qty || 0}x</p>
+                  <p className={`text-[11px] font-semibold ${textSubClass}`}>{rp(data?.revenue || 0)}</p>
                 </div>
               </div>
             ))}

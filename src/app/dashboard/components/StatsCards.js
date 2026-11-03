@@ -9,7 +9,6 @@ export default function StatsCards({ theme, stats, rp }) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
       {/* Total Pesanan */}
       <div className={`rounded-[2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-300 ${cardClass}`}>
         <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform ${theme === 'light' ? 'bg-[#F4EFE9]' : 'bg-slate-800/50'}`}></div>
@@ -61,7 +60,6 @@ export default function StatsCards({ theme, stats, rp }) {
         <h3 className="text-3xl font-black tracking-tight drop-shadow-md">{rp(stats?.revenue || 0)}</h3>
         <p className="text-xs text-white/80 font-semibold mt-1">Total pendapatan</p>
       </div>
-
     </div>
   );
 }
