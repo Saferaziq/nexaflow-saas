@@ -10,15 +10,48 @@ export const printHTML = (htmlContent) => {
   iframe.style.height = '0';
   iframe.style.border = '0';
   document.body.appendChild(iframe);
+  
   const doc = iframe.contentWindow.document;
   doc.open();
   doc.write(htmlContent);
   doc.close();
-  setTimeout(() => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    setTimeout(() => { document.body.removeChild(iframe); }, 10000);
-  }, 500);
+
+  // Fungsi untuk memicu print setelah semua gambar dimuat
+  const triggerPrint = () => {
+    // Beri jeda ekstra 500ms agar layout CSS benar-benar stabil
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(iframe); }, 10000);
+    }, 500);
+  };
+
+  // Cek apakah ada gambar (QR Code) di dalam struk
+  const images = iframe.contentWindow.document.images;
+  if (images.length === 0) {
+    triggerPrint();
+    return;
+  }
+
+  let loadedCount = 0;
+  const totalImages = images.length;
+
+  const checkAllLoaded = () => {
+    loadedCount++;
+    if (loadedCount >= totalImages) {
+      triggerPrint();
+    }
+  };
+
+  // Tunggu setiap gambar selesai diunduh
+  for (let i = 0; i < totalImages; i++) {
+    if (images[i].complete) {
+      checkAllLoaded();
+    } else {
+      images[i].addEventListener('load', checkAllLoaded);
+      images[i].addEventListener('error', checkAllLoaded); // Lanjut print meski gambar gagal
+    }
+  }
 };
 
 const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
