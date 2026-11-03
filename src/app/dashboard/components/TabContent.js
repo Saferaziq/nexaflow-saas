@@ -24,6 +24,7 @@ export default function TabContent({
   openEditMenu,
   onAddTable,
   onPrintQRTable,
+  onDownloadQR,
   onPrintBill,
   reportMode,
   setReportMode,
@@ -95,6 +96,7 @@ export default function TabContent({
         onAddTable={onAddTable}
         onDeleteTable={d.handleDeleteTable}
         onPrintQR={onPrintQRTable}
+        onDownloadQR={onDownloadQR}
       />
     );
   }

@@ -1,5 +1,4 @@
 'use client';
-
 import { Icons } from '../helpers/icons';
 
 export default function TabTables({
@@ -10,6 +9,7 @@ export default function TabTables({
   onAddTable,
   onDeleteTable,
   onPrintQR,
+  onDownloadQR,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -18,41 +18,46 @@ export default function TabTables({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={onAddTable} className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
-        <h3 className={`font-black text-lg mb-3 ${textMainClass}`}>Tambah Meja Baru</h3>
+      <div className={`p-4 rounded-2xl border-2 ${cardClass}`}>
+        <h3 className={`font-black text-sm mb-3 ${textMainClass}`}>Tambah Meja Baru</h3>
         <div className="flex gap-2">
           <input
             type="text"
             value={newTableNum}
-            onChange={e => setNewTableNum(e.target.value)}
+            onChange={(e) => setNewTableNum(e.target.value)}
             placeholder="Nomor meja (contoh: 01, A1)"
             className={inputClass}
           />
-          <button type="submit" className="bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3 px-6 rounded-xl text-sm flex items-center gap-2 shadow-lg active:scale-95 border-2 border-[var(--primary-dark)] whitespace-nowrap">
-            <Icons.Plus /> Tambah
+          <button
+            onClick={() => onAddTable(newTableNum, setNewTableNum)}
+            className="bg-[var(--primary-color)] text-white font-bold px-6 rounded-xl hover:bg-[var(--primary-dark)] transition-colors whitespace-nowrap"
+          >
+            + Tambah
           </button>
         </div>
-      </form>
+      </div>
 
       {tables.length === 0 ? (
         <div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}>
-          <div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><Icons.Grid /></div>
+          <div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><Icons.Utensils /></div>
           <p className={`font-black text-xl ${textMainClass}`}>Belum ada meja</p>
-          <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Tambahkan meja untuk memulai</p>
+          <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Tambahkan meja pertama Anda di atas.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {tables.map(table => (
-            <div key={table.id} className={`rounded-2xl p-4 shadow-sm border-2 flex flex-col items-center gap-2 hover:-translate-y-1 hover:shadow-lg transition-all ${cardClass}`}>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black ${theme === 'light' ? 'bg-[#F4EFE9] text-[var(--primary-color)]' : 'bg-slate-800 text-[var(--primary-color)]'}`}>
-                {table.table_number}
-              </div>
-              <div className="flex gap-1.5 w-full">
-                <button onClick={() => onPrintQR(table)} title="Cetak QR" className={`flex-1 text-xs font-bold py-2 rounded-lg border-2 transition-all ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
-                  <Icons.Print />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {tables.map((table) => (
+            <div key={table.id} className={`rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-sm border-2 ${cardClass}`}>
+              <span className={`text-3xl font-black mb-3 ${textMainClass}`}>{table.table_number}</span>
+              
+              <div className="flex gap-2 w-full mt-auto">
+                <button onClick={() => onPrintQR(table)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg border-2 border-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1" title="Cetak QR">
+                  <Icons.Printer />
                 </button>
-                <button onClick={() => onDeleteTable(table.id)} title="Hapus" className="flex-1 text-xs font-bold py-2 rounded-lg bg-rose-100 text-rose-600 border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-all">
-                  <Icons.X />
+                <button onClick={() => onDownloadQR(table)} className="flex-1 bg-emerald-50 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center justify-center text-xs gap-1">
+                  ⬇️ Download
+                </button>
+                <button onClick={() => onDeleteTable(table.id)} className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" title="Hapus Meja">
+                  ✕
                 </button>
               </div>
             </div>

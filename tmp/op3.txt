@@ -1,0 +1,150 @@
+﻿              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-black text-white drop-shadow-md truncate">{cafe.name}</h1>
+              <p className="text-xs text-white/95 font-bold mt-1">Silakan pilih menu favorit Anda</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SEARCH */}
+      <div className="px-5 -mt-6 relative z-20">
+        <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border-2 border-slate-300 flex items-center px-4 py-3">
+          <span className="text-slate-500 text-lg">ðŸ”</span>
+          <input type="text" placeholder="Cari menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 ml-3 text-[16px] font-bold outline-none text-slate-800 placeholder:text-slate-500 bg-transparent" />
+          {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 text-xl font-black px-2">Ã—</button>}
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div className="px-5 mt-6">
+        {activeTab === 'menu' && (
+          <>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
+              <button onClick={() => setCategory('all')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${category === 'all' ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>âœ¨ Semua</button>
+              {['makanan', 'minuman', 'cemilan'].map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${category === cat ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                  {categoryEmoji[cat]} {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {filteredMenus.length === 0 ? (
+                <div className="col-span-2 bg-white rounded-3xl p-10 text-center shadow-sm border-2 border-slate-300">
+                  <div className="text-5xl mb-3 opacity-50">ðŸ½ï¸</div>
+                  <p className="text-slate-800 font-black text-sm">Menu tidak ditemukan</p>
+                </div>
+              ) : filteredMenus.map(menu => {
+                const cartItem = cart.find(c => c.id === menu.id);
+                return (
+                  <div key={menu.id} className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative">
+                    <div className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200">
+                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">ðŸ½ï¸</div>}
+                      {cartItem && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white">{cartItem.qty}</div>}
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
+                        <p className="text-[10px] text-slate-600 font-semibold line-clamp-2 mt-1 leading-snug min-h-[2em]">{menu.description || 'Menu andalan kami'}</p>
+                      </div>
+                      <div className="mt-2 flex flex-col gap-2">
+                        <span className="font-black text-[var(--primary-color)] text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
+                        {cartItem ? (
+                          <div className="flex items-center justify-between bg-slate-50 rounded-lg p-1 border-2 border-slate-300">
+                            <button onClick={() => decCart(menu.id)} className="w-6 h-6 bg-white border border-slate-300 rounded shadow-sm font-black text-slate-700 flex items-center justify-center">-</button>
+                            <span className="font-black text-slate-900 text-xs">{cartItem.qty}</span>
+                            <button onClick={() => addToCart(menu)} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)]">+</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => addToCart(menu)} className="w-full bg-[var(--primary-light)] text-[var(--primary-color)] font-black py-1.5 rounded-lg text-xs transition-colors hover:bg-[var(--primary-color)] hover:text-white border-2 border-[var(--primary-color)]/20">Tambah</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'cart' && (
+          <>
+            {cart.length === 0 ? (
+              <div className="bg-white rounded-3xl p-10 text-center shadow-sm border-2 border-slate-300 mt-4">
+                <div className="text-6xl mb-4 opacity-50">ðŸ›’</div>
+                <p className="text-slate-800 font-black text-base">Keranjang masih kosong</p>
+                <button onClick={() => setActiveTab('menu')} className="bg-[var(--primary-color)] text-white font-black px-6 py-3 rounded-xl text-sm mt-4 shadow-md border-2 border-[var(--primary-dark)]">Lihat Menu</button>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-3xl p-5 border-2 border-slate-300 shadow-sm mt-2">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-slate-200">
+                    <h3 className="font-black text-slate-900 text-sm">Pesanan Anda</h3>
+                    <span className="text-[10px] bg-[var(--primary-light)] text-[var(--primary-color)] px-2.5 py-1 rounded-full font-black border border-[var(--primary-color)]/20">{totalCartQty} item</span>
+                  </div>
+                  <div className="space-y-5">
+                    {cart.map(item => (
+                      <div key={item.id} className="border-b-2 border-slate-100 pb-5 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-300">
+                            {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xl">ðŸ½ï¸</div>}
+                          </div>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <p className="font-black text-slate-900 text-sm truncate">{item.name}</p>
+                            <p className="text-xs text-[var(--primary-color)] font-black mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => decCart(item.id)} className="w-7 h-7 bg-slate-100 border border-slate-300 rounded-full font-black text-slate-700">-</button>
+                            <span className="w-5 text-center font-black text-slate-900 text-xs">{item.qty}</span>
+                            <button onClick={() => addToCart(item)} className="w-7 h-7 bg-[var(--primary-light)] border border-[var(--primary-color)]/30 text-[var(--primary-color)] rounded-full font-black">+</button>
+                          </div>
+                        </div>
+                        <input type="text" placeholder="Catatan (mis. tanpa gula)" value={item.note || ''} onChange={(e) => updateItemNote(item.id, e.target.value)} className="w-full mt-3 text-[16px] bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--primary-color)] font-bold text-slate-900 placeholder:text-slate-400" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-5 border-2 border-slate-300 shadow-sm mt-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-slate-600 font-bold">
+                      <span>Subtotal</span>
+                      <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+                    </div>
+                    {taxRate > 0 && (
+                      <div className="flex justify-between text-slate-600 font-bold">
+                        <span>PPN ({taxRate}%)</span>
+                        <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-black text-base pt-3 border-t-2 border-slate-200 mt-2">
+                      <span className="text-slate-900">Total Bayar</span>
+                      <span className="text-[var(--primary-color)]">Rp {totalPrice.toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={openConfirmation} disabled={isSubmitting} className="w-full bg-[var(--primary-color)] text-white font-black py-4 rounded-2xl mt-3 shadow-lg text-sm active:scale-[0.98] transition-transform border-2 border-[var(--primary-dark)]">
+                  {isSubmitting ? 'Memproses...' : 'Lanjut ke Konfirmasi'}
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {activeTab === 'status' && (
+          <div className="space-y-4 mt-2">
+            {myOrders.length === 0 ? (
+              <div className="bg-white rounded-3xl p-10 text-center shadow-sm border-2 border-slate-300">
+                <div className="text-6xl mb-4 opacity-50">ðŸ“‹</div>
+                <p className="text-slate-800 font-black text-base">Belum ada pesanan</p>
+              </div>
+            ) : myOrders.map(o => {
+              const statusIdx = ['pending', 'cooking', 'ready', 'completed'].indexOf(o.status);
+              const statusLabels = ['Diterima', 'Dimasak', 'Siap', 'Selesai'];
+              const statusEmojis = ['âœ…', 'ðŸ‘¨â€ðŸ³', 'ðŸ½ï¸', 'ðŸŽ‰'];
+              const statusColors = ['bg-amber-500', 'bg-blue-500', 'bg-emerald-500', 'bg-slate-800'];
+
+              return (

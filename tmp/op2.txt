@@ -1,0 +1,150 @@
+﻿    
+    const hasReadyOrder = myOrders.some(o => o.status === 'ready');
+    
+    if (hasReadyOrder) {
+      if (!intervalRef.current) {
+        playReadySound(); // Bunyi instan saat status berubah
+        intervalRef.current = setInterval(() => {
+          playReadySound(); // Bunyi berulang tiap 30 detik
+        }, 30000); 
+      }
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  };
+
+  // Jalankan pengecekan setiap kali data pesanan berubah atau audio di-unlock
+  useEffect(() => {
+    checkReadyOrders();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [myOrders, audioUnlocked]);
+  // -------------------------------
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  };
+
+  const addToCart = (menu) => {
+    unlockAudio(); // Buka kunci audio saat interaksi pertama
+    setCart(prev => {
+      const ex = prev.find(i => i.id === menu.id);
+      if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...menu, qty: 1, note: '' }];
+    });
+    showToast(`${menu.name} ditambah âœ”`);
+  };
+
+  const decCart = (id) => {
+    setCart(prev => {
+      const ex = prev.find(i => i.id === id);
+      if (ex.qty === 1) return prev.filter(i => i.id !== id);
+      return prev.map(i => i.id === id ? { ...i, qty: i.qty - 1 } : i);
+    });
+  };
+
+  const updateItemNote = (id, note) => {
+    setCart(prev => prev.map(i => i.id === id ? { ...i, note } : i));
+  };
+
+  const subtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+  const taxRate = cafe.tax_percentage || 0;
+  const taxAmount = (subtotal * taxRate) / 100;
+  const totalPrice = subtotal + taxAmount;
+  const totalCartQty = cart.reduce((a, b) => a + b.qty, 0);
+
+  const openConfirmation = () => {
+    if (cart.length === 0) return;
+    unlockAudio(); // Pastikan unlock lagi jika perlu
+    setShowConfirmModal(true);
+  };
+
+  const handleCheckout = async () => {
+    if (!customerName.trim()) {
+      showToast('Mohon isi nama Anda');
+      return;
+    }
+    setIsSubmitting(true);
+    localStorage.setItem('nexaflow_customer_name', customerName.trim());
+
+    const orderData = { 
+      tenant_id: tenantId, 
+      table_number: tableNumber, 
+      customer_name: customerName.trim(),
+      order_note: globalNote.trim(),
+      items: cart, 
+      subtotal: subtotal,
+      tax_amount: taxAmount,
+      total_price: totalPrice, 
+      status: 'pending', 
+      payment_status: 'unpaid', 
+      payment_method: 'cash' 
+    };
+
+    const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
+    
+    if (error) { 
+      showToast('Gagal: ' + error.message); 
+      setIsSubmitting(false); 
+      return; 
+    }
+
+    const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
+    localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify([...existingIds, data.id]));
+    
+    setCart([]); 
+    setGlobalNote('');
+    setIsSubmitting(false); 
+    setShowConfirmModal(false);
+    setActiveTab('status');
+    fetchMyOrders([...existingIds, data.id]);
+    showToast('Pesanan terkirim! ðŸŽ‰');
+  };
+
+  if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-slate-800">QR Code tidak valid.</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-slate-300 rounded-full animate-spin mx-auto border-t-[var(--primary-color)]"></div>
+        <p className="mt-4 text-slate-600 font-bold text-sm">Memuat menu...</p>
+      </div>
+    </div>
+  );
+
+  const filteredMenus = menus.filter(m => {
+    const matchCat = category === 'all' || m.category === category;
+    const matchSearch = !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const categoryEmoji = { makanan: 'ðŸ½ï¸', minuman: 'ðŸ¥¤', cemilan: 'ðŸ¿' };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans pb-32" onClick={unlockAudio}>
+      {/* HERO HEADER (Banner Background) */}
+      <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
+        {cafe.banner_url ? (
+          <img src={cafe.banner_url} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Banner" />
+        ) : (
+          <div className="absolute inset-0 w-full h-full bg-[var(--primary-color)] opacity-90"></div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10"></div>
+
+        <div className="relative px-6 pt-10 pb-12 z-10">
+          <div className="flex items-center justify-end mb-6">
+            <div className="bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 text-white border-2 border-white/30 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
+              Anda di Meja {tableNumber}
+            </div>
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            {cafe.logo_url ? (
+              <img src={cafe.logo_url} className="w-16 h-16 rounded-2xl bg-white object-cover border-2 border-white shadow-lg" alt="Logo" />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl font-black border-2 border-white/40 text-white shadow-sm">
+                {cafe.name.charAt(0)}

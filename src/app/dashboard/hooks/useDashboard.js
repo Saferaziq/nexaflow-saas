@@ -28,6 +28,10 @@ export function useDashboard() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const [menuSearch, setMenuSearch] = useState("");
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
+  const [queueFilter, setQueueFilter] = useState("active");
+
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(true);
   const audioUnlockedRef = useRef(false);
@@ -102,10 +106,9 @@ export function useDashboard() {
     if (data) setMenus(data);
   };
 
-    const fetchTables = async (tId) => {
+  const fetchTables = async (tId) => {
     const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId);
     if (data) {
-      // Sort secara numerik (angka), bukan teks
       const sorted = [...data].sort((a, b) => 
         a.table_number.localeCompare(b.table_number, undefined, { numeric: true, sensitivity: 'base' })
       );
@@ -341,6 +344,27 @@ export function useDashboard() {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   };
 
+  const handleDownloadQR = (table) => {
+    if (!table || !table.table_number) return;
+    const url = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(url)}`;
+    
+    const link = document.createElement('a');
+    link.href = qrApiUrl;
+    link.download = `QR_Meja_${table.table_number}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
+  };
+
+  const displayOrders = orders.filter(o => 
+    queueFilter === "all" ? true : 
+    queueFilter === "active" ? ["pending", "cooking", "ready"].includes(o.status) : 
+    o.status === "completed"
+  );
+
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings,
     todayStr, baseUrl, isExpired, theme, nowTick, soundEnabled, audioUnlocked,
@@ -351,6 +375,9 @@ export function useDashboard() {
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
     handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink,
+    handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables,
+    menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
+    queueFilter, setQueueFilter, displayOrders,
   };
 }
