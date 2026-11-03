@@ -345,14 +345,41 @@ export function useDashboard() {
   };
 
   const handlePrintBill = async (order) => {
-    const { printBill } = await import('../helpers/print');
-    printBill(order, settings, cafeName);
+    try {
+      const printModule = await import('../helpers/print');
+      const printFn = printModule.printBill || printModule.default;
+      
+      if (printFn) {
+        printFn(order, cafeName, settings.address, settings.wa);
+      } else {
+        showToast('Fungsi printBill tidak ditemukan di helpers/print.js', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal memuat fungsi cetak: ' + err.message, 'error');
+    }
   };
 
   const handlePrintDaily = async () => {
-    const { printDailyReport } = await import('../helpers/print');
-    const todayOrders = orders.filter(o => o.created_at && new Date(o.created_at).toDateString() === todayStr && o.status !== 'cancelled');
-    printDailyReport(todayOrders, settings, cafeName, todayStr);
+    try {
+      const printModule = await import('../helpers/print');
+      const printFn = printModule.printDailyReport || printModule.printReport;
+      
+      const todayOrders = orders.filter(o => 
+        o.created_at && 
+        new Date(o.created_at).toDateString() === todayStr && 
+        o.status !== 'cancelled'
+      );
+
+      if (printFn) {
+        printFn(todayOrders, cafeName, settings.address);
+      } else {
+        showToast('Fungsi cetak laporan tidak ditemukan', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal memuat fungsi cetak laporan: ' + err.message, 'error');
+    }
   };
 
   const handleDownloadQR = async (table) => {

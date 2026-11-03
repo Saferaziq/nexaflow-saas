@@ -1,7 +1,5 @@
 'use client';
 
-import { Icons } from '../helpers/icons';
-
 export default function TabQueue({
   theme,
   displayOrders,
@@ -14,115 +12,137 @@ export default function TabQueue({
   onPrintBill,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
-  const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
   const cardClass = theme === 'light' ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
 
-  const getStatusPill = (status) => ({ pending: 'status-pending', cooking: 'status-cooking', ready: 'status-ready', completed: 'status-completed', cancelled: 'status-cancelled' }[status] || 'status-completed');
-  const getStatusLabel = (status) => ({ pending: 'Baru', cooking: 'Dimasak', ready: 'Siap', completed: 'Selesai', cancelled: 'Batal' }[status] || status);
-  const getTimeBadge = (createdAt) => {
-    if (!nowTick) return null;
-    const mins = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
-    if (mins < 0) return null;
-    if (mins < 5) return { mins, cls: 'bg-slate-200 border-slate-300 text-slate-700', pulse: false };
-    if (mins < 15) return { mins, cls: 'bg-amber-100 border-amber-300 text-amber-800', pulse: false };
-    return { mins, cls: 'bg-rose-100 border-rose-300 text-rose-800', pulse: true };
+  const getAge = (createdAt) => {
+    if (!createdAt) return '';
+    const diff = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
+    return `${diff} mnt`;
+  };
+
+  const getAgeColor = (createdAt) => {
+    if (!createdAt) return 'text-slate-500';
+    const diff = Math.floor((nowTick - new Date(createdAt).getTime()) / 60000);
+    if (diff < 10) return 'text-emerald-500';
+    if (diff < 20) return 'text-amber-500';
+    return 'text-rose-500 font-black animate-pulse';
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className={`flex items-center gap-1 rounded-2xl p-1.5 w-fit border-2 shadow-sm ${theme === 'light' ? 'bg-[#E8DFD3] border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
-          {[{ k: 'active', l: 'Aktif' }, { k: 'done', l: 'Selesai' }, { k: 'all', l: 'Semua' }].map(({ k, l }) => (
-            <button
-              key={k}
-              onClick={() => setQueueFilter(k)}
-              className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all ${queueFilter === k ? (theme === 'light' ? 'bg-white text-[#2A1F17] shadow-md border border-[#D4C5B8]' : 'bg-slate-700 text-white shadow-md border border-slate-600') : textSubClass}`}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
-        {queueFilter === 'active' && (
-          <p className={`text-[11px] font-bold flex items-center gap-1.5 ${textSubClass}`}>
-            <Icons.Clock /> Urut dari yang paling lama menunggu
-          </p>
-        )}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {['active', 'completed', 'all'].map((f) => (
+          <button
+            key={f}
+            onClick={() => setQueueFilter(f)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all border-2 ${
+              queueFilter === f
+                ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)]'
+                : theme === 'light'
+                ? 'bg-white text-slate-600 border-[#D4C5B8] hover:bg-[#F4EFE9]'
+                : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700'
+            }`}
+          >
+            {f === 'active' ? 'Aktif' : f === 'completed' ? 'Selesai' : 'Semua'}
+          </button>
+        ))}
       </div>
 
       {displayOrders.length === 0 ? (
         <div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}>
-          <div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
-            <Icons.Clipboard />
-          </div>
-          <p className={`font-black text-xl ${textMainClass}`}>Tidak ada antrian pesanan</p>
-          <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Pesanan baru akan muncul otomatis</p>
+          <div className="text-6xl mb-4 opacity-50">📋</div>
+          <p className={`font-black text-xl ${textMainClass}`}>Tidak ada pesanan</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {displayOrders.map(order => {
-            const badge = ['pending', 'cooking', 'ready'].includes(order.status) ? getTimeBadge(order.created_at) : null;
-            return (
-              <div key={order.id} className={`rounded-[2rem] overflow-hidden shadow-sm border-2 flex flex-col hover:-translate-y-1 hover:shadow-xl transition-all duration-300 ${cardClass}`}>
-                <div className={`px-6 py-5 border-b-2 flex justify-between items-center ${theme === 'light' ? 'bg-gradient-to-br from-[#F4EFE9] to-white border-[#D4C5B8]' : 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700'}`}>
-                  <div>
-                    <p className={`text-[10px] font-extrabold uppercase tracking-widest ${textSubClass}`}>Meja {order.table_number}</p>
-                    <p className={`text-2xl font-black leading-tight truncate max-w-[150px] ${textMainClass}`}>{order.customer_name || 'Tamu'}</p>
-                  </div>
-                  <span className={`status-pill shadow-sm font-black ${getStatusPill(order.status)}`}>{getStatusLabel(order.status)}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {displayOrders.map((order) => (
+            <div
+              key={order.id}
+              className={`rounded-2xl p-4 flex flex-col relative shadow-sm border-2 ${cardClass} ${
+                order.status === 'ready' ? 'border-emerald-400 shadow-emerald-100' : ''
+              }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className={`font-black text-lg ${textMainClass}`}>Meja {order.table_number}</h3>
+                  <p className="text-xs font-bold text-slate-500">
+                    {order.customer_name || 'Tanpa Nama'}
+                  </p>
                 </div>
-                <div className="px-6 py-5 space-y-4 flex-1 flex flex-col">
-                  <div className={`flex items-center justify-between gap-2 text-[11px] font-bold ${textSubClass}`}>
-                    <span>#{order.id.slice(0, 8).toUpperCase()}</span>
-                    <div className="flex items-center gap-2">
-                      {badge && (
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 text-[10px] font-black shadow-sm ${badge.cls} ${badge.pulse ? 'animate-pulse' : ''}`}>
-                          <Icons.Clock /> {badge.mins}m
-                        </span>
-                      )}
-                      <span>{new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
+                <span className={`text-xs font-black ${getAgeColor(order.created_at)}`}>
+                  {getAge(order.created_at)}
+                </span>
+              </div>
+
+              <div className="flex-1 space-y-2 mb-4">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-slate-600 font-semibold">
+                      {item.qty}x {item.name}
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {rp(item.price * item.qty)}
+                    </span>
                   </div>
-                  {order.order_note && (
-                    <div className="bg-amber-100 border-l-4 border-amber-500 p-3 rounded-r-xl text-xs font-bold text-amber-800 shadow-sm">Catatan: {order.order_note}</div>
-                  )}
-                  <div className="space-y-3 pt-1 flex-1">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-start gap-3">
-                        <div className="flex-1">
-                          <span className={`font-bold text-sm ${theme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>{item.qty}x {item.name}</span>
-                          {item.note && (
-                            <p className={`text-[11px] font-bold mt-1 italic inline-block px-2 py-0.5 rounded border ${theme === 'light' ? 'text-[var(--primary-color)] bg-[var(--primary-light)] border-[var(--primary-color)]/20' : 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20'}`}>
-                              Catatan: "{item.note}"
-                            </p>
-                          )}
-                        </div>
-                        <span className={`font-black text-sm whitespace-nowrap ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{rp(item.price * item.qty)}</span>
-                      </div>
-                    ))}
+                ))}
+                {order.order_note && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-800 font-bold">Catatan: {order.order_note}</p>
                   </div>
-                  <div className={`pt-4 border-t-2 border-dashed flex justify-between items-center ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
-                    <span className={`text-xs font-extrabold ${textSubClass}`}>Total Tagihan</span>
-                    <span className="text-xl font-black text-[var(--primary-color)]">{rp(order.total_price)}</span>
-                  </div>
-                  {order.status !== 'completed' && order.status !== 'cancelled' && (
-                    <div className="space-y-2 pt-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => onUpdateOrderStatus(order.id, 'cooking')} className={`font-extrabold py-2.5 rounded-xl text-xs transition-all shadow-sm active:scale-95 border-2 ${theme === 'light' ? 'bg-[var(--primary-light)] hover:bg-[var(--primary-color)] hover:text-white border-[var(--primary-color)]/30 text-[var(--primary-color)]' : 'bg-slate-800 hover:bg-[var(--primary-color)] border-slate-600 text-[var(--primary-color)] hover:text-white'}`}>Masak</button>
-                        <button onClick={() => onUpdateOrderStatus(order.id, 'ready')} className="bg-emerald-100 hover:bg-emerald-500 text-emerald-700 hover:text-white border-2 border-emerald-300 font-extrabold py-2.5 rounded-xl text-xs transition-all shadow-sm active:scale-95">Sajikan</button>
-                      </div>
-                      <button onClick={() => onUpdateOrderStatus(order.id, 'completed')} className={`w-full font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'}`}>Selesai / Lunas</button>
-                      <button onClick={() => onCancelOrder(order.id)} className="w-full bg-rose-100 hover:bg-rose-500 text-rose-600 hover:text-white border-2 border-rose-300 font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95"><Icons.X /> Tolak Pesanan</button>
-                    </div>
-                  )}
-                  <div className="pt-2 mt-auto">
-                    <button onClick={() => onPrintBill(order)} className="w-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-[var(--primary-color)]/30 active:scale-95 border-2 border-[var(--primary-dark)]">
-                      <Icons.Print /> Cetak Bill & QRIS
+                )}
+              </div>
+
+              <div className="border-t-2 border-slate-200 pt-3 mt-auto space-y-2">
+                <div className="flex justify-between font-black text-sm mb-3">
+                  <span className={textMainClass}>Total</span>
+                  <span className="text-[var(--primary-color)]">{rp(order.total_price)}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => onPrintBill(order)}
+                    className="col-span-2 w-full bg-slate-100 text-slate-700 font-bold py-2.5 rounded-lg border-2 border-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    🖨️ Cetak Bill & QRIS
+                  </button>
+
+                  {order.status === 'pending' && (
+                    <button
+                      onClick={() => onUpdateOrderStatus(order.id, 'cooking')}
+                      className="col-span-2 w-full bg-amber-100 text-amber-700 font-bold py-2 rounded-lg border-2 border-amber-300 hover:bg-amber-500 hover:text-white transition-colors"
+                    >
+                      Proses Pesanan
                     </button>
-                  </div>
+                  )}
+                  {order.status === 'cooking' && (
+                    <button
+                      onClick={() => onUpdateOrderStatus(order.id, 'ready')}
+                      className="col-span-2 w-full bg-emerald-100 text-emerald-700 font-bold py-2 rounded-lg border-2 border-emerald-300 hover:bg-emerald-500 hover:text-white transition-colors"
+                    >
+                      Tandai Siap
+                    </button>
+                  )}
+                  {order.status === 'ready' && (
+                    <button
+                      onClick={() => onUpdateOrderStatus(order.id, 'completed')}
+                      className="col-span-2 w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg border-2 border-blue-300 hover:bg-blue-500 hover:text-white transition-colors"
+                    >
+                      Selesaikan Pesanan
+                    </button>
+                  )}
+                  
+                  {order.status !== 'completed' && order.status !== 'cancelled' && (
+                     <button
+                        onClick={() => onCancelOrder(order.id)}
+                        className="col-span-2 w-full bg-rose-100 text-rose-600 font-bold py-2 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors"
+                      >
+                        Tolak Pesanan
+                      </button>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -72,7 +72,7 @@ export default function DashboardPage() {
         onToggleFullscreen={d.toggleFullscreen}
         onLogout={d.handleLogout}
         onOpenKitchen={() => d.openKitchenLink(setKitchenModal)}
-        onPrintDaily={() => {}}
+        onPrintDaily={d.handlePrintDaily}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -104,8 +104,8 @@ export default function DashboardPage() {
           openAddMenu={openAddMenu}
           openEditMenu={openEditMenu}
           onAddTable={d.handleAddTable}
-          onDownloadQR={d.handleDownloadQR} // <-- FUNGSI SIMPAN QR DIPASANG DI SINI
-          onPrintBill={() => {}}
+          onDownloadQR={d.handleDownloadQR}
+          onPrintBill={d.handlePrintBill}
           reportMode={reportMode} setReportMode={setReportMode}
           reportDateStr={reportDateStr} setReportDateStr={setReportDateStr}
           reportMonth={reportMonth} setReportMonth={setReportMonth}
