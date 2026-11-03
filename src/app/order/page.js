@@ -149,7 +149,7 @@ function OrderContent() {
   const checkReadyOrders = () => {
     if (!audioUnlocked) return; 
     
-    // TAMBAHAN: JIKA TOGGLE OFF, MATIKAN SUARA
+    // JIKA TOGGLE OFF, MATIKAN SUARA
     if (cafe.notify_order_ready === false) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -181,7 +181,7 @@ function OrderContent() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [myOrders, audioUnlocked, cafe.notify_order_ready]); // TAMBAHAN: cafe.notify_order_ready
+  }, [myOrders, audioUnlocked, cafe.notify_order_ready]);
   // -------------------------------
 
   const showToast = (msg) => {
@@ -283,6 +283,9 @@ function OrderContent() {
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
 
+  // Cek apakah ada pesanan yang siap
+  const hasReadyOrder = myOrders.some(o => o.status === 'ready');
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32" onClick={unlockAudio}>
       {/* HERO HEADER (Banner Background) */}
@@ -317,8 +320,23 @@ function OrderContent() {
         </div>
       </div>
 
+      {/* FLOATING BANNER NOTIFIKASI SIAP (Tampil di semua tab jika ada pesanan siap & toggle ON) */}
+      {hasReadyOrder && cafe.notify_order_ready !== false && (
+        <div className="px-5 mt-4 relative z-30 animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-xl text-white shadow-inner animate-bounce">
+              🍽️
+            </div>
+            <div>
+              <p className="text-emerald-900 font-black text-sm uppercase tracking-wide">Pesanan Siap!</p>
+              <p className="text-emerald-700 font-bold text-xs mt-0.5">Pesanan sudah siap di ambil di kasir</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SEARCH */}
-      <div className="px-5 -mt-6 relative z-20">
+      <div className="px-5 mt-4 relative z-20">
         <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border-2 border-slate-300 flex items-center px-4 py-3">
           <span className="text-slate-500 text-lg">🔍</span>
           <input type="text" placeholder="Cari menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 ml-3 text-[16px] font-bold outline-none text-slate-800 placeholder:text-slate-500 bg-transparent" />
@@ -465,17 +483,6 @@ function OrderContent() {
                     </div>
                     <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase text-white shadow-sm border-2 border-black/10 ${statusColors[statusIdx]}`}>{o.status}</span>
                   </div>
-
-                  {/* TAMBAHAN: BANNER VISUAL PESANAN SIAP */}
-                  {o.status === 'ready' && cafe.notify_order_ready !== false && (
-                    <div className="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-4 mb-4 flex items-center gap-3 animate-pulse shadow-sm">
-                      <div className="text-2xl">🍽️</div>
-                      <div>
-                        <p className="text-emerald-800 font-black text-sm uppercase tracking-wide">Pesanan Siap!</p>
-                        <p className="text-emerald-700 font-bold text-xs mt-0.5">Pesanan sudah siap di ambil di kasir</p>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="space-y-2 mb-4">
                     {o.items.map((i, idx) => (
