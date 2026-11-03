@@ -1,5 +1,4 @@
 'use client';
-import { Icons } from '../helpers/icons';
 
 export default function TabTables({
   theme,
@@ -38,7 +37,7 @@ export default function TabTables({
 
       {tables.length === 0 ? (
         <div className={`rounded-[2rem] p-20 text-center shadow-sm border-2 ${cardClass}`}>
-          <div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}><Icons.Utensils /></div>
+          <div className={`w-20 h-20 mx-auto mb-4 rounded-[1.5rem] flex items-center justify-center shadow-inner border-2 text-4xl ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>🍽️</div>
           <p className={`font-black text-xl ${textMainClass}`}>Belum ada meja</p>
           <p className={`text-sm font-semibold mt-1 ${textSubClass}`}>Tambahkan meja pertama Anda di atas.</p>
         </div>
@@ -50,7 +49,7 @@ export default function TabTables({
               
               <div className="flex gap-2 w-full mt-auto">
                 <button onClick={() => onPrintQR(table)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg border-2 border-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1" title="Cetak QR">
-                  <Icons.Printer />
+                  🖨️ Cetak
                 </button>
                 <button onClick={() => onDeleteTable(table.id)} className="bg-rose-100 text-rose-600 font-bold py-2 px-3 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center" title="Hapus Meja">
                   ✕
