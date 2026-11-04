@@ -163,6 +163,19 @@ export function useDashboard() {
     return () => document.removeEventListener('fullscreenchange', h);
   }, []);
 
+  // 🔥 BUKA KUNCI AUDIO KASIR SECARA AGRESIF (Klik, Sentuh, atau Tekan Tombol)
+  useEffect(() => {
+    const handleInteraction = () => unlockAudio();
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
   useEffect(() => {
     const u = () => setNowTick(Date.now());
     u();

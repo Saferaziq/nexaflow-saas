@@ -44,10 +44,6 @@ const extractDominantColor = (imgUrl) => {
   }
 };
 
-// Helper status stok menu
-// - stock NULL/undefined → dianggap "tidak dilacak" (unlimited, selalu bisa dipesan)
-// - stock 0 → habis
-// - status !== 'available' → habis
 const getMenuStock = (menu) => {
   if (!menu) return { tracked: false, value: null, isOut: true, isLow: false };
   const tracked = menu.stock !== null && menu.stock !== undefined;
@@ -80,12 +76,12 @@ function OrderContent() {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioCtxRef = useRef(null);
   const intervalRef = useRef(null);
+  const pollRef = useRef(null);
+  const myOrderIdsRef = useRef([]);
 
-  // Fetch SEMUA menu (tanpa filter status) supaya menu habis tetap muncul
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
     if (data) {
-      // Urutkan: available + stok banyak dulu, lalu stok tipis, lalu habis
       const sorted = [...data].sort((a, b) => {
         const sa = getMenuStock(a);
         const sb = getMenuStock(b);
@@ -97,11 +93,25 @@ function OrderContent() {
     }
   };
 
+  const fetchMyOrders = async (ids) => {
+    if (!ids || ids.length === 0) {
+      setMyOrders([]);
+      return;
+    }
+    // PAKAI RPC AGAR ANTI RLS
+    const { data } = await supabase.rpc('get_customer_orders', { p_order_ids: ids });
+    if (data) setMyOrders(data);
+  };
+
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
     document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
 
     if (!tenantId) return;
+
+    const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
+    myOrderIdsRef.current = existingIds;
+
     const fetchData = async () => {
       const { data: cafeData } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
       if (cafeData) {
@@ -125,6 +135,8 @@ function OrderContent() {
       const savedName = localStorage.getItem('nexaflow_customer_name');
       if (savedName) setCustomerName(savedName);
 
+      if (existingIds.length > 0) await fetchMyOrders(existingIds);
+
       setLoading(false);
     };
     fetchData();
@@ -135,26 +147,26 @@ function OrderContent() {
         if (payload.new.banner_url) extractDominantColor(payload.new.banner_url);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => {
-        const existingOrders = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
-        if (existingOrders.length > 0) fetchMyOrders(existingOrders);
+        if (myOrderIdsRef.current.length > 0) fetchMyOrders(myOrderIdsRef.current);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tenantId}` }, async () => {
         await fetchAllMenus();
       })
       .subscribe();
 
-    const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
-    if (existingIds.length > 0) fetchMyOrders(existingIds);
+    // Auto-Polling 3 detik
+    pollRef.current = setInterval(() => {
+      if (myOrderIdsRef.current.length > 0) {
+        fetchMyOrders(myOrderIdsRef.current);
+      }
+    }, 3000);
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      supabase.removeChannel(channel);
+    };
   }, [tenantId, tableNumber]);
 
-  const fetchMyOrders = async (ids) => {
-    const { data } = await supabase.from('orders').select('*').in('id', ids).order('created_at', { ascending: false });
-    if (data) setMyOrders(data);
-  };
-
-  // ── Auto-cap cart jika stok/status berubah realtime ──
   useEffect(() => {
     if (cart.length === 0 || menus.length === 0) return;
     setCart(prev => {
@@ -206,6 +218,19 @@ function OrderContent() {
     setAudioUnlocked(true);
   };
 
+  // 🔥 BUKA KUNCI AUDIO SECARA AGRESIF (Klik, Sentuh, atau Tekan Tombol)
+  useEffect(() => {
+    const handleInteraction = () => unlockAudio();
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
   const checkReadyOrders = () => {
     if (!audioUnlocked) return; 
     if (cafe.notify_order_ready === false) {
@@ -241,7 +266,6 @@ function OrderContent() {
     setTimeout(() => setToast(null), 1800);
   };
 
-  // ── addToCart dengan validasi stok & status ──
   const addToCart = (menu) => {
     unlockAudio();
     const stock = getMenuStock(menu);
@@ -284,7 +308,6 @@ function OrderContent() {
 
   const openConfirmation = () => {
     if (cart.length === 0) return;
-    // Pastikan tidak ada item yang sudah habis
     const invalid = cart.find(item => {
       const menu = menus.find(m => m.id === item.id);
       return !menu || getMenuStock(menu).isOut;
@@ -304,7 +327,6 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // 1) Validasi stok & status terbaru dari server
     const menuIds = cart.map(i => i.id);
     const { data: freshMenus, error: freshErr } = await supabase
       .from('menus')
@@ -340,7 +362,6 @@ function OrderContent() {
 
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
-    // 2) Insert order
     const orderData = { 
       tenant_id: tenantId, 
       table_number: tableNumber, 
@@ -363,29 +384,31 @@ function OrderContent() {
       return; 
     }
 
-    // 3) Kurangi stok HANYA untuk menu yang dilacak stoknya (bukan null)
-    await Promise.all(cart.map(item => {
-      const fm = freshMap.get(item.id);
-      if (!fm) return Promise.resolve();
-      const tracked = fm.stock !== null && fm.stock !== undefined;
-      if (!tracked) return Promise.resolve();
-      const newStock = Math.max(0, Number(fm.stock) - item.qty);
-      return supabase.from('menus').update({ stock: newStock }).eq('id', item.id);
-    }));
+    try {
+      const { error: decErr } = await supabase.rpc('decrement_menu_stock', {
+        p_tenant_id: tenantId,
+        p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
+      });
+      if (decErr) {
+        console.error('Stock decrement error:', decErr);
+      }
+    } catch (rpcErr) {
+      console.error('RPC exception:', rpcErr);
+    }
 
-    // 4) Refresh menu list
     await fetchAllMenus();
 
-    // 5) Update local tracker
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
-    localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify([...existingIds, data.id]));
+    const newIds = [...existingIds, data.id];
+    localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
+    myOrderIdsRef.current = newIds;
     
     setCart([]); 
     setGlobalNote('');
     setIsSubmitting(false); 
     setShowConfirmModal(false);
     setActiveTab('status');
-    fetchMyOrders([...existingIds, data.id]);
+    fetchMyOrders(newIds);
     showToast('Pesanan terkirim! 🎉');
   };
 
@@ -409,7 +432,7 @@ function OrderContent() {
   const hasReadyOrder = myOrders.some(o => o.status === 'ready');
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-32" onClick={unlockAudio}>
+    <div className="min-h-screen bg-slate-50 font-sans pb-32">
       <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
         {cafe.banner_url ? (
           <img src={cafe.banner_url} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Banner" />
