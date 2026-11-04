@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+  Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+  EyeOff: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>,
   Logo: ({ className = "w-20 h-20" }) => (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
@@ -18,9 +20,12 @@ const Icons = {
 
 export default function RegisterPage() {
   const [cafeName, setCafeName] = useState('');
+  const [waNumber, setWaNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
@@ -31,7 +36,7 @@ export default function RegisterPage() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let particles = [];
-    const particleCount = window.innerWidth < 768 ? 25 : 50; // Kurangi partikel di HP agar tidak berat
+    const particleCount = window.innerWidth < 768 ? 25 : 50;
     const maxDistance = 200;
 
     const resize = () => {
@@ -84,6 +89,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg('');
 
+    if (!agreeTerms) {
+      setErrorMsg('Anda harus menyetujui Syarat & Ketentuan.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMsg('Password dan Konfirmasi Password tidak cocok!');
       return;
@@ -96,6 +106,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    // 1. Daftarkan Email & Password ke Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
@@ -105,11 +116,13 @@ export default function RegisterPage() {
     }
 
     if (authData.user) {
+      // 2. Buat Data Kafe (Tenant)
       const { data: newTenant, error: dbError } = await supabase.from('tenants').insert([{
         name: cafeName,
+        wa_number: waNumber,
         subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true,
-        is_open: true // Pastikan kafe baru langsung terbuka
+        is_open: true // Kafe langsung buka
       }]).select().single();
 
       if (dbError) {
@@ -118,6 +131,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // 3. Hubungkan User ke Kafe (Tabel users)
       if (newTenant) {
         await supabase.from('users').insert([{
           id: authData.user.id,
@@ -127,8 +141,17 @@ export default function RegisterPage() {
         }]);
       }
 
-      alert('Pendaftaran Berhasil! Silakan login dengan akun Anda.');
-      router.push('/login');
+      // 4. AUTO LOGIN & LANGSUNG KE DASHBOARD
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (loginError) {
+         // Jika auto-login gagal (misal karena email confirmation aktif), lempar ke login manual
+         alert('Pendaftaran Berhasil! Silakan login manual.');
+         router.push('/login');
+      } else {
+         // Jika sukses, langsung masuk dashboard tanpa alert
+         router.push('/dashboard');
+      }
     }
   };
 
@@ -138,7 +161,7 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        {/* Bagian Kiri (Branding) - Sembunyi di HP Kecil, Muncul di Tablet/Desktop */}
+        {/* Panel Kiri (Branding) */}
         <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
@@ -156,11 +179,10 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Bagian Kanan (Form) - Fokus Utama di HP */}
+        {/* Panel Kanan (Form) */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
             
-            {/* Logo kecil khusus untuk HP karena bagian kiri disembunyikan */}
             <div className="flex md:hidden items-center gap-3 mb-6">
               <Icons.Logo className="w-12 h-12" />
               <div>
@@ -179,20 +201,40 @@ export default function RegisterPage() {
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Caffe</label>
                 <input type="text" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja" required />
               </div>
+              
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">No. WhatsApp (Aktif)</label>
+                <input type="tel" value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="0812xxxxxx" required />
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="owner@nexaflow.id" required />
               </div>
+
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Minimal 6 karakter" required />
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all pr-12" placeholder="Minimal 6 karakter" required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8C7A6B] hover:text-[#3A2A20] transition-colors">
+                    {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+                  </button>
+                </div>
               </div>
+
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Konfirmasi Password</label>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required />
+                <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required />
+              </div>
+
+              <div className="flex items-start gap-2 pt-2">
+                <input type="checkbox" id="terms" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} className="mt-1 w-4 h-4 text-[#3A2A20] border-[#E3DCD1] rounded focus:ring-[#3A2A20]" />
+                <label htmlFor="terms" className="text-xs text-[#7A6A5F] font-medium leading-tight">
+                  Saya menyetujui <a href="#" className="font-bold text-[#3A2A20] hover:underline">Syarat & Ketentuan</a> serta <a href="#" className="font-bold text-[#3A2A20] hover:underline">Kebijakan Privasi</a> NexaFlow.
+                </label>
               </div>
               
-              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 text-sm sm:text-base">
+              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 text-sm sm:text-base disabled:opacity-70 disabled:cursor-not-allowed">
                 {loading ? 'Memproses...' : 'Mulai Uji Coba Gratis'} <Icons.ArrowRight />
               </button>
             </form>
