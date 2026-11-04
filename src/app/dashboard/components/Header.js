@@ -16,6 +16,8 @@ export default function Header({
   onToggleFullscreen,
   onLogout,
   onOpenKitchen,
+  isOpen,
+  onToggleCafeStatus,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const headerClass = theme === 'light'
@@ -77,6 +79,20 @@ export default function Header({
               className={`md:hidden p-2.5 rounded-2xl transition-colors border-2 ${theme === 'light' ? 'text-[#2A1F17] hover:bg-white border-[#D4C5B8]' : 'text-slate-300 hover:bg-slate-800 border-slate-600'}`}
             >
               <Icons.Menu />
+            </button>
+
+            {/* 🔥 TOMBOL BUKA/TUTUP KAFE — PROMINEN */}
+            <button
+              onClick={onToggleCafeStatus}
+              title={isOpen ? 'Klik untuk menutup kafe' : 'Klik untuk membuka kafe'}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl font-black text-xs shadow-md border-2 transition-all active:scale-95 ${
+                isOpen
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-rose-500 hover:bg-rose-600 text-white border-rose-600 animate-pulse'
+              }`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full bg-white ${isOpen ? 'animate-pulse' : ''}`}></span>
+              <span className="hidden sm:inline">{isOpen ? 'BUKA' : 'TUTUP'}</span>
             </button>
 
             <button

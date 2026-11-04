@@ -66,6 +66,7 @@ function DashboardContent() {
         isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen}
         onToggleTheme={d.toggleTheme} onToggleFullscreen={d.toggleFullscreen}
         onLogout={d.handleLogout} onOpenKitchen={() => d.openKitchenLink(setKitchenModal)}
+        isOpen={d.isOpen} onToggleCafeStatus={d.handleToggleCafeStatus}
       />
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">
@@ -85,6 +86,7 @@ function DashboardContent() {
             topMenus={d.topMenus || []} chartData={d.chartData || []} maxChartRev={d.maxChartRev || 1} totalChartRev={d.totalChartRev || 0} activeDays={d.activeDays || []}
             handleExportCSV={d.onExportCSV} handlePrintReport={d.onPrintReport}
             handleUploadImage={handleUploadImage} uploadingLogo={uploadingLogo} uploadingBanner={uploadingBanner} onSaveSettings={d.handleSaveSettings}
+            isOpen={d.isOpen} onToggleCafeStatus={d.handleToggleCafeStatus}
           />
         </div>
       </main>

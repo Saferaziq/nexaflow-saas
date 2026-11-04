@@ -58,7 +58,7 @@ function OrderContent() {
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true });
+  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true, is_open: true });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,6 @@ function OrderContent() {
       setMyOrders([]);
       return;
     }
-    // PAKAI RPC AGAR ANTI RLS
     const { data } = await supabase.rpc('get_customer_orders', { p_order_ids: ids });
     if (data) setMyOrders(data);
   };
@@ -154,7 +153,6 @@ function OrderContent() {
       })
       .subscribe();
 
-    // Auto-Polling 3 detik
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
@@ -218,7 +216,6 @@ function OrderContent() {
     setAudioUnlocked(true);
   };
 
-  // 🔥 BUKA KUNCI AUDIO SECARA AGRESIF (Klik, Sentuh, atau Tekan Tombol)
   useEffect(() => {
     const handleInteraction = () => unlockAudio();
     document.addEventListener('click', handleInteraction);
@@ -244,7 +241,7 @@ function OrderContent() {
     if (hasReadyOrder) {
       if (!intervalRef.current) {
         playReadySound();
-        intervalRef.current = setInterval(() => { playReadySound(); }, 30000); 
+        intervalRef.current = setInterval(() => { playReadySound(); }, 15000); 
       }
     } else {
       if (intervalRef.current) {
@@ -268,6 +265,10 @@ function OrderContent() {
 
   const addToCart = (menu) => {
     unlockAudio();
+    if (cafe.is_open === false) {
+      showToast('Kafe sedang tutup, tidak bisa memesan');
+      return;
+    }
     const stock = getMenuStock(menu);
     const existing = cart.find(i => i.id === menu.id);
     const currentQty = existing ? existing.qty : 0;
@@ -308,6 +309,10 @@ function OrderContent() {
 
   const openConfirmation = () => {
     if (cart.length === 0) return;
+    if (cafe.is_open === false) {
+      showToast('Kafe sedang tutup, tidak bisa memesan');
+      return;
+    }
     const invalid = cart.find(item => {
       const menu = menus.find(m => m.id === item.id);
       return !menu || getMenuStock(menu).isOut;
@@ -321,6 +326,10 @@ function OrderContent() {
   };
 
   const handleCheckout = async () => {
+    if (cafe.is_open === false) {
+      showToast('Kafe sedang tutup, tidak bisa memesan');
+      return;
+    }
     if (!customerName.trim()) {
       showToast('Mohon isi nama Anda');
       return;
@@ -433,6 +442,27 @@ function OrderContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
+      
+      {/* 🔥 OVERLAY KAFE TUTUP */}
+      {cafe.is_open === false && (
+        <div className="fixed inset-0 z-[999] bg-white/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="text-center max-w-md w-full animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-100 shadow-lg shadow-rose-100">
+              <span className="text-5xl">🔒</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">Kafe Sedang Tutup</h2>
+            <p className="text-sm font-bold text-slate-600 mb-8 leading-relaxed">
+              Mohon maaf, <strong>{cafe.name}</strong> sedang tidak menerima pesanan saat ini. Silakan kembali lagi nanti.
+            </p>
+            {cafe.wa_number && (
+              <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-emerald-700 bg-emerald-50 px-6 py-3 rounded-xl border-2 border-emerald-200 shadow-sm transition-all hover:bg-emerald-100">
+                💬 Hubungi Kafe via WA
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
         {cafe.banner_url ? (
           <img src={cafe.banner_url} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Banner" />
@@ -444,7 +474,7 @@ function OrderContent() {
         <div className="relative px-6 pt-10 pb-12 z-10">
           <div className="flex items-center justify-end mb-6">
             <div className="bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 text-white border-2 border-white/30 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
+              <span className={`w-2 h-2 rounded-full ${cafe.is_open === false ? 'bg-rose-400' : 'bg-emerald-400'} animate-pulse`}></span> 
               Anda di Meja {tableNumber}
             </div>
           </div>

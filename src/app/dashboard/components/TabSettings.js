@@ -11,6 +11,8 @@ export default function TabSettings({
   onUploadImage,
   uploadingLogo,
   uploadingBanner,
+  isOpen,
+  onToggleCafeStatus,
 }) {
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
@@ -23,6 +25,38 @@ export default function TabSettings({
   return (
     <div className={`max-w-3xl mx-auto rounded-[2rem] p-8 shadow-sm border-2 ${cardClass}`}>
       <h2 className={`font-black text-2xl mb-6 ${textMainClass}`}>Pengaturan Kafe</h2>
+
+      {/* 🔥 STATUS KAFE (BUKA/TUTUP) — DI PALING ATAS */}
+      <div className={`mb-6 p-5 rounded-2xl border-2 ${
+        isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'
+      }`}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h3 className={`font-black text-lg ${isOpen ? 'text-emerald-800' : 'text-rose-800'}`}>
+              {isOpen ? '✅ Kafe Sedang BUKA' : '🔒 Kafe Sedang TUTUP'}
+            </h3>
+            <p className={`text-xs font-semibold mt-1 ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {isOpen 
+                ? 'Pelanggan bisa memesan dari HP mereka melalui scan QR.' 
+                : 'Pelanggan tidak bisa memesan. Menu akan tampil dengan layar "TUTUP".'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleCafeStatus}
+            className={`relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none active:scale-95 ${
+              isOpen ? 'bg-emerald-500' : 'bg-rose-500'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-8 w-8 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                isOpen ? 'translate-x-7' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       <form onSubmit={onSave} className="space-y-6">
 
         {/* Nama & WA */}
@@ -147,7 +181,7 @@ export default function TabSettings({
           </p>
         </div>
 
-        {/* TOMBOL SIMPAN DENGAN PROTEKSI UPLOAD */}
+        {/* TOMBOL SIMPAN */}
         <button
           type="submit"
           disabled={uploadingLogo || uploadingBanner}

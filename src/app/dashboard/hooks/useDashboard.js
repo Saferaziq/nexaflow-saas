@@ -134,7 +134,7 @@ export function useDashboard() {
       if (!beepIntervalRef.current) {
         beepIntervalRef.current = setInterval(() => {
           playBeep();
-        }, 15000);
+        }, 10000);
       }
     } else {
       if (beepIntervalRef.current) {
