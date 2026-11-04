@@ -82,8 +82,9 @@ export default function Header({
             </button>
 
             {/* 🔥 TOMBOL BUKA/TUTUP KAFE — PROMINEN */}
-            <button
-              onClick={onToggleCafeStatus}
+                        <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
               title={isOpen ? 'Klik untuk menutup kafe' : 'Klik untuk membuka kafe'}
               className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl font-black text-xs shadow-md border-2 transition-all active:scale-95 ${
                 isOpen

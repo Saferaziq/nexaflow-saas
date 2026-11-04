@@ -26,16 +26,14 @@ export default function TabSettings({
     <div className={`max-w-3xl mx-auto rounded-[2rem] p-8 shadow-sm border-2 ${cardClass}`}>
       <h2 className={`font-black text-2xl mb-6 ${textMainClass}`}>Pengaturan Kafe</h2>
 
-      {/* 🔥 STATUS KAFE (BUKA/TUTUP) — DI PALING ATAS */}
-      <div className={`mb-6 p-5 rounded-2xl border-2 ${
-        isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'
-      }`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h3 className={`font-black text-lg ${isOpen ? 'text-emerald-800' : 'text-rose-800'}`}>
-              {isOpen ? '✅ Kafe Sedang BUKA' : '🔒 Kafe Sedang TUTUP'}
+      {/* 🔥 STATUS KAFE (BUKA/TUTUP) — TOMBOL BESAR */}
+      <div className={`mb-8 p-6 rounded-3xl border-4 ${isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
+          <div>
+            <h3 className={`font-black text-2xl mb-1 ${isOpen ? 'text-emerald-800' : 'text-rose-800'}`}>
+              {isOpen ? '✅ KAFE SEDANG BUKA' : '🔒 KAFE SEDANG TUTUP'}
             </h3>
-            <p className={`text-xs font-semibold mt-1 ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <p className={`text-xs font-semibold ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
               {isOpen 
                 ? 'Pelanggan bisa memesan dari HP mereka melalui scan QR.' 
                 : 'Pelanggan tidak bisa memesan. Menu akan tampil dengan layar "TUTUP".'}
@@ -43,16 +41,12 @@ export default function TabSettings({
           </div>
           <button
             type="button"
-            onClick={onToggleCafeStatus}
-            className={`relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none active:scale-95 ${
-              isOpen ? 'bg-emerald-500' : 'bg-rose-500'
+            onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
+            className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm text-white shadow-xl active:scale-95 transition-transform whitespace-nowrap ${
+              isOpen ? 'bg-rose-500 hover:bg-rose-600' : 'bg-emerald-500 hover:bg-emerald-600'
             }`}
           >
-            <span
-              className={`pointer-events-none inline-block h-8 w-8 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                isOpen ? 'translate-x-7' : 'translate-x-0'
-              }`}
-            />
+            {isOpen ? 'TUTUP KAFE SEKARANG' : 'BUKA KAFE SEKARANG'}
           </button>
         </div>
       </div>
