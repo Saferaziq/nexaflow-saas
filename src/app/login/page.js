@@ -111,7 +111,6 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        {/* Panel Kiri (Branding) - Logo diganti Gambar */}
         <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
@@ -124,16 +123,14 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
-            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Caffe<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
-            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu caffe Anda.</p>
+            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Kafe & Resto<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
+            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu Kafe/Resto Anda.</p>
           </div>
         </div>
 
-        {/* Panel Kanan (Form Login) */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
             
-            {/* Logo Kecil Khusus HP */}
             <div className="flex md:hidden items-center gap-3 mb-6">
               <img src="/logo-nexaflow.png" alt="Logo" className="w-12 h-12 object-contain mix-blend-multiply" />
               <div>
@@ -163,7 +160,7 @@ export default function LoginPage() {
 
             <div className="mt-8 text-center relative z-[999]">
               <p className="text-xs font-medium text-[#8C7A6B]">
-                Belum punya akun caffe? 
+                Belum punya akun kafe/resto? 
                 <button type="button" onClick={() => router.push('/register')} className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2">Daftar di sini</button>
               </p>
             </div>

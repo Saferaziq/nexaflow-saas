@@ -116,7 +116,7 @@ export default function RegisterPage() {
       }]).select().single();
 
       if (dbError) {
-        setErrorMsg('Gagal membuat profil kafe: ' + dbError.message);
+        setErrorMsg('Gagal membuat profil Kafe/Resto: ' + dbError.message);
         setLoading(false);
         return;
       }
@@ -147,7 +147,6 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        {/* Panel Kiri (Branding) - Logo Gambar */}
         <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
@@ -160,16 +159,14 @@ export default function RegisterPage() {
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Langkah Baru Bisnis Anda</div>
-            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Daftarkan<br /><span className="text-[#8C7A6B]">Caffe Anda.</span></h2>
+            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Daftarkan<br /><span className="text-[#8C7A6B]">Kafe / Resto Anda.</span></h2>
             <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Mulai transformasi digital bisnis Anda. Gratis uji coba 7 hari. Tanpa kartu kredit, tanpa biaya tersembunyi.</p>
           </div>
         </div>
 
-        {/* Panel Kanan (Form) */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
             
-            {/* Logo Mobile */}
             <div className="flex md:hidden items-center gap-3 mb-6">
               <img src="/logo-nexaflow.png" alt="Logo" className="w-12 h-12 object-contain mix-blend-multiply" />
               <div>
@@ -178,15 +175,15 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-2">Daftarkan Caffe</h3>
+            <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-2">Daftarkan Kafe / Resto</h3>
             <p className="text-xs sm:text-sm font-medium text-[#8C7A6B] mb-6 sm:mb-8">Mulai transformasi digital bisnis Anda.</p>
 
             {errorMsg && (<div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">{errorMsg}</div>)}
 
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Caffe</label>
-                <input type="text" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja" required />
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Kafe / Resto</label>
+                <input type="text" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja / Resto Nusantara" required />
               </div>
               
               <div>
