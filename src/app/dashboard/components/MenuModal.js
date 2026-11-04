@@ -5,12 +5,11 @@ import { Icons } from '../helpers/icons';
 
 export default function MenuModal({ theme, mode, initialData, onClose, onSave, onUploadImage }) {
   const [formData, setFormData] = useState({
-    id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: ''
+    id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // KUNCI PERBAIKAN: Memastikan form terisi saat tombol Edit diklik
   useEffect(() => {
     if (mode === 'edit' && initialData) {
       setFormData({
@@ -20,11 +19,12 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         price: initialData.price || '',
         desc: initialData.description || '',
         status: initialData.status || 'available',
-        image_url: initialData.image_url || ''
+        image_url: initialData.image_url || '',
+        stock: initialData.stock !== null ? initialData.stock : 0 // TAMBAHAN STOK
       });
     } else {
       setFormData({
-        id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: ''
+        id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0
       });
     }
   }, [mode, initialData]);
@@ -85,6 +85,10 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
               <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className={inputClass} placeholder="15000" required />
             </div>
             <div>
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Stok Tersedia</label>
+              <input type="number" min="0" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} className={inputClass} placeholder="0" />
+            </div>
+            <div className="col-span-2">
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Kategori</label>
               <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
                 <option value="makanan">Makanan</option>
