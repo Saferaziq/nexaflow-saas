@@ -46,11 +46,13 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-20">
 
-          {/* Logo */}
+          {/* Logo diganti dengan Gambar */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-dark)] flex items-center justify-center shadow-lg shadow-[var(--primary-color)]/30">
-              <span className="text-white font-black text-lg">N</span>
-            </div>
+            <img 
+              src="/logo-nexaflow.png" 
+              alt="NexaFlow Logo" 
+              className={`w-11 h-11 object-contain rounded-xl ${theme === 'light' ? 'mix-blend-multiply' : 'mix-blend-screen'}`} 
+            />
             <div>
               <h1 className={`text-lg font-black tracking-tight leading-none ${textMainClass}`}>NexaFlow</h1>
               <p className="text-[10px] font-extrabold text-[var(--primary-color)] tracking-widest uppercase mt-0.5">Kasir</p>
@@ -81,8 +83,8 @@ export default function Header({
               <Icons.Menu />
             </button>
 
-            {/* 🔥 TOMBOL BUKA/TUTUP KAFE — PROMINEN */}
-                        <button
+            {/* TOMBOL BUKA/TUTUP KAFE */}
+            <button
               type="button"
               onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
               title={isOpen ? 'Klik untuk menutup kafe' : 'Klik untuk membuka kafe'}

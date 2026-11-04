@@ -5,13 +5,9 @@ import Link from 'next/link';
 const WA_NUMBER = '6281389744957';
 const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir caffe Anda. Bisa info lebih lanjut?';
 
-const NexaLogo = ({ className = "w-8 h-8" }) => (
-  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
-    <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
-    <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
-    <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
-  </svg>
+// Menggunakan Gambar Logo Baru
+const LogoImg = ({ className = "w-8 h-8" }) => (
+  <img src="/logo-nexaflow.png" alt="NexaFlow Logo" className={`${className} object-contain mix-blend-multiply`} />
 );
 
 const Icons = {
@@ -72,7 +68,6 @@ export default function LandingPage() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let particles = [];
-    // Kurangi partikel di HP agar tidak membebani baterai
     const particleCount = window.innerWidth < 768 ? 30 : 70;
     const maxDistance = 200;
 
@@ -134,7 +129,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
-              <NexaLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
+              <LogoImg className="w-10 h-10 group-hover:scale-105 transition-transform" />
               <div>
                 <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p>
@@ -157,7 +152,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown - SEBELUMNYA HILANG */}
         {mobileOpen && (
           <div className="md:hidden absolute top-20 left-0 right-0 bg-[#F4EFE9] border-b border-[#E3DCD1] shadow-xl p-4 flex flex-col gap-2 z-40">
             <button onClick={() => scrollTo('fitur')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">Fitur</button>
@@ -177,7 +171,6 @@ export default function LandingPage() {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E3DCD1]/50 border border-[#D3C8BB] text-[#3A2A20] text-[10px] font-black tracking-[0.15em] uppercase mb-6 sm:mb-8 shadow-sm backdrop-blur-sm"><Icons.Sparkles />Langkah Baru Bisnis Anda</div>
               
-              {/* Ukuran font disesuaikan agar tidak overflow di HP kecil */}
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-[#3A2A20] leading-[1.05] tracking-tight">Ubah Cara Caffe<br /><span className="text-[#8C7A6B]">Bekerja Hari Ini.</span></h1>
               
               <p className="mt-5 sm:mt-6 text-base sm:text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.</p>
@@ -216,7 +209,6 @@ export default function LandingPage() {
                 <ul className="space-y-3">{['Keranjang melayang (Sticky Cart)', 'Perhitungan PPN otomatis', 'Konfirmasi pesanan 1 klik'].map((item, i) => (<li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>))}</ul>
               </div>
               <div className="order-1 md:order-2 flex justify-center">
-                {/* Ukuran HP mockup dibuat responsif (max-w) agar tidak overflow di layar kecil */}
                 <div className="w-full max-w-[280px] sm:max-w-[300px] h-[550px] sm:h-[600px] bg-white rounded-[2.5rem] sm:rounded-[3rem] border-[6px] sm:border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative"><div className="absolute top-0 w-full h-6 sm:h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-12 sm:w-16 h-1 bg-white/30 rounded-full"></div></div><div className="p-4 sm:p-5 pt-8 sm:pt-10 h-full flex flex-col"><div className="flex justify-between items-center mb-4 sm:mb-6"><div><p className="text-[9px] sm:text-[10px] font-bold text-[#8C7A6B] uppercase">Meja 04</p><h4 className="text-lg sm:text-xl font-black text-[#3A2A20]">Caffe Premium</h4></div><div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#F4EFE9] border border-[#E3DCD1] flex items-center justify-center"><Icons.Menu/></div></div><div className="flex-1 space-y-3 sm:space-y-4"><div className="flex gap-2 sm:gap-3 bg-white border border-[#E3DCD1] rounded-xl p-2.5 sm:p-3 shadow-sm"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-xs sm:text-sm text-[#3A2A20]">Es Kopi Susu</p><p className="text-[9px] sm:text-[10px] text-[#8C7A6B]">Kopi</p><p className="font-black text-xs sm:text-sm text-[#3A2A20] mt-1">Rp 22.000</p></div></div><div className="flex gap-2 sm:gap-3 bg-white border border-[#E3DCD1] rounded-xl p-2.5 sm:p-3 shadow-sm"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-xs sm:text-sm text-[#3A2A20]">Croissant Butter</p><p className="text-[9px] sm:text-[10px] text-[#8C7A6B]">Cemilan</p><p className="font-black text-xs sm:text-sm text-[#3A2A20] mt-1">Rp 18.000</p></div></div></div><div className="bg-[#3A2A20] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white mt-4 shadow-lg"><div className="flex justify-between items-center mb-1.5 sm:mb-2"><span className="text-[10px] sm:text-xs font-bold text-[#D3C8BB]">2 Item</span><span className="text-xs sm:text-sm font-black">Rp 40.000</span></div><div className="bg-white/10 text-center py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold">Pesan Sekarang</div></div></div></div>
               </div>
             </div>
@@ -354,13 +346,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* FOOTER - Logo Gambar */}
       <footer className="border-t border-[#E3DCD1] px-4 sm:px-6 lg:px-8 py-10 sm:py-14 bg-[#F4EFE9]/80 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 mb-10 sm:mb-12">
             <div className="sm:col-span-2">
               <div className="flex items-center gap-3 mb-4 sm:mb-5">
-                <NexaLogo className="w-10 h-10 sm:w-12 sm:h-12" />
+                <LogoImg className="w-10 h-10 sm:w-12 sm:h-12" />
                 <div><p className="text-lg sm:text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p><p className="text-[9px] sm:text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">SAAS RESTAURANT</p></div>
               </div>
               <p className="text-xs sm:text-sm text-[#7A6A5F] leading-relaxed max-w-sm font-medium">Sistem kasir modern untuk caffe & restoran Indonesia. Pesanan lebih cepat, laporan lebih rapi, pelanggan lebih senang.</p>

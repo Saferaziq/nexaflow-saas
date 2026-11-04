@@ -8,14 +8,6 @@ const Icons = {
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
   Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
   EyeOff: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>,
-  Logo: ({ className = "w-20 h-20" }) => (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
-      <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
-      <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
-      <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
-    </svg>
-  )
 };
 
 export default function RegisterPage() {
@@ -106,7 +98,6 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    // 1. Daftarkan Email & Password ke Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
@@ -116,13 +107,12 @@ export default function RegisterPage() {
     }
 
     if (authData.user) {
-      // 2. Buat Data Kafe (Tenant)
       const { data: newTenant, error: dbError } = await supabase.from('tenants').insert([{
         name: cafeName,
         wa_number: waNumber,
         subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true,
-        is_open: true // Kafe langsung buka
+        is_open: true
       }]).select().single();
 
       if (dbError) {
@@ -131,7 +121,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // 3. Hubungkan User ke Kafe (Tabel users)
       if (newTenant) {
         await supabase.from('users').insert([{
           id: authData.user.id,
@@ -141,15 +130,12 @@ export default function RegisterPage() {
         }]);
       }
 
-      // 4. AUTO LOGIN & LANGSUNG KE DASHBOARD
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       
       if (loginError) {
-         // Jika auto-login gagal (misal karena email confirmation aktif), lempar ke login manual
          alert('Pendaftaran Berhasil! Silakan login manual.');
          router.push('/login');
       } else {
-         // Jika sukses, langsung masuk dashboard tanpa alert
          router.push('/dashboard');
       }
     }
@@ -161,19 +147,19 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        {/* Panel Kiri (Branding) */}
+        {/* Panel Kiri (Branding) - Logo Gambar */}
         <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
-              <Icons.Logo className="w-16 h-16 lg:w-20 lg:h-20" />
+              <img src="/logo-nexaflow.png" alt="Logo" className="w-20 h-20 object-contain mix-blend-multiply" />
               <div>
-                <h1 className="text-2xl lg:text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
-                <p className="text-[10px] lg:text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
+                <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
+                <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[9px] lg:text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Langkah Baru Bisnis Anda</div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Langkah Baru Bisnis Anda</div>
             <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Daftarkan<br /><span className="text-[#8C7A6B]">Caffe Anda.</span></h2>
             <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Mulai transformasi digital bisnis Anda. Gratis uji coba 7 hari. Tanpa kartu kredit, tanpa biaya tersembunyi.</p>
           </div>
@@ -183,8 +169,9 @@ export default function RegisterPage() {
         <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
             
+            {/* Logo Mobile */}
             <div className="flex md:hidden items-center gap-3 mb-6">
-              <Icons.Logo className="w-12 h-12" />
+              <img src="/logo-nexaflow.png" alt="Logo" className="w-12 h-12 object-contain mix-blend-multiply" />
               <div>
                 <h1 className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
                 <p className="text-[9px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>

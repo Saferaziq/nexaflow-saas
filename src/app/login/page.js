@@ -6,14 +6,6 @@ import { useRouter } from 'next/navigation';
 const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
-  Logo: ({ className = "w-20 h-20" }) => (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <rect x="2" y="15" width="8" height="20" rx="1" fill="#3A2A20"/>
-      <rect x="14" y="5" width="8" height="30" rx="1" fill="#3A2A20"/>
-      <rect x="26" y="22" width="8" height="13" rx="1" fill="#3A2A20"/>
-      <circle cx="35" cy="11" r="2.5" fill="#3A2A20"/>
-    </svg>
-  )
 };
 
 export default function LoginPage() {
@@ -29,7 +21,6 @@ export default function LoginPage() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let particles = [];
-    // Kurangi partikel di HP agar tidak berat
     const particleCount = window.innerWidth < 768 ? 25 : 50; 
     const maxDistance = 200;
 
@@ -120,31 +111,31 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        {/* Panel Kiri (Branding) - Sembunyi di HP Kecil, Muncul di Tablet/Desktop */}
+        {/* Panel Kiri (Branding) - Logo diganti Gambar */}
         <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
-              <Icons.Logo className="w-16 h-16 lg:w-20 lg:h-20" />
+              <img src="/logo-nexaflow.png" alt="Logo" className="w-20 h-20 object-contain mix-blend-multiply" />
               <div>
-                <h1 className="text-2xl lg:text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
-                <p className="text-[10px] lg:text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
+                <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
+                <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[9px] lg:text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
             <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Caffe<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
             <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu caffe Anda.</p>
           </div>
         </div>
 
-        {/* Panel Kanan (Form Login) - Fokus Utama di HP */}
+        {/* Panel Kanan (Form Login) */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
             
-            {/* Logo Kecil Khusus HP karena Panel Kiri disembunyikan */}
+            {/* Logo Kecil Khusus HP */}
             <div className="flex md:hidden items-center gap-3 mb-6">
-              <Icons.Logo className="w-12 h-12" />
+              <img src="/logo-nexaflow.png" alt="Logo" className="w-12 h-12 object-contain mix-blend-multiply" />
               <div>
                 <h1 className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
                 <p className="text-[9px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
@@ -159,7 +150,6 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
-                {/* text-base di HP penting agar iOS tidak auto-zoom saat input diklik */}
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="admin@kafe.com" required />
               </div>
               <div>
