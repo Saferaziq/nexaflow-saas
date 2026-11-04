@@ -29,7 +29,8 @@ export default function LoginPage() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let particles = [];
-    const particleCount = 50;
+    // Kurangi partikel di HP agar tidak berat
+    const particleCount = window.innerWidth < 768 ? 25 : 50; 
     const maxDistance = 200;
 
     const resize = () => {
@@ -83,25 +84,20 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    // 1. Buat Promise untuk login
     const loginPromise = supabase.auth.signInWithPassword({ email, password });
 
-    // 2. Buat Promise "Pengaman" (Timeout 2 detik)
     const timeoutPromise = new Promise((resolve, reject) =>
       setTimeout(async () => {
-        // Jika timeout tercapai, cek apakah sesi sebenarnya sudah terbentuk
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          // Jika sesi ADA, berarti login sukses tapi promise hang. Kita paksa resolve!
           resolve({ data: { session }, error: null });
         } else {
           reject(new Error('Waktu habis. Periksa koneksi internet Anda atau coba lagi.'));
         }
-      }, 2000) // 2 detik (lebih agresif)
+      }, 2000)
     );
 
     try {
-      // 3. Balapan antara login asli vs timeout
       const { error } = await Promise.race([loginPromise, timeoutPromise]);
 
       if (error) {
@@ -110,7 +106,6 @@ export default function LoginPage() {
         return;
       }
 
-      // 4. Jika berhasil (atau timeout tapi sesi ada), langsung ke dashboard
       router.push('/dashboard');
       
     } catch (err) {
@@ -120,39 +115,60 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-4 relative font-sans">
+    <div className="min-h-[100dvh] bg-[#F4EFE9] flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans">
       <canvas id="network-canvas" className="fixed inset-0 z-0 pointer-events-none"></canvas>
 
-      <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
+      <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
         
-        <div className="w-full md:w-1/2 p-10 md:p-14 flex flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
+        {/* Panel Kiri (Branding) - Sembunyi di HP Kecil, Muncul di Tablet/Desktop */}
+        <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
           
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-8">
-              <Icons.Logo className="w-20 h-20" />
+              <Icons.Logo className="w-16 h-16 lg:w-20 lg:h-20" />
               <div>
-                <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
-                <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
+                <h1 className="text-2xl lg:text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
+                <p className="text-[10px] lg:text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
-            <h2 className="text-4xl md:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Caffe<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[9px] lg:text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Akses Kasir & Dapur</div>
+            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Kelola Caffe<br /><span className="text-[#8C7A6B]">Lebih Mudah.</span></h2>
             <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Masuk ke dashboard kasir untuk memantau pesanan real-time, cetak QRIS dinamis, dan kelola menu caffe Anda.</p>
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 p-10 md:p-14 bg-white flex flex-col justify-center relative z-20">
+        {/* Panel Kanan (Form Login) - Fokus Utama di HP */}
+        <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
           <div className="max-w-sm mx-auto w-full">
-            <h3 className="text-2xl font-black text-[#3A2A20] mb-2">Masuk Kasir</h3>
-            <p className="text-xs font-medium text-[#8C7A6B] mb-8">Silakan masukkan kredensial akun Anda.</p>
+            
+            {/* Logo Kecil Khusus HP karena Panel Kiri disembunyikan */}
+            <div className="flex md:hidden items-center gap-3 mb-6">
+              <Icons.Logo className="w-12 h-12" />
+              <div>
+                <h1 className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
+                <p className="text-[9px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
+              </div>
+            </div>
+
+            <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-2">Masuk Kasir</h3>
+            <p className="text-xs sm:text-sm font-medium text-[#8C7A6B] mb-6 sm:mb-8">Silakan masukkan kredensial akun Anda.</p>
 
             {errorMsg && (<div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">{errorMsg}</div>)}
 
             <form onSubmit={handleLogin} className="space-y-5">
-              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="admin@kafe.com" required /></div>
-              <div><label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="••••••••" required /></div>
-              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2">{loading ? 'Memproses...' : 'Masuk Dashboard'} <Icons.ArrowRight /></button>
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
+                {/* text-base di HP penting agar iOS tidak auto-zoom saat input diklik */}
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="admin@kafe.com" required />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="••••••••" required />
+              </div>
+              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 text-sm sm:text-base">
+                {loading ? 'Memproses...' : 'Masuk Dashboard'} <Icons.ArrowRight />
+              </button>
             </form>
 
             <div className="mt-8 text-center relative z-[999]">
