@@ -26,7 +26,7 @@ export default function TabSettings({
     <div className={`max-w-3xl mx-auto rounded-[2rem] p-8 shadow-sm border-2 ${cardClass}`}>
       <h2 className={`font-black text-2xl mb-6 ${textMainClass}`}>Pengaturan Kafe</h2>
 
-      {/* 🔥 STATUS KAFE (BUKA/TUTUP) — TOMBOL BESAR */}
+      {/* 🔥 STATUS KAFE (BUKA/TUTUP) */}
       <div className={`mb-8 p-6 rounded-3xl border-4 ${isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
           <div>
@@ -41,7 +41,7 @@ export default function TabSettings({
           </div>
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
+            onClick={(e) => { e.preventDefault(); onToggleCafeStatus && onToggleCafeStatus(); }}
             className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm text-white shadow-xl active:scale-95 transition-transform whitespace-nowrap ${
               isOpen ? 'bg-rose-500 hover:bg-rose-600' : 'bg-emerald-500 hover:bg-emerald-600'
             }`}

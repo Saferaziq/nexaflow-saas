@@ -16,6 +16,7 @@ export function useDashboard() {
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11, notify_order_ready: true });
+  const [isOpen, setIsOpen] = useState(true); // 🔥 STATE UNTUK BUKA/TUTUP
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
@@ -128,13 +129,18 @@ export function useDashboard() {
     }
   };
 
+  const fetchTenantStatus = async (tId) => {
+    const { data } = await supabase.from('tenants').select('is_open').eq('id', tId).single();
+    if (data && data.is_open !== undefined) setIsOpen(data.is_open !== false);
+  };
+
   useEffect(() => {
     const hasPendingOrder = orders.some(o => o.status === 'pending');
     if (hasPendingOrder) {
       if (!beepIntervalRef.current) {
         beepIntervalRef.current = setInterval(() => {
           playBeep();
-        }, 10000);
+        }, 15000);
       }
     } else {
       if (beepIntervalRef.current) {
@@ -163,7 +169,6 @@ export function useDashboard() {
     return () => document.removeEventListener('fullscreenchange', h);
   }, []);
 
-  // 🔥 BUKA KUNCI AUDIO KASIR SECARA AGRESIF (Klik, Sentuh, atau Tekan Tombol)
   useEffect(() => {
     const handleInteraction = () => unlockAudio();
     document.addEventListener('click', handleInteraction);
@@ -197,7 +202,7 @@ export function useDashboard() {
     setBaseUrl(window.location.origin);
 
     let channel, presenceChannel, isMounted = true;
-    let pollingInterval = null; // <-- UNTUK AUTO-POLLING
+    let pollingInterval = null;
 
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -222,6 +227,7 @@ export function useDashboard() {
         const tId = userData.tenant_id;
         setTenantId(tId);
         setCafeName(userData.tenants.name);
+        setIsOpen(userData.tenants.is_open !== false);
         setSettings({
           name: userData.tenants.name,
           wa: userData.tenants.wa_number || '',
@@ -238,10 +244,12 @@ export function useDashboard() {
 
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
-        // 1. REALTIME SUBSCRIPTION (Instan)
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
+            if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
+          })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
             else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT' || s === 'CLOSED') setRealtimeStatus('offline');
@@ -253,10 +261,9 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
-        // 2. AUTO-POLLING (Backup jika realtime drop / tab di background)
-        // Cek data baru setiap 10 detik tanpa perlu refresh
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
+          fetchTenantStatus(tId);
         }, 10000);
       }
     };
@@ -269,6 +276,15 @@ export function useDashboard() {
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
   }, [router]);
+
+  // 🔥 FUNGSI UBAH STATUS BUKA/TUTUP KAFE
+  const handleToggleCafeStatus = async () => {
+    const newStatus = !isOpen;
+    const { error } = await supabase.from('tenants').update({ is_open: newStatus }).eq('id', tenantId);
+    if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
+    setIsOpen(newStatus);
+    showToast(newStatus ? 'Kafe sekarang BUKA ✅' : 'Kafe sekarang TUTUP 🔒', newStatus ? 'success' : 'warning');
+  };
 
   const getLocalDateStr = (dateStr) => {
     const d = new Date(dateStr);
@@ -440,7 +456,6 @@ export function useDashboard() {
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
     const currentOrder = orders.find(o => o.id === id);
 
-    // Pulihkan stok karena sudah dikurangi saat order dibuat
     if (currentOrder && currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
         const menu = menus.find(m => m.id === item.id) || menus.find(m => m.name === item.name);
@@ -624,12 +639,13 @@ export function useDashboard() {
   );
 
   return {
-    cafeName, userEmail, tenantId, menus, orders, tables, settings,
+    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, // Pastikan isOpen dikembalikan
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
-    handleUpdateStock,
+    handleUpdateStock, 
+    handleToggleCafeStatus, // 🔥 Pastikan fungsi ini dikembalikan!
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
