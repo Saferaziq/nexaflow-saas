@@ -184,6 +184,7 @@ export function useDashboard() {
     setBaseUrl(window.location.origin);
 
     let channel, presenceChannel, isMounted = true;
+    let pollingInterval = null; // <-- UNTUK AUTO-POLLING
 
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -224,6 +225,7 @@ export function useDashboard() {
 
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
+        // 1. REALTIME SUBSCRIPTION (Instan)
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
@@ -237,12 +239,19 @@ export function useDashboard() {
         presenceChannel.subscribe(async (s) => {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
+
+        // 2. AUTO-POLLING (Backup jika realtime drop / tab di background)
+        // Cek data baru setiap 10 detik tanpa perlu refresh
+        pollingInterval = setInterval(() => {
+          fetchOrders(tId);
+        }, 10000);
       }
     };
 
     fetchData();
     return () => {
       isMounted = false;
+      if (pollingInterval) clearInterval(pollingInterval);
       if (channel) supabase.removeChannel(channel);
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
@@ -408,16 +417,9 @@ export function useDashboard() {
     setUploading(false);
   };
 
-  // ============================================================
-  // MANAJEMEN STOK
-  // Stok sudah dikurangi OTOMATIS saat order dibuat di halaman customer (/order).
-  // Kasir TIDAK perlu decrement lagi. Hanya perlu pulihkan stok jika order DITOLAK.
-  // ============================================================
   const handleUpdateOrderStatus = async (id, status) => {
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
-
-    // Stok TIDAK di-decrement di sini (sudah dikurangi saat order dibuat).
     await supabase.from('orders').update(u).eq('id', id);
     fetchOrders(tenantId);
   };
@@ -425,7 +427,7 @@ export function useDashboard() {
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
     const currentOrder = orders.find(o => o.id === id);
 
-    // Pulihkan stok karena sudah dikurangi saat order dibuat (status apapun kecuali yang sudah cancelled).
+    // Pulihkan stok karena sudah dikurangi saat order dibuat
     if (currentOrder && currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
         const menu = menus.find(m => m.id === item.id) || menus.find(m => m.name === item.name);
@@ -462,7 +464,6 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // Tambah/kurangi stok manual via tombol + / −
   const handleUpdateStock = async (menuId, currentStock, change) => {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
     const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
@@ -477,7 +478,6 @@ export function useDashboard() {
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
-      // notify_order_ready: settings.notify_order_ready,  <-- TETAP DIMATIKAN UNTUK HINDARI ERROR CACHE
     }).eq('id', tenantId).select();
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
