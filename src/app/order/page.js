@@ -44,6 +44,19 @@ const extractDominantColor = (imgUrl) => {
   }
 };
 
+// Helper status stok menu
+// - stock NULL/undefined → dianggap "tidak dilacak" (unlimited, selalu bisa dipesan)
+// - stock 0 → habis
+// - status !== 'available' → habis
+const getMenuStock = (menu) => {
+  if (!menu) return { tracked: false, value: null, isOut: true, isLow: false };
+  const tracked = menu.stock !== null && menu.stock !== undefined;
+  const value = tracked ? Number(menu.stock) : null;
+  const isOut = menu.status !== 'available' || (tracked && value <= 0);
+  const isLow = tracked && value > 0 && value <= 5;
+  return { tracked, value, isOut, isLow };
+};
+
 function OrderContent() {
   const searchParams = useSearchParams();
   const tenantId = searchParams.get('tenant');
@@ -68,6 +81,22 @@ function OrderContent() {
   const audioCtxRef = useRef(null);
   const intervalRef = useRef(null);
 
+  // Fetch SEMUA menu (tanpa filter status) supaya menu habis tetap muncul
+  const fetchAllMenus = async () => {
+    const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
+    if (data) {
+      // Urutkan: available + stok banyak dulu, lalu stok tipis, lalu habis
+      const sorted = [...data].sort((a, b) => {
+        const sa = getMenuStock(a);
+        const sb = getMenuStock(b);
+        if (sa.isOut !== sb.isOut) return sa.isOut ? 1 : -1;
+        if (sa.isLow !== sb.isLow) return sa.isLow ? 1 : -1;
+        return 0;
+      });
+      setMenus(sorted);
+    }
+  };
+
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
     document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
@@ -81,8 +110,17 @@ function OrderContent() {
         else if (cafeData.logo_url) extractDominantColor(cafeData.logo_url);
       }
       
-      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
-      if (menuData) setMenus(menuData);
+      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
+      if (menuData) {
+        const sorted = [...menuData].sort((a, b) => {
+          const sa = getMenuStock(a);
+          const sb = getMenuStock(b);
+          if (sa.isOut !== sb.isOut) return sa.isOut ? 1 : -1;
+          if (sa.isLow !== sb.isLow) return sa.isLow ? 1 : -1;
+          return 0;
+        });
+        setMenus(sorted);
+      }
       
       const savedName = localStorage.getItem('nexaflow_customer_name');
       if (savedName) setCustomerName(savedName);
@@ -101,9 +139,7 @@ function OrderContent() {
         if (existingOrders.length > 0) fetchMyOrders(existingOrders);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tenantId}` }, async () => {
-        // Realtime update stok / menu baru / menu dihapus
-        const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
-        if (menuData) setMenus(menuData);
+        await fetchAllMenus();
       })
       .subscribe();
 
@@ -118,22 +154,23 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
-  // ── Auto-cap cart jika stok berubah realtime ──
+  // ── Auto-cap cart jika stok/status berubah realtime ──
   useEffect(() => {
     if (cart.length === 0 || menus.length === 0) return;
     setCart(prev => {
       let changed = false;
       const next = prev.map(item => {
         const menu = menus.find(m => m.id === item.id);
-        if (!menu) return item;
-        const maxStock = Number(menu.stock || 0);
-        if (item.qty > maxStock) {
+        if (!menu) { changed = true; return { ...item, qty: 0 }; }
+        const stock = getMenuStock(menu);
+        if (stock.isOut) { changed = true; return { ...item, qty: 0 }; }
+        if (stock.tracked && item.qty > stock.value) {
           changed = true;
-          return { ...item, qty: Math.max(0, maxStock) };
+          return { ...item, qty: Math.max(0, stock.value) };
         }
         return item;
       }).filter(i => i.qty > 0);
-      if (changed) showToast('Beberapa item dikurangi karena stok berubah');
+      if (changed) showToast('Beberapa item disesuaikan dengan stok terkini');
       return changed ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,19 +241,19 @@ function OrderContent() {
     setTimeout(() => setToast(null), 1800);
   };
 
-  // ── addToCart dengan validasi stok ──
+  // ── addToCart dengan validasi stok & status ──
   const addToCart = (menu) => {
     unlockAudio();
+    const stock = getMenuStock(menu);
     const existing = cart.find(i => i.id === menu.id);
     const currentQty = existing ? existing.qty : 0;
-    const maxStock = Number(menu.stock || 0);
 
-    if (maxStock <= 0) {
+    if (stock.isOut) {
       showToast(`${menu.name} sedang habis`);
       return;
     }
-    if (currentQty >= maxStock) {
-      showToast(`Stok ${menu.name} tersisa ${maxStock}`);
+    if (stock.tracked && currentQty >= stock.value) {
+      showToast(`Stok ${menu.name} tersisa ${stock.value}`);
       return;
     }
     setCart(prev => {
@@ -247,6 +284,15 @@ function OrderContent() {
 
   const openConfirmation = () => {
     if (cart.length === 0) return;
+    // Pastikan tidak ada item yang sudah habis
+    const invalid = cart.find(item => {
+      const menu = menus.find(m => m.id === item.id);
+      return !menu || getMenuStock(menu).isOut;
+    });
+    if (invalid) {
+      showToast(`${invalid.name} sudah habis, hapus dulu dari keranjang`);
+      return;
+    }
     unlockAudio();
     setShowConfirmModal(true);
   };
@@ -258,11 +304,11 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // 1) Validasi stok terbaru dari server
+    // 1) Validasi stok & status terbaru dari server
     const menuIds = cart.map(i => i.id);
     const { data: freshMenus, error: freshErr } = await supabase
       .from('menus')
-      .select('id, name, stock')
+      .select('id, name, stock, status')
       .in('id', menuIds);
 
     if (freshErr) {
@@ -271,13 +317,23 @@ function OrderContent() {
       return;
     }
 
-    const stockMap = new Map((freshMenus || []).map(m => [m.id, Number(m.stock || 0)]));
-    const shortage = cart.find(item => (stockMap.get(item.id) ?? 0) < item.qty);
+    const freshMap = new Map((freshMenus || []).map(m => [m.id, m]));
+    const shortage = cart.find(item => {
+      const fm = freshMap.get(item.id);
+      if (!fm) return true;
+      if (fm.status !== 'available') return true;
+      const tracked = fm.stock !== null && fm.stock !== undefined;
+      if (tracked && Number(fm.stock) < item.qty) return true;
+      return false;
+    });
     if (shortage) {
-      const avail = stockMap.get(shortage.id) ?? 0;
-      showToast(`Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
-      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
-      if (menuData) setMenus(menuData);
+      const fm = freshMap.get(shortage.id);
+      const tracked = fm && fm.stock !== null && fm.stock !== undefined;
+      const avail = tracked ? Number(fm.stock) : 0;
+      showToast(fm && fm.status !== 'available' 
+        ? `${shortage.name} sedang habis` 
+        : `Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
+      await fetchAllMenus();
       setIsSubmitting(false);
       return;
     }
@@ -307,16 +363,18 @@ function OrderContent() {
       return; 
     }
 
-    // 3) Kurangi stok (parallel)
+    // 3) Kurangi stok HANYA untuk menu yang dilacak stoknya (bukan null)
     await Promise.all(cart.map(item => {
-      const current = stockMap.get(item.id) ?? 0;
-      const newStock = Math.max(0, current - item.qty);
+      const fm = freshMap.get(item.id);
+      if (!fm) return Promise.resolve();
+      const tracked = fm.stock !== null && fm.stock !== undefined;
+      if (!tracked) return Promise.resolve();
+      const newStock = Math.max(0, Number(fm.stock) - item.qty);
       return supabase.from('menus').update({ stock: newStock }).eq('id', item.id);
     }));
 
     // 4) Refresh menu list
-    const { data: menuDataAfter } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
-    if (menuDataAfter) setMenus(menuDataAfter);
+    await fetchAllMenus();
 
     // 5) Update local tracker
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
@@ -425,9 +483,9 @@ function OrderContent() {
                 </div>
               ) : filteredMenus.map(menu => {
                 const cartItem = cart.find(c => c.id === menu.id);
-                const stockNum = Number(menu.stock || 0);
-                const isOut = stockNum <= 0;
-                const isLow = stockNum > 0 && stockNum <= 5;
+                const stock = getMenuStock(menu);
+                const isOut = stock.isOut;
+                const isLow = stock.isLow;
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
                     <div className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200">
@@ -435,7 +493,7 @@ function OrderContent() {
                       {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
                       {isLow && !isOut && (
                         <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
-                          Sisa {stockNum}
+                          Sisa {stock.value}
                         </div>
                       )}
                       {isOut && (
@@ -457,7 +515,7 @@ function OrderContent() {
                           <div className="flex items-center justify-between bg-slate-50 rounded-lg p-1 border-2 border-slate-300">
                             <button onClick={() => decCart(menu.id)} className="w-6 h-6 bg-white border border-slate-300 rounded shadow-sm font-black text-slate-700 flex items-center justify-center">-</button>
                             <span className="font-black text-slate-900 text-xs">{cartItem.qty}</span>
-                            <button onClick={() => addToCart(menu)} disabled={cartItem.qty >= stockNum} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)] disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                            <button onClick={() => addToCart(menu)} disabled={stock.tracked && cartItem.qty >= stock.value} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)] disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                           </div>
                         ) : (
                           <button onClick={() => addToCart(menu)} className="w-full bg-[var(--primary-light)] text-[var(--primary-color)] font-black py-1.5 rounded-lg text-xs transition-colors hover:bg-[var(--primary-color)] hover:text-white border-2 border-[var(--primary-color)]/20">Tambah</button>
@@ -488,8 +546,9 @@ function OrderContent() {
                   </div>
                   <div className="space-y-5">
                     {cart.map(item => {
-                      const menuLive = menus.find(m => m.id === item.id);
-                      const liveStock = menuLive ? Number(menuLive.stock || 0) : 0;
+                      const liveMenu = menus.find(m => m.id === item.id);
+                      const liveStock = getMenuStock(liveMenu);
+                      const maxQty = liveStock.tracked ? liveStock.value : Infinity;
                       return (
                       <div key={item.id} className="border-b-2 border-slate-100 pb-5 last:border-0 last:pb-0">
                         <div className="flex justify-between items-start gap-3">
@@ -499,11 +558,14 @@ function OrderContent() {
                           <div className="flex-1 min-w-0 pt-0.5">
                             <p className="font-black text-slate-900 text-sm truncate">{item.name}</p>
                             <p className="text-xs text-[var(--primary-color)] font-black mt-1">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                            {liveStock.isOut && (
+                              <p className="text-[10px] text-rose-600 font-black mt-1">⚠️ Sudah habis — hapus dari keranjang</p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => decCart(item.id)} className="w-7 h-7 bg-slate-100 border border-slate-300 rounded-full font-black text-slate-700">-</button>
                             <span className="w-5 text-center font-black text-slate-900 text-xs">{item.qty}</span>
-                            <button onClick={() => addToCart(item)} disabled={item.qty >= liveStock} className="w-7 h-7 bg-[var(--primary-light)] border border-[var(--primary-color)]/30 text-[var(--primary-color)] rounded-full font-black disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                            <button onClick={() => addToCart(item)} disabled={item.qty >= maxQty} className="w-7 h-7 bg-[var(--primary-light)] border border-[var(--primary-color)]/30 text-[var(--primary-color)] rounded-full font-black disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                           </div>
                         </div>
                         <input type="text" placeholder="Catatan (mis. tanpa gula)" value={item.note || ''} onChange={(e) => updateItemNote(item.id, e.target.value)} className="w-full mt-3 text-[16px] bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--primary-color)] font-bold text-slate-900 placeholder:text-slate-400" />
