@@ -405,7 +405,7 @@ export function useDashboard() {
       const bucket = (type === 'logo' || type === 'banner') ? 'cafe-logos' : 'menu-images';
       const { error: upErr } = await supabase.storage.from(bucket).upload(fileName, compressed, { cacheControl: '3600', upsert: false });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+      const { data: urlData } = await supabase.storage.from(bucket).getPublicUrl(fileName);
       if (type === 'logo') setSettings(p => ({ ...p, logo_url: urlData.publicUrl }));
       else if (type === 'banner') { setSettings(p => ({ ...p, banner_url: urlData.publicUrl })); extractDominantColor(urlData.publicUrl); }
       else if (setMenuFn) setMenuFn(p => ({ ...p, image_url: urlData.publicUrl }));
@@ -447,21 +447,20 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // BYPASS CACHE SUPABASE DENGAN RPC & PASTIKAN TIPE DATA ANGKA
+  // PERBAIKAN: Ganti RPC dengan update tabel langsung
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
-    const { error } = await supabase.rpc('update_tenant_settings', {
-      p_tenant_id: tenantId,
-      p_name: settings.name,
-      p_wa: settings.wa,
-      p_address: settings.address,
-      p_logo_url: settings.logo_url,
-      p_qris_string: settings.qris_string,
-      p_banner_url: settings.banner_url,
-      p_tax_percentage: Number(settings.tax_percentage) || 0, // <--- SUDAH DIPERBAIKI
-      p_notify_order_ready: settings.notify_order_ready,
-    });
+    const { error } = await supabase.from('tenants').update({
+      name: settings.name,
+      wa_number: settings.wa,
+      address: settings.address,
+      logo_url: settings.logo_url,
+      qris_string: settings.qris_string,
+      banner_url: settings.banner_url,
+      tax_percentage: Number(settings.tax_percentage) || 0,
+      notify_order_ready: settings.notify_order_ready,
+    }).eq('id', tenantId);
 
     if (error) {
       showToast('Gagal simpan: ' + error.message, 'error');
