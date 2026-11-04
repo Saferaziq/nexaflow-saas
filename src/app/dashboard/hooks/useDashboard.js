@@ -447,7 +447,7 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // BYPASS CACHE SUPABASE DENGAN RPC
+  // BYPASS CACHE SUPABASE DENGAN RPC & PASTIKAN TIPE DATA ANGKA
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
@@ -459,7 +459,7 @@ export function useDashboard() {
       p_logo_url: settings.logo_url,
       p_qris_string: settings.qris_string,
       p_banner_url: settings.banner_url,
-      p_tax_percentage: settings.tax_percentage,
+      p_tax_percentage: Number(settings.tax_percentage) || 0, // <--- SUDAH DIPERBAIKI
       p_notify_order_ready: settings.notify_order_ready,
     });
 
