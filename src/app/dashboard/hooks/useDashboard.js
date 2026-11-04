@@ -447,7 +447,6 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // MENGGUNAKAN CARA STANDAR .UPDATE() (BUKAN RPC)
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
