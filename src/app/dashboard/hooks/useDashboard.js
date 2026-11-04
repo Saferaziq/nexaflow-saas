@@ -226,6 +226,7 @@ export function useDashboard() {
 
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
             else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT' || s === 'CLOSED') setRealtimeStatus('offline');
@@ -408,27 +409,15 @@ export function useDashboard() {
   };
 
   // ============================================================
-  // MANAJEMEN STOK — Otomatis kurangi saat order di-accept (cooking)
-  //                 Otomatis pulihkan saat order di-cancel
+  // MANAJEMEN STOK
+  // Stok sudah dikurangi OTOMATIS saat order dibuat di halaman customer (/order).
+  // Kasir TIDAK perlu decrement lagi. Hanya perlu pulihkan stok jika order DITOLAK.
   // ============================================================
   const handleUpdateOrderStatus = async (id, status) => {
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
 
-    const currentOrder = orders.find(o => o.id === id);
-
-    // Kurangi stok HANYA saat transisi pending -> cooking
-    if (status === 'cooking' && currentOrder && currentOrder.status === 'pending' && Array.isArray(currentOrder.items)) {
-      for (const item of currentOrder.items) {
-        const menu = menus.find(m => m.name === item.name);
-        if (menu) {
-          const newStock = Math.max(0, Number(menu.stock || 0) - Number(item.qty || 0));
-          await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);
-        }
-      }
-      await fetchMenus(tenantId);
-    }
-
+    // Stok TIDAK di-decrement di sini (sudah dikurangi saat order dibuat).
     await supabase.from('orders').update(u).eq('id', id);
     fetchOrders(tenantId);
   };
@@ -436,10 +425,10 @@ export function useDashboard() {
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
     const currentOrder = orders.find(o => o.id === id);
 
-    // Pulihkan stok jika sebelumnya sudah dikurangi (status cooking/ready)
-    if (currentOrder && ['cooking', 'ready'].includes(currentOrder.status) && Array.isArray(currentOrder.items)) {
+    // Pulihkan stok karena sudah dikurangi saat order dibuat (status apapun kecuali yang sudah cancelled).
+    if (currentOrder && currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
-        const menu = menus.find(m => m.name === item.name);
+        const menu = menus.find(m => m.id === item.id) || menus.find(m => m.name === item.name);
         if (menu) {
           const newStock = Number(menu.stock || 0) + Number(item.qty || 0);
           await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);

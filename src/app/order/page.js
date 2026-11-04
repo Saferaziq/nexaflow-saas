@@ -64,11 +64,9 @@ function OrderContent() {
   const [customerName, setCustomerName] = useState('');
   const [globalNote, setGlobalNote] = useState('');
 
-  // --- STATE & REF UNTUK NOTIFIKASI SUARA ---
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioCtxRef = useRef(null);
   const intervalRef = useRef(null);
-  // ------------------------------------------
 
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
@@ -102,6 +100,11 @@ function OrderContent() {
         const existingOrders = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
         if (existingOrders.length > 0) fetchMyOrders(existingOrders);
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tenantId}` }, async () => {
+        // Realtime update stok / menu baru / menu dihapus
+        const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
+        if (menuData) setMenus(menuData);
+      })
       .subscribe();
 
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
@@ -115,7 +118,27 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
-  // --- LOGIKA SUARA NOTIFIKASI ---
+  // ── Auto-cap cart jika stok berubah realtime ──
+  useEffect(() => {
+    if (cart.length === 0 || menus.length === 0) return;
+    setCart(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        const menu = menus.find(m => m.id === item.id);
+        if (!menu) return item;
+        const maxStock = Number(menu.stock || 0);
+        if (item.qty > maxStock) {
+          changed = true;
+          return { ...item, qty: Math.max(0, maxStock) };
+        }
+        return item;
+      }).filter(i => i.qty > 0);
+      if (changed) showToast('Beberapa item dikurangi karena stok berubah');
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menus]);
+
   const playReadySound = () => {
     if (!audioCtxRef.current) return;
     try {
@@ -124,7 +147,7 @@ function OrderContent() {
       const playOne = (t) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.frequency.value = 880; // Frekuensi tinggi (nada siap)
+        osc.frequency.value = 880;
         osc.type = 'sine';
         gain.gain.setValueAtTime(0, ctx.currentTime + t);
         gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + t + 0.02);
@@ -132,7 +155,7 @@ function OrderContent() {
         osc.connect(gain); gain.connect(ctx.destination);
         osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + 0.18);
       };
-      playOne(0); playOne(0.22); playOne(0.44); // Bunyi "Ting Ting Ting"
+      playOne(0); playOne(0.22); playOne(0.44);
     } catch (e) { console.log('Audio error:', e); }
   };
 
@@ -148,8 +171,6 @@ function OrderContent() {
 
   const checkReadyOrders = () => {
     if (!audioUnlocked) return; 
-    
-    // JIKA TOGGLE OFF, MATIKAN SUARA
     if (cafe.notify_order_ready === false) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -157,15 +178,11 @@ function OrderContent() {
       }
       return;
     }
-
     const hasReadyOrder = myOrders.some(o => o.status === 'ready');
-    
     if (hasReadyOrder) {
       if (!intervalRef.current) {
-        playReadySound(); // Bunyi instan saat status berubah
-        intervalRef.current = setInterval(() => {
-          playReadySound(); // Bunyi berulang tiap 30 detik
-        }, 30000); 
+        playReadySound();
+        intervalRef.current = setInterval(() => { playReadySound(); }, 30000); 
       }
     } else {
       if (intervalRef.current) {
@@ -175,22 +192,33 @@ function OrderContent() {
     }
   };
 
-  // Jalankan pengecekan setiap kali data pesanan berubah atau audio di-unlock
   useEffect(() => {
     checkReadyOrders();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [myOrders, audioUnlocked, cafe.notify_order_ready]);
-  // -------------------------------
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
   };
 
+  // ── addToCart dengan validasi stok ──
   const addToCart = (menu) => {
-    unlockAudio(); // Buka kunci audio saat interaksi pertama
+    unlockAudio();
+    const existing = cart.find(i => i.id === menu.id);
+    const currentQty = existing ? existing.qty : 0;
+    const maxStock = Number(menu.stock || 0);
+
+    if (maxStock <= 0) {
+      showToast(`${menu.name} sedang habis`);
+      return;
+    }
+    if (currentQty >= maxStock) {
+      showToast(`Stok ${menu.name} tersisa ${maxStock}`);
+      return;
+    }
     setCart(prev => {
       const ex = prev.find(i => i.id === menu.id);
       if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i);
@@ -219,7 +247,7 @@ function OrderContent() {
 
   const openConfirmation = () => {
     if (cart.length === 0) return;
-    unlockAudio(); // Pastikan unlock lagi jika perlu
+    unlockAudio();
     setShowConfirmModal(true);
   };
 
@@ -229,8 +257,34 @@ function OrderContent() {
       return;
     }
     setIsSubmitting(true);
+
+    // 1) Validasi stok terbaru dari server
+    const menuIds = cart.map(i => i.id);
+    const { data: freshMenus, error: freshErr } = await supabase
+      .from('menus')
+      .select('id, name, stock')
+      .in('id', menuIds);
+
+    if (freshErr) {
+      showToast('Gagal cek stok: ' + freshErr.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const stockMap = new Map((freshMenus || []).map(m => [m.id, Number(m.stock || 0)]));
+    const shortage = cart.find(item => (stockMap.get(item.id) ?? 0) < item.qty);
+    if (shortage) {
+      const avail = stockMap.get(shortage.id) ?? 0;
+      showToast(`Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
+      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
+      if (menuData) setMenus(menuData);
+      setIsSubmitting(false);
+      return;
+    }
+
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
+    // 2) Insert order
     const orderData = { 
       tenant_id: tenantId, 
       table_number: tableNumber, 
@@ -253,6 +307,18 @@ function OrderContent() {
       return; 
     }
 
+    // 3) Kurangi stok (parallel)
+    await Promise.all(cart.map(item => {
+      const current = stockMap.get(item.id) ?? 0;
+      const newStock = Math.max(0, current - item.qty);
+      return supabase.from('menus').update({ stock: newStock }).eq('id', item.id);
+    }));
+
+    // 4) Refresh menu list
+    const { data: menuDataAfter } = await supabase.from('menus').select('*').eq('tenant_id', tenantId).eq('status', 'available');
+    if (menuDataAfter) setMenus(menuDataAfter);
+
+    // 5) Update local tracker
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify([...existingIds, data.id]));
     
@@ -282,13 +348,10 @@ function OrderContent() {
   });
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
-
-  // Cek apakah ada pesanan yang siap
   const hasReadyOrder = myOrders.some(o => o.status === 'ready');
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32" onClick={unlockAudio}>
-      {/* HERO HEADER (Banner Background) */}
       <div className="relative overflow-hidden pb-safe rounded-b-[2.5rem] shadow-sm bg-slate-800">
         {cafe.banner_url ? (
           <img src={cafe.banner_url} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Banner" />
@@ -320,7 +383,6 @@ function OrderContent() {
         </div>
       </div>
 
-      {/* FLOATING BANNER NOTIFIKASI SIAP (Tampil di semua tab jika ada pesanan siap & toggle ON) */}
       {hasReadyOrder && cafe.notify_order_ready !== false && (
         <div className="px-5 mt-4 relative z-30 animate-in slide-in-from-top-4 fade-in duration-300">
           <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-emerald-500/20">
@@ -335,7 +397,6 @@ function OrderContent() {
         </div>
       )}
 
-      {/* SEARCH */}
       <div className="px-5 mt-4 relative z-20">
         <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border-2 border-slate-300 flex items-center px-4 py-3">
           <span className="text-slate-500 text-lg">🔍</span>
@@ -344,7 +405,6 @@ function OrderContent() {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="px-5 mt-6">
         {activeTab === 'menu' && (
           <>
@@ -365,11 +425,24 @@ function OrderContent() {
                 </div>
               ) : filteredMenus.map(menu => {
                 const cartItem = cart.find(c => c.id === menu.id);
+                const stockNum = Number(menu.stock || 0);
+                const isOut = stockNum <= 0;
+                const isLow = stockNum > 0 && stockNum <= 5;
                 return (
-                  <div key={menu.id} className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative">
+                  <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
                     <div className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200">
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
-                      {cartItem && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white">{cartItem.qty}</div>}
+                      {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
+                      {isLow && !isOut && (
+                        <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
+                          Sisa {stockNum}
+                        </div>
+                      )}
+                      {isOut && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-10">
+                          <span className="text-white font-black text-xs uppercase tracking-widest bg-rose-500 px-3 py-1.5 rounded-lg border-2 border-white/40 shadow-lg">Habis</span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
@@ -378,11 +451,13 @@ function OrderContent() {
                       </div>
                       <div className="mt-2 flex flex-col gap-2">
                         <span className="font-black text-[var(--primary-color)] text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
-                        {cartItem ? (
+                        {isOut ? (
+                          <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-1.5 rounded-lg text-xs border-2 border-slate-300 cursor-not-allowed">Habis</button>
+                        ) : cartItem ? (
                           <div className="flex items-center justify-between bg-slate-50 rounded-lg p-1 border-2 border-slate-300">
                             <button onClick={() => decCart(menu.id)} className="w-6 h-6 bg-white border border-slate-300 rounded shadow-sm font-black text-slate-700 flex items-center justify-center">-</button>
                             <span className="font-black text-slate-900 text-xs">{cartItem.qty}</span>
-                            <button onClick={() => addToCart(menu)} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)]">+</button>
+                            <button onClick={() => addToCart(menu)} disabled={cartItem.qty >= stockNum} className="w-6 h-6 bg-[var(--primary-color)] text-white rounded shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)] disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                           </div>
                         ) : (
                           <button onClick={() => addToCart(menu)} className="w-full bg-[var(--primary-light)] text-[var(--primary-color)] font-black py-1.5 rounded-lg text-xs transition-colors hover:bg-[var(--primary-color)] hover:text-white border-2 border-[var(--primary-color)]/20">Tambah</button>
@@ -412,7 +487,10 @@ function OrderContent() {
                     <span className="text-[10px] bg-[var(--primary-light)] text-[var(--primary-color)] px-2.5 py-1 rounded-full font-black border border-[var(--primary-color)]/20">{totalCartQty} item</span>
                   </div>
                   <div className="space-y-5">
-                    {cart.map(item => (
+                    {cart.map(item => {
+                      const menuLive = menus.find(m => m.id === item.id);
+                      const liveStock = menuLive ? Number(menuLive.stock || 0) : 0;
+                      return (
                       <div key={item.id} className="border-b-2 border-slate-100 pb-5 last:border-0 last:pb-0">
                         <div className="flex justify-between items-start gap-3">
                           <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-300">
@@ -425,12 +503,13 @@ function OrderContent() {
                           <div className="flex items-center gap-2">
                             <button onClick={() => decCart(item.id)} className="w-7 h-7 bg-slate-100 border border-slate-300 rounded-full font-black text-slate-700">-</button>
                             <span className="w-5 text-center font-black text-slate-900 text-xs">{item.qty}</span>
-                            <button onClick={() => addToCart(item)} className="w-7 h-7 bg-[var(--primary-light)] border border-[var(--primary-color)]/30 text-[var(--primary-color)] rounded-full font-black">+</button>
+                            <button onClick={() => addToCart(item)} disabled={item.qty >= liveStock} className="w-7 h-7 bg-[var(--primary-light)] border border-[var(--primary-color)]/30 text-[var(--primary-color)] rounded-full font-black disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                           </div>
                         </div>
                         <input type="text" placeholder="Catatan (mis. tanpa gula)" value={item.note || ''} onChange={(e) => updateItemNote(item.id, e.target.value)} className="w-full mt-3 text-[16px] bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[var(--primary-color)] font-bold text-slate-900 placeholder:text-slate-400" />
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -529,7 +608,6 @@ function OrderContent() {
         )}
       </div>
 
-      {/* FOOTER & BRANDING DEVELOPER */}
       <div className="text-center mt-10 pb-32 space-y-4">
         {cafe.wa_number && (
           <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-black text-emerald-700 bg-emerald-50 px-5 py-2.5 rounded-full border-2 border-emerald-200 shadow-sm transition-all hover:bg-emerald-100">
@@ -546,7 +624,6 @@ function OrderContent() {
         </div>
       </div>
 
-      {/* FLOATING BOTTOM NAV with Safe Area */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto bg-white/95 backdrop-blur-xl border-2 border-slate-300 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-1.5 flex gap-1">
           <button onClick={() => setActiveTab('menu')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all border-2 ${activeTab === 'menu' ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20' : 'text-slate-500 hover:bg-slate-50 border-transparent'}`}>
@@ -569,7 +646,6 @@ function OrderContent() {
         </div>
       </div>
 
-      {/* STICKY CART BAR (Only in Menu Tab) */}
       {activeTab === 'menu' && totalCartQty > 0 && (
         <div className="fixed bottom-28 left-0 right-0 z-40 px-5 animate-in slide-in-from-bottom-5">
           <div className="max-w-md mx-auto bg-white/95 backdrop-blur-lg rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.15)] p-2.5 flex justify-between items-center border-2 border-slate-300">
@@ -589,7 +665,6 @@ function OrderContent() {
         </div>
       )}
 
-           {/* CONFIRMATION MODAL */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
