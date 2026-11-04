@@ -494,11 +494,11 @@ export function useDashboard() {
     showToast('Pengaturan disimpan', 'success');
   };
 
-  // MENGGUNAKAN RPC BYPASS UNTUK MENGHINDARI ERROR CACHE SUPABASE
+  // MENGGUNAKAN RPC BYPASS TERBARU (simpan_menu_v2)
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     
-    const { error } = await supabase.rpc('save_menu_with_stock', {
+    const { error } = await supabase.rpc('simpan_menu_v2', {
       p_id: isEdit ? currentMenu.id : null,
       p_tenant_id: tenantId,
       p_name: currentMenu.name || '',
