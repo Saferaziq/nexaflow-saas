@@ -405,7 +405,7 @@ export function useDashboard() {
       const bucket = (type === 'logo' || type === 'banner') ? 'cafe-logos' : 'menu-images';
       const { error: upErr } = await supabase.storage.from(bucket).upload(fileName, compressed, { cacheControl: '3600', upsert: false });
       if (upErr) throw upErr;
-      const { data: urlData } = await supabase.storage.from(bucket).getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       if (type === 'logo') setSettings(p => ({ ...p, logo_url: urlData.publicUrl }));
       else if (type === 'banner') { setSettings(p => ({ ...p, banner_url: urlData.publicUrl })); extractDominantColor(urlData.publicUrl); }
       else if (setMenuFn) setMenuFn(p => ({ ...p, image_url: urlData.publicUrl }));
@@ -447,24 +447,28 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // PERBAIKAN: Ganti RPC dengan update tabel langsung
+  // MENGGUNAKAN CARA STANDAR .UPDATE() (BUKAN RPC)
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
-    const { error } = await supabase.from('tenants').update({
-      name: settings.name,
-      wa_number: settings.wa,
+    const { data, error } = await supabase.from('tenants').update({
+      name: settings.name, 
+      wa_number: settings.wa, 
       address: settings.address,
-      logo_url: settings.logo_url,
+      logo_url: settings.logo_url, 
       qris_string: settings.qris_string,
-      banner_url: settings.banner_url,
-      tax_percentage: Number(settings.tax_percentage) || 0,
+      banner_url: settings.banner_url, 
+      tax_percentage: settings.tax_percentage,
       notify_order_ready: settings.notify_order_ready,
-    }).eq('id', tenantId);
+    }).eq('id', tenantId).select();
 
     if (error) {
       showToast('Gagal simpan: ' + error.message, 'error');
       console.error("Supabase Error:", error);
+      return;
+    }
+    if (data.length === 0) {
+      showToast('Gagal simpan: Anda tidak memiliki akses (RLS).', 'error');
       return;
     }
 
