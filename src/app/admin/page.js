@@ -116,7 +116,11 @@ export default function AdminDashboard() {
     const baseDate = Math.max(Date.now(), currentEnd); 
     const newEndDate = new Date(baseDate + (30 * 24 * 60 * 60 * 1000)).toISOString();
 
-    const { error } = await supabase.from('tenants').update({ subscription_end_date: newEndDate, is_active: true }).eq('id', tenant.id);
+    // is_active disertakan untuk memastikan kafe diaktifkan kembali jika sebelumnya expired
+    const { error } = await supabase.from('tenants').update({ 
+      subscription_end_date: newEndDate, 
+      is_active: true 
+    }).eq('id', tenant.id);
     
     setExtendingId(null);
     if (error) {
@@ -132,7 +136,6 @@ export default function AdminDashboard() {
     showToast('ID disalin', 'success');
   };
 
-  // FIX WA: Pembersihan dan normalisasi nomor telepon secara presisi
   const openWa = (tenant) => {
     if (!tenant.wa_number) return showToast('Nomor WA belum diatur oleh kafe ini', 'warning');
     
@@ -171,52 +174,55 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#050b14] text-slate-200 font-sans selection:bg-cyan-500/30">
       
+      {/* HEADER */}
       <header className="border-b border-white/10 bg-[#0a192f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
               <span className="text-cyan-400"><Icons.Shield /></span> Control Center
             </h1>
             <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">Developer & Billing Monitor</p>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 rounded-xl font-bold text-sm transition-all">
+          <button onClick={handleLogout} className="flex items-center justify-center w-full sm:w-auto gap-2 px-5 py-2.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 rounded-xl font-bold text-sm transition-all active:scale-95">
             <Icons.Logout /> Logout
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* STATS CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           <div className="bg-[#0a192f] border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-10 text-white group-hover:scale-110 transition-transform"><Icons.Store /></div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total Klien</p>
-            <h3 className="text-5xl font-black text-white">{stats.total}</h3>
+            <h3 className="text-4xl sm:text-5xl font-black text-white">{stats.total}</h3>
           </div>
           <div className="bg-[#0d3b66] border border-cyan-500/30 rounded-3xl p-6 shadow-[0_0_30px_rgba(0,168,204,0.15)] relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-20 text-cyan-400 group-hover:scale-110 transition-transform"><Icons.Activity /></div>
             <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-2">Kafe Online</p>
-            <h3 className="text-5xl font-black text-cyan-400">{stats.online} <span className="text-xl text-slate-500 font-bold">/ {stats.total}</span></h3>
+            <h3 className="text-4xl sm:text-5xl font-black text-cyan-400">{stats.online} <span className="text-xl text-slate-500 font-bold">/ {stats.total}</span></h3>
           </div>
-          <div className="bg-gradient-to-br from-amber-900/40 to-[#050b14] border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-amber-900/40 to-[#050b14] border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group sm:col-span-2 lg:col-span-1">
             <div className="absolute top-0 right-0 p-6 opacity-20 text-amber-500 group-hover:scale-110 transition-transform"><Icons.Alert /></div>
-            <p className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">Butuh Perhatian</p>
-            <h3 className="text-5xl font-black text-amber-400">{stats.warning}</h3>
+            <p className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">Butuh Perhatian (≤ 3 Hari)</p>
+            <h3 className="text-4xl sm:text-5xl font-black text-amber-400">{stats.warning}</h3>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#0a192f]/50 p-4 rounded-2xl border border-white/10">
-          <div className="relative w-full sm:w-96">
+        {/* SEARCH & FILTER */}
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-[#0a192f]/50 p-4 rounded-2xl border border-white/10">
+          <div className="relative w-full lg:w-96">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Icons.Search /></span>
             <input 
               type="text" 
               placeholder="Cari nama kafe..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-[#050b14] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-colors"
+              className="w-full bg-[#050b14] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-colors"
             />
           </div>
-          <div className="flex bg-[#050b14] p-1 rounded-xl border border-white/10 w-full sm:w-auto overflow-x-auto">
+          <div className="flex bg-[#050b14] p-1 rounded-xl border border-white/10 w-full lg:w-auto overflow-x-auto scrollbar-hide">
             {[
               { id: 'all', label: 'Semua' },
               { id: 'online', label: 'Online' },
@@ -226,7 +232,7 @@ export default function AdminDashboard() {
               <button 
                 key={f.id} 
                 onClick={() => setFilterStatus(f.id)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${filterStatus === f.id ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-500 hover:text-white'}`}
+                className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${filterStatus === f.id ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-500 hover:text-white'}`}
               >
                 {f.label}
               </button>
@@ -234,106 +240,194 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-[#0a192f]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
-              <thead>
-                <tr className="bg-[#050b14] text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/10">
-                  <th className="p-5">Nama Kafe</th>
-                  <th className="p-5">Status Jaringan</th>
-                  <th className="p-5">Tgl Bergabung</th>
-                  <th className="p-5">Sisa Waktu Tagihan</th>
-                  <th className="p-5 text-right">Aksi Cepat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredTenants.length === 0 ? (
-                  <tr><td colSpan="5" className="p-10 text-center text-slate-500 font-bold">Tidak ada data yang cocok.</td></tr>
-                ) : filteredTenants.map((tenant) => {
-                  const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-                  const isOnline = onlineUsers[tenant.id];
-                  const isExpired = daysLeft <= 0;
-                  const isWarning = daysLeft > 0 && daysLeft <= 3;
-                  const isExtending = extendingId === tenant.id;
-                  
-                  return (
-                    <tr key={tenant.id} className="hover:bg-white/[0.02] transition-colors group">
-                      <td className="p-5">
-                        <div className="flex items-center gap-4">
-                          {tenant.logo_url ? (
-                            <img src={tenant.logo_url} className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-sm" />
+        {/* --- TAMPILAN DESKTOP (TABEL) --- */}
+        <div className="hidden lg:block bg-[#0a192f]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#050b14] text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/10">
+                <th className="p-5">Nama Kafe</th>
+                <th className="p-5">Status Jaringan</th>
+                <th className="p-5">Tgl Bergabung</th>
+                <th className="p-5">Sisa Waktu Tagihan</th>
+                <th className="p-5 text-right">Aksi Cepat</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filteredTenants.length === 0 ? (
+                <tr><td colSpan="5" className="p-10 text-center text-slate-500 font-bold">Tidak ada data yang cocok.</td></tr>
+              ) : filteredTenants.map((tenant) => {
+                const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
+                const isOnline = onlineUsers[tenant.id];
+                const isExpired = daysLeft <= 0;
+                const isWarning = daysLeft > 0 && daysLeft <= 3;
+                const isExtending = extendingId === tenant.id;
+                
+                return (
+                  <tr key={tenant.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="p-5">
+                      <div className="flex items-center gap-4">
+                        {tenant.logo_url ? (
+                          <img src={tenant.logo_url} className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-sm" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 flex items-center justify-center text-lg font-black text-cyan-400 border border-white/10">
+                            {tenant.name.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-white text-base">{tenant.name}</p>
+                          <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 font-mono">
+                            <span>ID: {tenant.id.slice(0, 8)}...</span>
+                            <button onClick={() => copyToClipboard(tenant.id)} className="hover:text-cyan-400 transition-colors" title="Copy Full ID"><Icons.Copy /></button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-5">
+                      <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                        isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
+                        {isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </td>
+                    <td className="p-5 text-sm font-semibold text-slate-400">
+                      {new Date(tenant.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="p-5">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-2xl font-black ${
+                            isExpired ? 'text-rose-500' : isWarning ? 'text-amber-400 animate-pulse' : 'text-cyan-400'
+                          }`}>
+                            {daysLeft} <span className="text-xs font-bold text-slate-500">Hari</span>
+                          </span>
+                        </div>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-500'}`}>
+                          {isExpired ? 'Telah Berakhir' : `Jatuh Tempo: ${new Date(tenant.subscription_end_date).toLocaleDateString('id-ID')}`}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => openWa(tenant)}
+                          className="p-2.5 bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 border border-white/10 rounded-xl transition-all"
+                          title="Hubungi via WA"
+                        >
+                          <Icons.WhatsApp />
+                        </button>
+                        <button 
+                          onClick={() => handleExtend(tenant)}
+                          disabled={isExtending}
+                          className="inline-flex items-center justify-center min-w-[110px] gap-1.5 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-[#050b14] font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
+                        >
+                          {isExtending ? (
+                            <div className="w-4 h-4 border-2 border-[#050b14] border-t-transparent rounded-full animate-spin"></div>
                           ) : (
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 flex items-center justify-center text-lg font-black text-cyan-400 border border-white/10">
-                              {tenant.name.charAt(0)}
-                            </div>
+                            <><Icons.Plus /> 30 Hari</>
                           )}
-                          <div>
-                            <p className="font-bold text-white text-base">{tenant.name}</p>
-                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 font-mono">
-                              <span>ID: {tenant.id.slice(0, 8)}...</span>
-                              <button onClick={() => copyToClipboard(tenant.id)} className="hover:text-cyan-400 transition-colors" title="Copy Full ID"><Icons.Copy /></button>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-5">
-                        <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                          isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
-                          {isOnline ? 'Online' : 'Offline'}
-                        </span>
-                      </td>
-                      <td className="p-5 text-sm font-semibold text-slate-400">
-                        {new Date(tenant.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="p-5">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-2xl font-black ${
-                              isExpired ? 'text-rose-500' : isWarning ? 'text-amber-400 animate-pulse' : 'text-cyan-400'
-                            }`}>
-                              {daysLeft} <span className="text-xs font-bold text-slate-500">Hari</span>
-                            </span>
-                          </div>
-                          <p className={`text-[10px] font-bold uppercase tracking-wider ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-500'}`}>
-                            {isExpired ? 'Telah Berakhir' : `Jatuh Tempo: ${new Date(tenant.subscription_end_date).toLocaleDateString('id-ID')}`}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => openWa(tenant)}
-                            className="p-2.5 bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 border border-white/10 rounded-xl transition-all"
-                            title="Hubungi via WA"
-                          >
-                            <Icons.WhatsApp />
-                          </button>
-                          <button 
-                            onClick={() => handleExtend(tenant)}
-                            disabled={isExtending}
-                            className="inline-flex items-center justify-center min-w-[110px] gap-1.5 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-[#050b14] font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95"
-                          >
-                            {isExtending ? (
-                              <div className="w-4 h-4 border-2 border-[#050b14] border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <><Icons.Plus /> 30 Hari</>
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* --- TAMPILAN MOBILE/TABLET (CARDS) --- */}
+        <div className="lg:hidden space-y-4">
+          {filteredTenants.length === 0 ? (
+            <div className="bg-[#0a192f]/80 border border-white/10 rounded-2xl p-8 text-center text-slate-500 font-bold">
+              Tidak ada data yang cocok.
+            </div>
+          ) : filteredTenants.map((tenant) => {
+            const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
+            const isOnline = onlineUsers[tenant.id];
+            const isExpired = daysLeft <= 0;
+            const isWarning = daysLeft > 0 && daysLeft <= 3;
+            const isExtending = extendingId === tenant.id;
+
+            return (
+              <div key={tenant.id} className="bg-[#0a192f]/90 border border-white/10 rounded-2xl p-5 shadow-lg flex flex-col gap-4 relative overflow-hidden">
+                {/* Indikator Warna di Kiri */}
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${isExpired ? 'bg-rose-500' : isWarning ? 'bg-amber-400' : 'bg-cyan-500'}`}></div>
+                
+                {/* Header Card (Logo & Nama) */}
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {tenant.logo_url ? (
+                      <img src={tenant.logo_url} className="w-12 h-12 rounded-xl object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 flex items-center justify-center text-lg font-black text-cyan-400 border border-white/10">
+                        {tenant.name.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-bold text-white text-base leading-tight">{tenant.name}</h3>
+                      <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500 font-mono">
+                        <span>ID: {tenant.id.slice(0, 8)}...</span>
+                        <button onClick={() => copyToClipboard(tenant.id)} className="hover:text-cyan-400 p-1"><Icons.Copy /></button>
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                    isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+
+                {/* Info Masa Aktif */}
+                <div className="bg-[#050b14] rounded-xl p-3 sm:p-4 flex justify-between items-center border border-white/5">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sisa Waktu</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className={`text-2xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-400' : 'text-cyan-400'}`}>
+                        {daysLeft}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">Hari</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Jatuh Tempo</p>
+                    <p className={`text-xs font-bold ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-300'}`}>
+                      {isExpired ? 'Telah Berakhir' : new Date(tenant.subscription_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tombol Aksi */}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => openWa(tenant)}
+                    className="flex-1 py-3 bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 border border-white/10 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-bold"
+                  >
+                    <Icons.WhatsApp /> Hubungi
+                  </button>
+                  <button 
+                    onClick={() => handleExtend(tenant)}
+                    disabled={isExtending}
+                    className="flex-[2] py-3 bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-[#050b14] font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    {isExtending ? (
+                      <div className="w-4 h-4 border-2 border-[#050b14] border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <><Icons.Plus /> Perpanjang 30 Hari</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
       </main>
 
-      <div className="fixed bottom-6 right-6 z-[100] space-y-3 w-80 pointer-events-none">
+      {/* TOASTS */}
+      <div className="fixed bottom-6 right-6 z-[100] space-y-3 w-[calc(100%-3rem)] sm:w-80 pointer-events-none">
         {toasts.map(t => {
           const isErr = t.type === 'error';
           const isWarn = t.type === 'warning';
