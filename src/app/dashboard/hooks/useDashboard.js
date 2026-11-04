@@ -407,32 +407,47 @@ export function useDashboard() {
     setUploading(false);
   };
 
+  // ============================================================
+  // MANAJEMEN STOK — Otomatis kurangi saat order di-accept (cooking)
+  //                 Otomatis pulihkan saat order di-cancel
+  // ============================================================
   const handleUpdateOrderStatus = async (id, status) => {
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
-    
-    if (status === 'cooking') {
-      const order = orders.find(o => o.id === id);
-      if (order && order.items) {
-        for (const item of order.items) {
-          const menu = menus.find(m => m.id === item.id);
-          if (menu) {
-            const newStock = (menu.stock || 0) - item.qty;
-            await supabase.from('menus').update({ 
-              stock: newStock,
-              status: newStock <= 0 ? 'soldout' : 'available'
-            }).eq('id', menu.id);
-          }
+
+    const currentOrder = orders.find(o => o.id === id);
+
+    // Kurangi stok HANYA saat transisi pending -> cooking
+    if (status === 'cooking' && currentOrder && currentOrder.status === 'pending' && Array.isArray(currentOrder.items)) {
+      for (const item of currentOrder.items) {
+        const menu = menus.find(m => m.name === item.name);
+        if (menu) {
+          const newStock = Math.max(0, Number(menu.stock || 0) - Number(item.qty || 0));
+          await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);
         }
       }
+      await fetchMenus(tenantId);
     }
 
     await supabase.from('orders').update(u).eq('id', id);
     fetchOrders(tenantId);
-    fetchMenus(tenantId);
   };
 
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
+    const currentOrder = orders.find(o => o.id === id);
+
+    // Pulihkan stok jika sebelumnya sudah dikurangi (status cooking/ready)
+    if (currentOrder && ['cooking', 'ready'].includes(currentOrder.status) && Array.isArray(currentOrder.items)) {
+      for (const item of currentOrder.items) {
+        const menu = menus.find(m => m.name === item.name);
+        if (menu) {
+          const newStock = Number(menu.stock || 0) + Number(item.qty || 0);
+          await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);
+        }
+      }
+      await fetchMenus(tenantId);
+    }
+
     await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id);
     fetchOrders(tenantId);
     showToast('Pesanan ditolak', 'warning');
@@ -458,13 +473,22 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
+  // Tambah/kurangi stok manual via tombol + / −
+  const handleUpdateStock = async (menuId, currentStock, change) => {
+    const newStock = Math.max(0, Number(currentStock || 0) + change);
+    const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
+    if (error) { showToast('Gagal update stok: ' + error.message, 'error'); return; }
+    await fetchMenus(tenantId);
+    showToast(change > 0 ? 'Stok ditambah' : 'Stok dikurangi', 'success');
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     const { data, error } = await supabase.from('tenants').update({
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
-      // notify_order_ready: settings.notify_order_ready,  <-- MATI SEMENTARA
+      // notify_order_ready: settings.notify_order_ready,  <-- TETAP DIMATIKAN UNTUK HINDARI ERROR CACHE
     }).eq('id', tenantId).select();
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
@@ -476,33 +500,18 @@ export function useDashboard() {
 
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
-    
     const payload = {
       tenant_id: tenantId, 
-      name: currentMenu.name || '', 
-      category: currentMenu.category || 'makanan',
-      price: parseFloat(currentMenu.price) || 0, 
-      description: currentMenu.desc || '',
-      status: currentMenu.status || 'available', 
-      image_url: currentMenu.image_url || '',
-      stock: parseInt(currentMenu.stock) || 0, 
+      name: currentMenu.name, 
+      category: currentMenu.category,
+      price: parseFloat(currentMenu.price), 
+      description: currentMenu.desc,
+      status: currentMenu.status, 
+      image_url: currentMenu.image_url,
+      stock: parseInt(currentMenu.stock, 10) || 0,
     };
-
-    let error;
-    if (isEdit) {
-      const { error: err } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
-      error = err;
-    } else {
-      const { error: err } = await supabase.from('menus').insert([payload]);
-      error = err;
-    }
-
-    if (error) {
-      console.error("Supabase Error:", error);
-      showToast('Gagal simpan: ' + error.message, 'error');
-      return;
-    }
-
+    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+    else await supabase.from('menus').insert([payload]);
     resetFn({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0 });
     fetchMenus(tenantId);
     showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
@@ -618,6 +627,7 @@ export function useDashboard() {
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
+    handleUpdateStock,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,

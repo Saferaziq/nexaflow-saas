@@ -21,7 +21,7 @@ export default function TabContent({
   }
 
   if (activeTab === 'menu') {
-    return <TabMenu theme={theme} menus={d.menus} menuSearch={menuSearch} setMenuSearch={setMenuSearch} menuCategoryFilter={menuCategoryFilter} setMenuCategoryFilter={setMenuCategoryFilter} onOpenAddMenu={onOpenAddMenu} onOpenEditMenu={onOpenEditMenu} onDeleteMenu={d.handleDeleteMenu} onToggleStatus={d.toggleMenuStatus} rp={rp} />;
+    return <TabMenu theme={theme} menus={d.menus} menuSearch={menuSearch} setMenuSearch={setMenuSearch} menuCategoryFilter={menuCategoryFilter} setMenuCategoryFilter={setMenuCategoryFilter} onOpenAddMenu={onOpenAddMenu} onOpenEditMenu={onOpenEditMenu} onDeleteMenu={d.handleDeleteMenu} onToggleStatus={d.toggleMenuStatus} onUpdateStock={d.handleUpdateStock} rp={rp} />;
   }
 
   if (activeTab === 'tables') {
