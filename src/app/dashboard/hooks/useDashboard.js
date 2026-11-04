@@ -354,7 +354,6 @@ export function useDashboard() {
     try {
       const printModule = await import('../helpers/print');
       const printFn = printModule.printDailyReport;
-
       if (printFn) {
         printFn({ orders: orders.filter(o => o.status !== 'cancelled'), settings, userEmail });
       } else {
@@ -461,12 +460,11 @@ export function useDashboard() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    
     const { data, error } = await supabase.from('tenants').update({
       name: settings.name, wa_number: settings.wa, address: settings.address,
       logo_url: settings.logo_url, qris_string: settings.qris_string,
       banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
-      // notify_order_ready: settings.notify_order_ready,
+      // notify_order_ready: settings.notify_order_ready,  <-- MATI SEMENTARA
     }).eq('id', tenantId).select();
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
@@ -476,11 +474,11 @@ export function useDashboard() {
     showToast('Pengaturan disimpan', 'success');
   };
 
+  // RPC V3 UNTUK SIMPAN MENU
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     
-    // RPC PANGGILAN BERSIH
-    const { error } = await supabase.rpc('simpan_menu_v2', {
+    const { error } = await supabase.rpc('simpan_menu_v3', {
       p_id: isEdit ? currentMenu.id : null,
       p_tenant_id: tenantId,
       p_name: currentMenu.name || '',
