@@ -102,6 +102,14 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
+  // 🔥 Fungsi Pengecekan Status Kafe
+  const fetchCafeStatus = async () => {
+    const { data } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
+    if (data && data.is_open !== undefined) {
+      setCafe(prev => ({ ...prev, is_open: data.is_open !== false }));
+    }
+  };
+
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
     document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
@@ -142,7 +150,7 @@ function OrderContent() {
 
     const channel = supabase.channel('customer-realtime-' + Date.now())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
-        setCafe(payload.new);
+        setCafe(prev => ({ ...prev, ...payload.new }));
         if (payload.new.banner_url) extractDominantColor(payload.new.banner_url);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => {
@@ -153,10 +161,12 @@ function OrderContent() {
       })
       .subscribe();
 
+    // 🔥 Auto-Polling: Cek Pesanan + Cek Status Kafe Tiap 3 Detik
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
       }
+      fetchCafeStatus(); 
     }, 3000);
 
     return () => {
@@ -335,6 +345,15 @@ function OrderContent() {
       return;
     }
     setIsSubmitting(true);
+
+    // 🔥 VALIDASI TERAKHIR KE SERVER
+    const { data: tenantData } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
+    if (tenantData && tenantData.is_open === false) {
+      showToast('Maaf, kafe baru saja tutup.');
+      setCafe(prev => ({ ...prev, is_open: false }));
+      setIsSubmitting(false);
+      return;
+    }
 
     const menuIds = cart.map(i => i.id);
     const { data: freshMenus, error: freshErr } = await supabase
