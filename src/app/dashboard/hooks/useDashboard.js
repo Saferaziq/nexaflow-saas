@@ -16,7 +16,7 @@ export function useDashboard() {
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11, notify_order_ready: true });
-  const [isOpen, setIsOpen] = useState(true); // 🔥 STATE UNTUK BUKA/TUTUP
+  const [isOpen, setIsOpen] = useState(true);
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
@@ -41,6 +41,7 @@ export function useDashboard() {
   const audioCtxRef = useRef(null);
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const hasPendingOrderRef = useRef(false); // 🔥 TRACKING PESANAN PENDING
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -119,7 +120,7 @@ export function useDashboard() {
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
-          playBeep(); 
+          playBeep(); // Bunyi instan saat pesanan baru masuk
           const first = data.find(o => o.id === newOnes[0]);
           if (first) showToast(`Pesanan baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
@@ -134,26 +135,26 @@ export function useDashboard() {
     if (data && data.is_open !== undefined) setIsOpen(data.is_open !== false);
   };
 
+  // 🔥 UPDATE REF PENDING SETIAP KALI ADA PERUBAHAN DATA
   useEffect(() => {
-    const hasPendingOrder = orders.some(o => o.status === 'pending');
-    if (hasPendingOrder) {
-      if (!beepIntervalRef.current) {
-        beepIntervalRef.current = setInterval(() => {
-          playBeep();
-        }, 15000);
+    hasPendingOrderRef.current = orders.some(o => o.status === 'pending');
+  }, [orders]);
+
+  // 🔥 INTERVAL BUNYI KASIR: Jalan terus di background tiap 10 detik
+  useEffect(() => {
+    beepIntervalRef.current = setInterval(() => {
+      if (hasPendingOrderRef.current) {
+        playBeep();
       }
-    } else {
+    }, 10000);
+
+    return () => {
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
         beepIntervalRef.current = null;
       }
-    }
-    return () => {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-      }
     };
-  }, [orders]);
+  }, []);
 
   useEffect(() => {
     setTheme(localStorage.getItem('nexaflow_theme') || 'light');
@@ -277,7 +278,6 @@ export function useDashboard() {
     };
   }, [router]);
 
-  // 🔥 FUNGSI UBAH STATUS BUKA/TUTUP KAFE
   const handleToggleCafeStatus = async () => {
     const newStatus = !isOpen;
     const { error } = await supabase.from('tenants').update({ is_open: newStatus }).eq('id', tenantId);
@@ -639,13 +639,13 @@ export function useDashboard() {
   );
 
   return {
-    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, // Pastikan isOpen dikembalikan
+    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen,
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleUpdateStock, 
-    handleToggleCafeStatus, // 🔥 Pastikan fungsi ini dikembalikan!
+    handleToggleCafeStatus, 
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,

@@ -78,6 +78,9 @@ function OrderContent() {
   const intervalRef = useRef(null);
   const pollRef = useRef(null);
   const myOrderIdsRef = useRef([]);
+  const myOrdersRef = useRef([]);
+  myOrdersRef.current = myOrders;
+  const prevReadyRef = useRef(false);
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -102,7 +105,6 @@ function OrderContent() {
     if (data) setMyOrders(data);
   };
 
-  // 🔥 Fungsi Pengecekan Status Kafe
   const fetchCafeStatus = async () => {
     const { data } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
     if (data && data.is_open !== undefined) {
@@ -161,7 +163,6 @@ function OrderContent() {
       })
       .subscribe();
 
-    // 🔥 Auto-Polling: Cek Pesanan + Cek Status Kafe Tiap 3 Detik
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
@@ -238,8 +239,18 @@ function OrderContent() {
     };
   }, []);
 
-  const checkReadyOrders = () => {
-    if (!audioUnlocked) return; 
+  // 🔥 1. Bunyi Instan saat pesanan baru berstatus "ready"
+  useEffect(() => {
+    const hasReady = myOrders.some(o => o.status === 'ready');
+    if (hasReady && !prevReadyRef.current && audioUnlocked && cafe.notify_order_ready !== false) {
+      playReadySound();
+    }
+    prevReadyRef.current = hasReady;
+  }, [myOrders, audioUnlocked, cafe.notify_order_ready]);
+
+  // 🔥 2. Bunyi Berulang tiap 20 detik
+  useEffect(() => {
+    if (!audioUnlocked) return;
     if (cafe.notify_order_ready === false) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -247,26 +258,21 @@ function OrderContent() {
       }
       return;
     }
-    const hasReadyOrder = myOrders.some(o => o.status === 'ready');
-    if (hasReadyOrder) {
-      if (!intervalRef.current) {
+
+    intervalRef.current = setInterval(() => {
+      const hasReady = myOrdersRef.current.some(o => o.status === 'ready');
+      if (hasReady) {
         playReadySound();
-        intervalRef.current = setInterval(() => { playReadySound(); }, 15000); 
       }
-    } else {
+    }, 20000);
+
+    return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-    }
-  };
-
-  useEffect(() => {
-    checkReadyOrders();
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [myOrders, audioUnlocked, cafe.notify_order_ready]);
+  }, [audioUnlocked, cafe.notify_order_ready]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -346,7 +352,6 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // 🔥 VALIDASI TERAKHIR KE SERVER
     const { data: tenantData } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
     if (tenantData && tenantData.is_open === false) {
       showToast('Maaf, kafe baru saja tutup.');
@@ -462,7 +467,6 @@ function OrderContent() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
       
-      {/* 🔥 OVERLAY KAFE TUTUP */}
       {cafe.is_open === false && (
         <div className="fixed inset-0 z-[999] bg-white/95 backdrop-blur-md flex items-center justify-center p-6">
           <div className="text-center max-w-md w-full animate-in zoom-in-95 duration-300">
