@@ -9,7 +9,7 @@ import TabSettings from './TabSettings';
 export default function TabContent({
   activeTab, theme, d, rp, displayOrders, queueFilter, setQueueFilter,
   menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
-  newTableNum, setNewTableNum, openAddMenu, openEditMenu, onAddTable,
+  newTableNum, setNewTableNum, onOpenAddMenu, onOpenEditMenu, onAddTable,
   onDownloadQR, onPrintBill, reportMode, setReportMode, reportDateStr, setReportDateStr,
   reportMonth, setReportMonth, reportYear, setReportYear, reportStartDateStr, setReportStartDateStr,
   reportEndDateStr, setReportEndDateStr, reportLabel, reportStats, topMenus, chartData,
@@ -21,7 +21,7 @@ export default function TabContent({
   }
 
   if (activeTab === 'menu') {
-    return <TabMenu theme={theme} menus={d.menus} menuSearch={menuSearch} setMenuSearch={setMenuSearch} menuCategoryFilter={menuCategoryFilter} setMenuCategoryFilter={setMenuCategoryFilter} onAddMenu={openAddMenu} onEditMenu={openEditMenu} onDeleteMenu={d.handleDeleteMenu} onToggleStatus={d.toggleMenuStatus} rp={rp} />;
+    return <TabMenu theme={theme} menus={d.menus} menuSearch={menuSearch} setMenuSearch={setMenuSearch} menuCategoryFilter={menuCategoryFilter} setMenuCategoryFilter={setMenuCategoryFilter} onOpenAddMenu={onOpenAddMenu} onOpenEditMenu={onOpenEditMenu} onDeleteMenu={d.handleDeleteMenu} onToggleStatus={d.toggleMenuStatus} rp={rp} />;
   }
 
   if (activeTab === 'tables') {

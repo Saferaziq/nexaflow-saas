@@ -20,7 +20,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         desc: initialData.description || '',
         status: initialData.status || 'available',
         image_url: initialData.image_url || '',
-        stock: initialData.stock || 0 // Perbaikan: menggunakan || 0 untuk handle undefined
+        stock: initialData.stock || 0
       });
     } else {
       setFormData({
@@ -58,7 +58,6 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4">
-          {/* Upload Foto */}
           <div>
             <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Foto Menu</label>
             <div className="flex items-center gap-4">
@@ -74,7 +73,6 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
             </div>
           </div>
 
-          {/* Form Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Nama Menu <span className="text-rose-500">*</span></label>

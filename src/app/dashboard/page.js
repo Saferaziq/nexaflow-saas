@@ -95,8 +95,8 @@ function DashboardContent() {
             setMenuCategoryFilter={d.setMenuCategoryFilter}
             newTableNum={newTableNum} 
             setNewTableNum={setNewTableNum} 
-            openAddMenu={handleOpenAddMenu} 
-            openEditMenu={handleOpenEditMenu} 
+            onOpenAddMenu={handleOpenAddMenu} 
+            onOpenEditMenu={handleOpenEditMenu} 
             onAddTable={handleAddTable}
             onDownloadQR={d.handleDownloadQR} 
             onPrintBill={d.handlePrintBill}
