@@ -20,7 +20,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         desc: initialData.description || '',
         status: initialData.status || 'available',
         image_url: initialData.image_url || '',
-        stock: initialData.stock !== null ? initialData.stock : 0 // TAMBAHAN STOK
+        stock: initialData.stock || 0 // Perbaikan: menggunakan || 0 untuk handle undefined
       });
     } else {
       setFormData({

@@ -62,7 +62,6 @@ export default function TabMenu({
                   <Icons.Utensils />
                 </div>
               )}
-              {/* TAMPILAN STOK & STATUS */}
               <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                 <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${m.status === 'available' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-rose-100 text-rose-700 border border-rose-300'}`}>
                   {m.status === 'available' ? 'Tersedia' : 'Habis'}
