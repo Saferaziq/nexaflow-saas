@@ -31,18 +31,8 @@ export default function TabMenu({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
-          <input 
-            type="text" 
-            placeholder="Cari nama menu..." 
-            value={menuSearch} 
-            onChange={e => setMenuSearch(e.target.value)} 
-            className={inputClass} 
-          />
-          <select 
-            value={menuCategoryFilter} 
-            onChange={e => setMenuCategoryFilter(e.target.value)} 
-            className={inputClass}
-          >
+          <input type="text" placeholder="Cari nama menu..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} className={inputClass} />
+          <select value={menuCategoryFilter} onChange={e => setMenuCategoryFilter(e.target.value)} className={inputClass}>
             <option value="all">Semua Kategori</option>
             <option value="makanan">Makanan</option>
             <option value="minuman">Minuman</option>
@@ -79,24 +69,15 @@ export default function TabMenu({
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-4">
-              <button 
-                onClick={() => onOpenEditMenu(m)} 
-                className={`py-2 rounded-lg text-xs font-bold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}
-              >
+              <button onClick={() => onOpenEditMenu(m)} className={`py-2 rounded-lg text-xs font-bold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
                 Edit
               </button>
-              <button 
-                onClick={() => onDeleteMenu(m.id)} 
-                className="py-2 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border-2 border-rose-200 transition-colors"
-              >
+              <button onClick={() => onDeleteMenu(m.id)} className="py-2 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border-2 border-rose-200 transition-colors">
                 Hapus
               </button>
             </div>
             
-            <button 
-              onClick={() => onToggleStatus(m)} 
-              className={`w-full mt-2 py-2 rounded-lg text-xs font-bold transition-colors border-2 ${m.status === 'available' ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}`}
-            >
+            <button onClick={() => onToggleStatus(m)} className={`w-full mt-2 py-2 rounded-lg text-xs font-bold transition-colors border-2 ${m.status === 'available' ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
               {m.status === 'available' ? 'Tandai Habis' : 'Tandai Tersedia'}
             </button>
           </div>

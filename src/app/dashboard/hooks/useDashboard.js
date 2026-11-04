@@ -130,7 +130,6 @@ export function useDashboard() {
 
   useEffect(() => {
     const hasPendingOrder = orders.some(o => o.status === 'pending');
-
     if (hasPendingOrder) {
       if (!beepIntervalRef.current) {
         beepIntervalRef.current = setInterval(() => {
@@ -143,7 +142,6 @@ export function useDashboard() {
         beepIntervalRef.current = null;
       }
     }
-
     return () => {
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
@@ -358,11 +356,7 @@ export function useDashboard() {
       const printFn = printModule.printDailyReport;
 
       if (printFn) {
-        printFn({
-          orders: orders.filter(o => o.status !== 'cancelled'),
-          settings,
-          userEmail
-        });
+        printFn({ orders: orders.filter(o => o.status !== 'cancelled'), settings, userEmail });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
@@ -418,7 +412,6 @@ export function useDashboard() {
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
     
-    // LOGIKA POTONG STOK: Saat pesanan mulai dimasak
     if (status === 'cooking') {
       const order = orders.find(o => o.id === id);
       if (order && order.items) {
@@ -470,34 +463,23 @@ export function useDashboard() {
     e.preventDefault();
     
     const { data, error } = await supabase.from('tenants').update({
-      name: settings.name, 
-      wa_number: settings.wa, 
-      address: settings.address,
-      logo_url: settings.logo_url, 
-      qris_string: settings.qris_string,
-      banner_url: settings.banner_url, 
-      tax_percentage: settings.tax_percentage,
-      // notify_order_ready: settings.notify_order_ready,  <-- DIMATIKAN SEMENTARA
+      name: settings.name, wa_number: settings.wa, address: settings.address,
+      logo_url: settings.logo_url, qris_string: settings.qris_string,
+      banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
+      // notify_order_ready: settings.notify_order_ready,
     }).eq('id', tenantId).select();
 
-    if (error) {
-      showToast('Gagal simpan: ' + error.message, 'error');
-      console.error("Supabase Error:", error);
-      return;
-    }
-    if (data.length === 0) {
-      showToast('Gagal simpan: Anda tidak memiliki akses (RLS).', 'error');
-      return;
-    }
+    if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
+    if (data.length === 0) { showToast('Gagal simpan: Akses ditolak (RLS).', 'error'); return; }
 
     setCafeName(settings.name);
     showToast('Pengaturan disimpan', 'success');
   };
 
-  // MENGGUNAKAN RPC BYPASS TERBARU (simpan_menu_v2)
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     
+    // RPC PANGGILAN BERSIH
     const { error } = await supabase.rpc('simpan_menu_v2', {
       p_id: isEdit ? currentMenu.id : null,
       p_tenant_id: tenantId,
@@ -542,17 +524,10 @@ export function useDashboard() {
     try {
       const printModule = await import('../helpers/print');
       const qrisModule = await import('../helpers/qris');
-      
       const printFn = printModule.printBillWithQRIS;
       const qrisFn = qrisModule.generateDynamicQRIS;
-
       if (printFn && qrisFn) {
-        printFn({
-          order,
-          settings,
-          generateDynamicQRIS: qrisFn,
-          showToast
-        });
+        printFn({ order, settings, generateDynamicQRIS: qrisFn, showToast });
       } else {
         showToast('Fungsi cetak tidak ditemukan di print.js', 'error');
       }
@@ -566,13 +541,8 @@ export function useDashboard() {
     try {
       const printModule = await import('../helpers/print');
       const printFn = printModule.printDailyReport;
-
       if (printFn) {
-        printFn({
-          orders,
-          settings,
-          userEmail
-        });
+        printFn({ orders, settings, userEmail });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
@@ -588,68 +558,46 @@ export function useDashboard() {
       showToast('Menyiapkan gambar QR...', 'info');
       const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(orderUrl)}`;
-      
       const canvas = document.createElement('canvas');
-      canvas.width = 1000;
-      canvas.height = 1300;
+      canvas.width = 1000; canvas.height = 1300;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (settings.logo_url) {
         const logoImg = new Image();
-        logoImg.crossOrigin = 'Anonymous';
-        logoImg.src = settings.logo_url;
+        logoImg.crossOrigin = 'Anonymous'; logoImg.src = settings.logo_url;
         await new Promise((resolve) => {
-          logoImg.onload = () => {
-            ctx.drawImage(logoImg, 400, 80, 200, 200); 
-            resolve();
-          };
+          logoImg.onload = () => { ctx.drawImage(logoImg, 400, 80, 200, 200); resolve(); };
           logoImg.onerror = resolve;
         });
       }
 
-      ctx.fillStyle = '#2A1F17';
-      ctx.font = 'bold 50px Arial';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 50px Arial'; ctx.textAlign = 'center';
       ctx.fillText(settings.name.toUpperCase(), 500, 350);
 
       const qrImg = new Image();
-      qrImg.crossOrigin = 'Anonymous';
-      qrImg.src = qrApiUrl;
-      
+      qrImg.crossOrigin = 'Anonymous'; qrImg.src = qrApiUrl;
       await new Promise((resolve, reject) => {
-        qrImg.onload = () => {
-          ctx.drawImage(qrImg, 150, 400, 700, 700);
-          resolve();
-        };
+        qrImg.onload = () => { ctx.drawImage(qrImg, 150, 400, 700, 700); resolve(); };
         qrImg.onerror = reject;
       });
 
-      ctx.fillStyle = '#2A1F17';
-      ctx.font = 'bold 70px Arial';
+      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 70px Arial';
       ctx.fillText(`MEJA ${table.table_number}`, 500, 1200);
-
-      ctx.fillStyle = '#5C4B3E';
-      ctx.font = '30px Arial';
+      ctx.fillStyle = '#5C4B3E'; ctx.font = '30px Arial';
       ctx.fillText('Scan untuk memesan menu', 500, 1260);
 
       canvas.toBlob((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `QR_Meja_${table.table_number}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        link.href = blobUrl; link.download = `QR_Meja_${table.table_number}.png`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
-        
         showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
       }, 'image/png');
 
     } catch (error) {
-      console.error(error);
-      showToast('Gagal membuat gambar QR.', 'error');
+      console.error(error); showToast('Gagal membuat gambar QR.', 'error');
     }
   };
 
@@ -661,31 +609,17 @@ export function useDashboard() {
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings,
-    todayStr, baseUrl, isExpired, theme, nowTick,
-    realtimeStatus, toasts, confirmDialog, isFullscreen,
+    todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
-    rp, showToast, askConfirm, unlockAudio,
-    toggleTheme, toggleFullscreen, handleLogout,
-    handleImageUpload, handleUpdateOrderStatus, handleCancelOrder,
-    handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
-    handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink,
-    handlePrintBill, handlePrintDaily, handleDownloadQR,
-    fetchMenus, fetchOrders, fetchTables,
-    menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
+    rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
+    handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
+    handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
+    fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
-    
-    reportMode, setReportMode, reportDateStr, setReportDateStr, 
-    reportMonth, setReportMonth, reportYear, setReportYear, 
+    reportMode, setReportMode, reportDateStr, setReportDateStr, reportMonth, setReportMonth, reportYear, setReportYear,
     reportStartDateStr, setReportStartDateStr, reportEndDateStr, setReportEndDateStr,
-    reportLabel: reportData.label,
-    reportStats: reportData.reportStats,
-    topMenus: reportData.topMenus,
-    chartData: reportData.chartData,
-    maxChartRev: reportData.maxChartRev,
-    totalChartRev: reportData.totalChartRev,
-    showDailyBreakdown: false,
-    activeDays: [],
-    onExportCSV: handleExportCSV,
-    onPrintReport: handlePrintReport,
+    reportLabel: reportData.label, reportStats: reportData.reportStats, topMenus: reportData.topMenus,
+    chartData: reportData.chartData, maxChartRev: reportData.maxChartRev, totalChartRev: reportData.totalChartRev,
+    showDailyBreakdown: false, activeDays: [], onExportCSV: handleExportCSV, onPrintReport: handlePrintReport,
   };
 }
