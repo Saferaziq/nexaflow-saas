@@ -474,21 +474,28 @@ export function useDashboard() {
     showToast('Pengaturan disimpan', 'success');
   };
 
-  // RPC V3 UNTUK SIMPAN MENU
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     
-    const { error } = await supabase.rpc('simpan_menu_v3', {
-      p_id: isEdit ? currentMenu.id : null,
-      p_tenant_id: tenantId,
-      p_name: currentMenu.name || '',
-      p_category: currentMenu.category || 'makanan',
-      p_price: parseFloat(currentMenu.price) || 0,
-      p_description: currentMenu.desc || '',
-      p_status: currentMenu.status || 'available',
-      p_image_url: currentMenu.image_url || '',
-      p_stock: parseInt(currentMenu.stock) || 0,
-    });
+    const payload = {
+      tenant_id: tenantId, 
+      name: currentMenu.name || '', 
+      category: currentMenu.category || 'makanan',
+      price: parseFloat(currentMenu.price) || 0, 
+      description: currentMenu.desc || '',
+      status: currentMenu.status || 'available', 
+      image_url: currentMenu.image_url || '',
+      stock: parseInt(currentMenu.stock) || 0, 
+    };
+
+    let error;
+    if (isEdit) {
+      const { error: err } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from('menus').insert([payload]);
+      error = err;
+    }
 
     if (error) {
       console.error("Supabase Error:", error);
