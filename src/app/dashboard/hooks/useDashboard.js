@@ -450,6 +450,7 @@ export function useDashboard() {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     
+    // BYPASS CACHE: notify_order_ready dimatikan sementara
     const { data, error } = await supabase.from('tenants').update({
       name: settings.name, 
       wa_number: settings.wa, 
@@ -458,7 +459,7 @@ export function useDashboard() {
       qris_string: settings.qris_string,
       banner_url: settings.banner_url, 
       tax_percentage: settings.tax_percentage,
-      notify_order_ready: settings.notify_order_ready,
+      // notify_order_ready: settings.notify_order_ready,  <-- DIMATIKAN SEMENTARA
     }).eq('id', tenantId).select();
 
     if (error) {
