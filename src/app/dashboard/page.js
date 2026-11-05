@@ -25,8 +25,12 @@ function DashboardContent() {
   const handleOpenAddMenu = () => setMenuModal({ open: true, mode: 'add', data: null });
   const handleOpenEditMenu = (menu) => setMenuModal({ open: true, mode: 'edit', data: menu });
 
+  // 🔥 PERBAIKAN ERROR PREVENTDEFAULT DI SINI
   const handleAddTable = (e) => {
-    e.preventDefault();
+    // Cek jika 'e' adalah event form (bukan string), baru jalankan preventDefault
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     d.handleAddTable(newTableNum, setNewTableNum);
   };
 
