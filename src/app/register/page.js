@@ -111,6 +111,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    // 1. Daftarkan Email & Password ke Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
@@ -120,6 +121,7 @@ export default function RegisterPage() {
     }
 
     if (authData.user) {
+      // 2. Panggil RPC untuk membuat Kafe & User (Bypass RLS)
       const { error: rpcError } = await supabase.rpc('register_new_tenant', {
         p_user_id: authData.user.id,
         p_cafe_name: finalCafeName,
@@ -132,6 +134,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // 3. Auto Login & Masuk Dashboard
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       
       if (loginError) {
