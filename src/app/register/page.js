@@ -81,8 +81,21 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg('');
 
+    const finalCafeName = cafeName.trim();
+    const finalWaNumber = waNumber.trim();
+
     if (!agreeTerms) {
       setErrorMsg('Anda harus menyetujui Syarat & Ketentuan.');
+      return;
+    }
+
+    if (!finalCafeName) {
+      setErrorMsg('Nama Kafe/Resto tidak boleh kosong.');
+      return;
+    }
+
+    if (!finalWaNumber) {
+      setErrorMsg('Nomor WhatsApp tidak boleh kosong.');
       return;
     }
 
@@ -101,33 +114,22 @@ export default function RegisterPage() {
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
-      setErrorMsg(authError.message);
+      setErrorMsg(authError.message === 'User already registered' ? 'Email ini sudah terdaftar. Silakan login.' : authError.message);
       setLoading(false);
       return;
     }
 
     if (authData.user) {
-      const { data: newTenant, error: dbError } = await supabase.from('tenants').insert([{
-        name: cafeName,
-        wa_number: waNumber,
-        subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        is_active: true,
-        is_open: true
-      }]).select().single();
+      const { error: rpcError } = await supabase.rpc('register_new_tenant', {
+        p_user_id: authData.user.id,
+        p_cafe_name: finalCafeName,
+        p_wa_number: finalWaNumber
+      });
 
-      if (dbError) {
-        setErrorMsg('Gagal membuat profil Kafe/Resto: ' + dbError.message);
+      if (rpcError) {
+        setErrorMsg('Gagal membuat profil Kafe/Resto: ' + rpcError.message);
         setLoading(false);
         return;
-      }
-
-      if (newTenant) {
-        await supabase.from('users').insert([{
-          id: authData.user.id,
-          tenant_id: newTenant.id,
-          email: email,
-          role: 'owner'
-        }]);
       }
 
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
@@ -180,26 +182,26 @@ export default function RegisterPage() {
 
             {errorMsg && (<div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">{errorMsg}</div>)}
 
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} autoComplete="off" className="space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Kafe / Resto</label>
-                <input type="text" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja / Resto Nusantara" required />
+                <input type="text" autoComplete="off" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja / Resto Nusantara" required />
               </div>
               
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">No. WhatsApp (Aktif)</label>
-                <input type="tel" value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="0812xxxxxx" required />
+                <input type="tel" autoComplete="off" value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="0812xxxxxx" required />
               </div>
 
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="owner@nexaflow.id" required />
+                <input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="owner@nexaflow.id" required />
               </div>
 
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all pr-12" placeholder="Minimal 6 karakter" required />
+                  <input type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all pr-12" placeholder="Minimal 6 karakter" required />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8C7A6B] hover:text-[#3A2A20] transition-colors">
                     {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
                   </button>
@@ -208,7 +210,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Konfirmasi Password</label>
-                <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required />
+                <input type={showPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required />
               </div>
 
               <div className="flex items-start gap-2 pt-2">
