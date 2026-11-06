@@ -47,7 +47,6 @@ export function useDashboard() {
   const beepIntervalRef = useRef(null);
   const hasPendingOrderRef = useRef(false);
   
-  // 🔥 OPTIMASI: Refs untuk optimistic update & debounce
   const ordersRef = useRef([]);
   ordersRef.current = orders;
   const menusRef = useRef([]);
@@ -121,7 +120,6 @@ export function useDashboard() {
     }
   };
 
-  // 🔥 OPTIMASI: Filter query 120 hari + status aktif (dari 5000 row ke ~500 row)
   const fetchOrders = async (tId) => {
     if (!tId) return;
     const cutoff = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
@@ -260,15 +258,12 @@ export function useDashboard() {
 
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
-        // 🔥 OPTIMASI: Realtime dengan debounce (INSERT instan, UPDATE/DELETE debounce 600ms)
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, (payload) => {
             if (payload.eventType === 'INSERT') {
-              // INSERT (customer baru pesan): instan untuk bunyi & toast
               fetchOrders(tId);
               return;
             }
-            // UPDATE/DELETE: debounce 600ms untuk mencegah spam
             if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
             realtimeDebounceRef.current = setTimeout(() => fetchOrders(tId), 600);
           })
@@ -288,7 +283,6 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
-        // 🔥 OPTIMASI: Polling 10s → 30s (Realtime sudah handle mostly)
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
           fetchTenantStatus(tId);
@@ -323,13 +317,11 @@ export function useDashboard() {
     showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF ✅' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF 🔒', newStatus ? 'success' : 'warning');
   };
 
-  // 🔥 OPTIMASI: Optimistic update (langsung berubah, tanpa refetch)
   const handleConfirmPayment = (orderId) => {
     askConfirm('Konfirmasi Pembayaran', 'Pastikan uang sudah diterima (Cash) atau mutasi sudah masuk (QRIS). Lanjutkan?', async () => {
       const prevOrder = ordersRef.current.find(o => o.id === orderId);
       if (!prevOrder) return;
       
-      // Optimistic: update state lokal dulu
       setOrders(prev => prev.map(o => 
         o.id === orderId ? { ...o, payment_status: 'PAID', paid_at: new Date().toISOString() } : o
       ));
@@ -340,7 +332,6 @@ export function useDashboard() {
       }).eq('id', orderId);
 
       if (error) {
-        // Rollback
         setOrders(prev => prev.map(o => 
           o.id === orderId ? { ...o, payment_status: prevOrder.payment_status, paid_at: prevOrder.paid_at } : o
         ));
@@ -512,14 +503,12 @@ export function useDashboard() {
     setUploading(false);
   };
 
-  // 🔥 OPTIMASI: Optimistic update untuk status pesanan
   const handleUpdateOrderStatus = async (id, status) => {
     const prevOrder = ordersRef.current.find(o => o.id === id);
     if (!prevOrder) return;
     const prevStatus = prevOrder.status;
     const prevPaymentStatus = prevOrder.payment_status;
 
-    // Optimistic
     setOrders(prev => prev.map(o => 
       o.id === id ? { ...o, status, ...(status === 'completed' ? { payment_status: 'paid' } : {}) } : o
     ));
@@ -529,7 +518,6 @@ export function useDashboard() {
     const { error } = await supabase.from('orders').update(u).eq('id', id);
     
     if (error) {
-      // Rollback
       setOrders(prev => prev.map(o => 
         o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus } : {}) } : o
       ));
@@ -537,19 +525,16 @@ export function useDashboard() {
     }
   };
 
-  // 🔥 OPTIMASI: Optimistic update untuk cancel order
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
     const currentOrder = ordersRef.current.find(o => o.id === id);
     if (!currentOrder) return;
     const prevStatus = currentOrder.status;
     const prevPaymentStatus = currentOrder.payment_status;
 
-    // Optimistic
     setOrders(prev => prev.map(o => 
       o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED' } : o
     ));
 
-    // Kembalikan stok di background
     if (currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
         const menu = menusRef.current.find(m => m.id === item.id) || menusRef.current.find(m => m.name === item.name);
@@ -560,14 +545,12 @@ export function useDashboard() {
           });
         }
       }
-      // Fire-and-forget fetch menus
       fetchMenus(tenantId);
     }
 
     const { error } = await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
     
     if (error) {
-      // Rollback
       setOrders(prev => prev.map(o => 
         o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus } : o
       ));
@@ -590,12 +573,10 @@ export function useDashboard() {
     showToast('Meja dihapus', 'success');
   }, true);
 
-  // 🔥 OPTIMASI: Optimistic update untuk toggle menu status
   const toggleMenuStatus = async (menu) => {
     const ns = menu.status === 'available' ? 'soldout' : 'available';
     const prevMenus = menusRef.current;
     
-    // Optimistic
     setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, status: ns } : m));
     
     const { error } = await supabase.from('menus').update({ status: ns }).eq('id', menu.id);
@@ -608,12 +589,10 @@ export function useDashboard() {
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
-  // 🔥 OPTIMASI: Optimistic update untuk stock
   const handleUpdateStock = async (menuId, currentStock, change) => {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
     const prevMenus = menusRef.current;
     
-    // Optimistic
     setMenus(prev => prev.map(m => m.id === menuId ? { ...m, stock: newStock } : m));
     
     const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
@@ -641,7 +620,6 @@ export function useDashboard() {
     showToast('Pengaturan disimpan', 'success');
   };
 
-  // 🔥 OPTIMASI: Optimistic update untuk save menu
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     const payload = {
@@ -727,52 +705,78 @@ export function useDashboard() {
     }
   };
 
+  // 🔥 QR OPTIMIZATION: ECC=H (30% tolerance) + margin besar + canvas 1500x1950
   const handleDownloadQR = async (table) => {
     if (!table || !table.table_number) return;
     try {
       showToast('Menyiapkan gambar QR...', 'info');
       const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(orderUrl)}`;
+      // ECC=H untuk toleransi 30% kerusakan, margin=30 untuk quiet zone
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=30&data=${encodeURIComponent(orderUrl)}`;
+      
       const canvas = document.createElement('canvas');
-      canvas.width = 1000; canvas.height = 1300;
+      canvas.width = 1500; 
+      canvas.height = 1950;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Logo (center top)
       if (settings.logo_url) {
         const logoImg = new Image();
-        logoImg.crossOrigin = 'Anonymous'; logoImg.src = settings.logo_url;
+        logoImg.crossOrigin = 'Anonymous'; 
+        logoImg.src = settings.logo_url;
         await new Promise((resolve) => {
-          logoImg.onload = () => { ctx.drawImage(logoImg, 400, 80, 200, 200); resolve(); };
+          logoImg.onload = () => { ctx.drawImage(logoImg, 600, 100, 300, 300); resolve(); };
           logoImg.onerror = resolve;
         });
       }
 
-      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 50px Arial'; ctx.textAlign = 'center';
-      ctx.fillText(settings.name.toUpperCase(), 500, 350);
+      // Cafe name
+      ctx.fillStyle = '#2A1F17'; 
+      ctx.font = 'bold 70px Arial'; 
+      ctx.textAlign = 'center';
+      ctx.fillText(settings.name.toUpperCase(), 750, 520);
 
+      // QR Code (1000x1000 di tengah)
       const qrImg = new Image();
-      qrImg.crossOrigin = 'Anonymous'; qrImg.src = qrApiUrl;
+      qrImg.crossOrigin = 'Anonymous'; 
+      qrImg.src = qrApiUrl;
       await new Promise((resolve, reject) => {
-        qrImg.onload = () => { ctx.drawImage(qrImg, 150, 400, 700, 700); resolve(); };
+        qrImg.onload = () => { ctx.drawImage(qrImg, 250, 620, 1000, 1000); resolve(); };
         qrImg.onerror = reject;
       });
 
-      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 70px Arial';
-      ctx.fillText(`MEJA ${table.table_number}`, 500, 1200);
-      ctx.fillStyle = '#5C4B3E'; ctx.font = '30px Arial';
-      ctx.fillText('Scan untuk memesan menu', 500, 1260);
+      // Table Number
+      ctx.fillStyle = '#2A1F17'; 
+      ctx.font = 'bold 100px Arial';
+      ctx.fillText(`MEJA ${table.table_number}`, 750, 1780);
+      
+      // Instruction
+      ctx.fillStyle = '#5C4B3E'; 
+      ctx.font = 'bold 40px Arial';
+      ctx.fillText('Scan untuk memesan menu', 750, 1860);
+      
+      // Fallback text
+      ctx.fillStyle = '#888888'; 
+      ctx.font = '28px Arial';
+      ctx.fillText('Jika QR tidak terbaca, silakan hubungi kasir', 750, 1915);
 
       canvas.toBlob((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = blobUrl; link.download = `QR_Meja_${table.table_number}.png`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        link.href = blobUrl; 
+        link.download = `QR_Meja_${table.table_number}.png`;
+        document.body.appendChild(link); 
+        link.click(); 
+        document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
         showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
       }, 'image/png');
 
     } catch (error) {
-      console.error(error); showToast('Gagal membuat gambar QR.', 'error');
+      console.error(error); 
+      showToast('Gagal membuat gambar QR.', 'error');
     }
   };
 

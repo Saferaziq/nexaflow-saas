@@ -124,17 +124,21 @@ function OrderContent() {
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     myOrderIdsRef.current = existingIds;
 
+    // 🔥 OPTIMASI: Paralel fetch cafe + menu (hemat ~500ms), setLoading(false) SEBELUM fetchMyOrders
     const fetchData = async () => {
-      const { data: cafeData } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
-      if (cafeData) {
-        setCafe(cafeData);
-        if (cafeData.banner_url) extractDominantColor(cafeData.banner_url);
-        else if (cafeData.logo_url) extractDominantColor(cafeData.logo_url);
+      const [cafeRes, menuRes] = await Promise.all([
+        supabase.from('tenants').select('*').eq('id', tenantId).single(),
+        supabase.from('menus').select('*').eq('tenant_id', tenantId)
+      ]);
+      
+      if (cafeRes.data) {
+        setCafe(cafeRes.data);
+        if (cafeRes.data.banner_url) extractDominantColor(cafeRes.data.banner_url);
+        else if (cafeRes.data.logo_url) extractDominantColor(cafeRes.data.logo_url);
       }
       
-      const { data: menuData } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
-      if (menuData) {
-        const sorted = [...menuData].sort((a, b) => {
+      if (menuRes.data) {
+        const sorted = [...menuRes.data].sort((a, b) => {
           const sa = getMenuStock(a);
           const sb = getMenuStock(b);
           if (sa.isOut !== sb.isOut) return sa.isOut ? 1 : -1;
@@ -147,9 +151,11 @@ function OrderContent() {
       const savedName = localStorage.getItem('nexaflow_customer_name');
       if (savedName) setCustomerName(savedName);
 
-      if (existingIds.length > 0) await fetchMyOrders(existingIds);
-
+      // 🔥 Set loading false SEBELUM fetchMyOrders (menu langsung muncul)
       setLoading(false);
+
+      // 🔥 Fire-and-forget: fetchMyOrders di background
+      if (existingIds.length > 0) fetchMyOrders(existingIds);
     };
     fetchData();
 
@@ -166,8 +172,6 @@ function OrderContent() {
       })
       .subscribe();
 
-    // 🔥 OPTIMASI: Polling dinaikkan dari 3 detik menjadi 15 detik
-    // Realtime sudah handle update instan, polling hanya sebagai fallback
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
@@ -357,7 +361,7 @@ function OrderContent() {
     }
   };
 
-  // 🔥 OPTIMASI CHECKOUT: Paralel query, optimistic UI, fire-and-forget
+  // 🔥 OPTIMASI FINAL: Slim payload, no redundant fetch
   const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -369,7 +373,7 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // OPTIMASI #1: Paralel cek tenant + cek stok menu (hemat ~300ms)
+    // Paralel: tenant check + stock check
     const menuIds = cart.map(i => i.id);
     const [tenantRes, menuRes] = await Promise.all([
       supabase.from('tenants').select('is_open').eq('id', tenantId).single(),
@@ -406,7 +410,7 @@ function OrderContent() {
       showToast(fm && fm.status !== 'available' 
         ? `${shortage.name} sedang habis` 
         : `Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
-      fetchAllMenus(); // fire-and-forget
+      fetchAllMenus();
       setIsSubmitting(false);
       return;
     }
@@ -422,12 +426,21 @@ function OrderContent() {
       finalPaymentStatus = 'unpaid';
     }
 
+    // 🔥 OPTIMASI: Slim payload (hanya 5 field per item, bukan 10+)
+    const slimItems = cart.map(i => ({
+      id: i.id,
+      name: i.name,
+      price: i.price,
+      qty: i.qty,
+      note: i.note || ''
+    }));
+
     const orderData = { 
       tenant_id: tenantId, 
       table_number: tableNumber, 
       customer_name: customerName.trim(),
       order_note: globalNote.trim(),
-      items: cart, 
+      items: slimItems,
       subtotal: subtotal,
       tax_amount: taxAmount,
       total_price: totalPrice, 
@@ -444,7 +457,7 @@ function OrderContent() {
       return; 
     }
 
-    // OPTIMASI #2: RPC stok di background (tidak di-await, hemat ~400ms)
+    // RPC background (tidak di-await)
     supabase.rpc('decrement_menu_stock', {
       p_tenant_id: tenantId,
       p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
@@ -457,7 +470,7 @@ function OrderContent() {
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
 
-    // OPTIMASI #3: Optimistic UI - langsung tambahkan order ke state (hemat ~500ms)
+    // Optimistic update
     setMyOrders(prev => [data, ...prev]);
     
     setCart([]); 
@@ -467,10 +480,9 @@ function OrderContent() {
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
-
-    // OPTIMASI #4: Fire-and-forget sync (Realtime + Polling akan replace dengan data authoritative)
-    fetchMyOrders(newIds);
-    fetchAllMenus();
+    
+    // 🔥 TIDAK ADA fetchMyOrders / fetchAllMenus di sini
+    // Realtime sudah handle update orders & menus otomatis
     
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir ⏳');
