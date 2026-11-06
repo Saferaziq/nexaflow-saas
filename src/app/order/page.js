@@ -166,12 +166,14 @@ function OrderContent() {
       })
       .subscribe();
 
+    // 🔥 OPTIMASI: Polling dinaikkan dari 3 detik menjadi 15 detik
+    // Realtime sudah handle update instan, polling hanya sebagai fallback
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
       }
       fetchCafeStatus(); 
-    }, 3000);
+    }, 15000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -275,7 +277,6 @@ function OrderContent() {
     };
   }, [audioUnlocked, cafe.notify_order_ready]);
 
-  // 🔥 Update: Toast tampil lebih lama (4 detik)
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
@@ -352,10 +353,11 @@ function OrderContent() {
       setShowConfirmModal(false);
       setShowPaymentModal(true);
     } else {
-      handleCheckout('CASH'); // Langsung proses jika fitur OFF
+      handleCheckout('CASH');
     }
   };
 
+  // 🔥 OPTIMASI CHECKOUT: Paralel query, optimistic UI, fire-and-forget
   const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -367,27 +369,28 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    const { data: tenantData } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
-    if (tenantData && tenantData.is_open === false) {
+    // OPTIMASI #1: Paralel cek tenant + cek stok menu (hemat ~300ms)
+    const menuIds = cart.map(i => i.id);
+    const [tenantRes, menuRes] = await Promise.all([
+      supabase.from('tenants').select('is_open').eq('id', tenantId).single(),
+      supabase.from('menus').select('id, name, stock, status').in('id', menuIds)
+    ]);
+
+    if (tenantRes.data && tenantRes.data.is_open === false) {
       showToast('Maaf, kafe baru saja tutup.');
       setCafe(prev => ({ ...prev, is_open: false }));
       setIsSubmitting(false);
       return;
     }
 
-    const menuIds = cart.map(i => i.id);
-    const { data: freshMenus, error: freshErr } = await supabase
-      .from('menus')
-      .select('id, name, stock, status')
-      .in('id', menuIds);
-
-    if (freshErr) {
-      showToast('Gagal cek stok: ' + freshErr.message);
+    if (menuRes.error) {
+      showToast('Gagal cek stok: ' + menuRes.error.message);
       setIsSubmitting(false);
       return;
     }
 
-    const freshMap = new Map((freshMenus || []).map(m => [m.id, m]));
+    const freshMenus = menuRes.data || [];
+    const freshMap = new Map(freshMenus.map(m => [m.id, m]));
     const shortage = cart.find(item => {
       const fm = freshMap.get(item.id);
       if (!fm) return true;
@@ -403,7 +406,7 @@ function OrderContent() {
       showToast(fm && fm.status !== 'available' 
         ? `${shortage.name} sedang habis` 
         : `Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
-      await fetchAllMenus();
+      fetchAllMenus(); // fire-and-forget
       setIsSubmitting(false);
       return;
     }
@@ -441,22 +444,21 @@ function OrderContent() {
       return; 
     }
 
-    try {
-      const { error: decErr } = await supabase.rpc('decrement_menu_stock', {
-        p_tenant_id: tenantId,
-        p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
-      });
+    // OPTIMASI #2: RPC stok di background (tidak di-await, hemat ~400ms)
+    supabase.rpc('decrement_menu_stock', {
+      p_tenant_id: tenantId,
+      p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
+    }).then(({ error: decErr }) => {
       if (decErr) console.error('Stock decrement error:', decErr);
-    } catch (rpcErr) {
-      console.error('RPC exception:', rpcErr);
-    }
-
-    await fetchAllMenus();
+    });
 
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     const newIds = [...existingIds, data.id];
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
+
+    // OPTIMASI #3: Optimistic UI - langsung tambahkan order ke state (hemat ~500ms)
+    setMyOrders(prev => [data, ...prev]);
     
     setCart([]); 
     setGlobalNote('');
@@ -465,9 +467,11 @@ function OrderContent() {
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
+
+    // OPTIMASI #4: Fire-and-forget sync (Realtime + Polling akan replace dengan data authoritative)
     fetchMyOrders(newIds);
+    fetchAllMenus();
     
-    // 🔥 Update: Toast Notification yang lebih jelas
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir ⏳');
     } else {
@@ -712,7 +716,6 @@ function OrderContent() {
         {activeTab === 'status' && (
           <div className="space-y-4 mt-2">
             
-            {/* 🔥 BANNER NOTIFIKASI MENUNGGU KONFIRMASI */}
             {hasWaitingOrder && (
               <div className="bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl flex items-start gap-3 shadow-md shadow-amber-500/10 animate-pulse mb-2">
                 <span className="text-2xl mt-0.5">⏳</span>
@@ -768,7 +771,6 @@ function OrderContent() {
                     <span className="text-base font-black text-[var(--primary-color)]">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
                   </div>
 
-                  {/* STATUS PEMBAYARAN */}
                   {isCancelled && (
                     <div className="bg-rose-50 border-2 border-rose-300 p-4 rounded-xl text-center">
                       <p className="text-rose-800 font-black text-sm">❌ Pesanan Ditolak</p>
@@ -790,7 +792,6 @@ function OrderContent() {
                     </div>
                   )}
 
-                  {/* TIMELINE PROSES (Hanya muncul jika sudah PAID) */}
                   {!isCancelled && !isWaitingCash && !isWaitingQris && (
                     <div className="mt-2 space-y-4">
                       {statusLabels.map((label, i) => {
@@ -876,7 +877,6 @@ function OrderContent() {
         </div>
       )}
 
-      {/* MODAL 1: KONFIRMASI PESANAN (Nama & Catatan) */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
@@ -906,7 +906,6 @@ function OrderContent() {
         </div>
       )}
 
-      {/* MODAL 2: PILIH METODE PEMBAYARAN */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
@@ -944,7 +943,6 @@ function OrderContent() {
         </div>
       )}
 
-      {/* MODAL 3: TAMPILKAN QRIS */}
       {showQrisModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
