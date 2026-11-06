@@ -348,6 +348,7 @@ export function useDashboard() {
     return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
   };
 
+  // 🔥 UPDATE: Tambah mode weekly + hitung QRIS/Cash + statusCount
   const getReportData = () => {
     let start = '', end = '', label = '';
 
@@ -355,6 +356,13 @@ export function useDashboard() {
       start = reportDateStr;
       end = reportDateStr;
       label = new Date(reportDateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } else if (reportMode === 'weekly') {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 6);
+      start = weekAgo.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      end = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      label = `7 Hari Terakhir (${weekAgo.toLocaleDateString('id-ID')} - ${today.toLocaleDateString('id-ID')})`;
     } else if (reportMode === 'monthly') {
       const lastDay = new Date(reportYear, reportMonth + 1, 0).getDate();
       start = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01`;
@@ -374,10 +382,28 @@ export function useDashboard() {
 
     let revenue = 0;
     let totalItems = 0;
+    let revenueQRIS = 0;
+    let revenueCash = 0;
+    let countQRIS = 0;
+    let countCash = 0;
+    const statusCount = { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 };
     const menuMap = new Map();
 
     filtered.forEach(o => {
-      revenue += Number(o.total_price || 0);
+      const amount = Number(o.total_price || 0);
+      revenue += amount;
+
+      const method = String(o.payment_method || 'CASH').toUpperCase();
+      if (method === 'QRIS') {
+        revenueQRIS += amount;
+        countQRIS++;
+      } else {
+        revenueCash += amount;
+        countCash++;
+      }
+
+      if (statusCount.hasOwnProperty(o.status)) statusCount[o.status]++;
+
       if (o.items && Array.isArray(o.items)) {
         o.items.forEach(item => {
           totalItems += Number(item.qty || 0);
@@ -394,7 +420,11 @@ export function useDashboard() {
     const totalOrders = filtered.length;
     const avgOrder = totalOrders > 0 ? revenue / totalOrders : 0;
 
-    const reportStats = { totalOrders, revenue, avgOrder, totalItems };
+    const reportStats = { 
+      totalOrders, revenue, avgOrder, totalItems,
+      revenueQRIS, revenueCash, countQRIS, countCash,
+      statusCount
+    };
 
     const chartData = [];
     let maxChartRev = 0;
@@ -429,6 +459,8 @@ export function useDashboard() {
     csv += `Total Omset,${reportStats.revenue}\n`;
     csv += `Rata-rata/Order,${reportStats.avgOrder}\n`;
     csv += `Item Terjual,${reportStats.totalItems}\n\n`;
+    csv += `Pendapatan QRIS,${reportStats.revenueQRIS} (${reportStats.countQRIS} transaksi)\n`;
+    csv += `Pendapatan Cash,${reportStats.revenueCash} (${reportStats.countCash} transaksi)\n\n`;
     csv += `Menu Terlaris,Qty,Omset\n`;
     topMenus.forEach(([name, data]) => {
       csv += `"${name}",${data.qty},${data.revenue}\n`;
@@ -446,12 +478,20 @@ export function useDashboard() {
     showToast('Laporan CSV berhasil diunduh', 'success');
   };
 
+  // 🔥 UPDATE: Panggil printReport (bukan printDailyReport)
   const handlePrintReport = async () => {
     try {
       const printModule = await import('../helpers/print');
-      const printFn = printModule.printDailyReport;
+      const printFn = printModule.printReport;
       if (printFn) {
-        printFn({ orders: orders.filter(o => o.status !== 'cancelled'), settings, userEmail });
+        printFn({ 
+          reportStats: reportData.reportStats, 
+          topMenus: reportData.topMenus, 
+          reportLabel: reportData.label,
+          settings, 
+          userEmail,
+          reportNow: new Date(),
+        });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
@@ -705,13 +745,11 @@ export function useDashboard() {
     }
   };
 
-  // 🔥 QR OPTIMIZATION: ECC=H (30% tolerance) + margin besar + canvas 1500x1950
   const handleDownloadQR = async (table) => {
     if (!table || !table.table_number) return;
     try {
       showToast('Menyiapkan gambar QR...', 'info');
       const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
-      // ECC=H untuk toleransi 30% kerusakan, margin=30 untuk quiet zone
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=30&data=${encodeURIComponent(orderUrl)}`;
       
       const canvas = document.createElement('canvas');
@@ -721,7 +759,6 @@ export function useDashboard() {
       ctx.fillStyle = '#ffffff'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Logo (center top)
       if (settings.logo_url) {
         const logoImg = new Image();
         logoImg.crossOrigin = 'Anonymous'; 
@@ -732,13 +769,11 @@ export function useDashboard() {
         });
       }
 
-      // Cafe name
       ctx.fillStyle = '#2A1F17'; 
       ctx.font = 'bold 70px Arial'; 
       ctx.textAlign = 'center';
       ctx.fillText(settings.name.toUpperCase(), 750, 520);
 
-      // QR Code (1000x1000 di tengah)
       const qrImg = new Image();
       qrImg.crossOrigin = 'Anonymous'; 
       qrImg.src = qrApiUrl;
@@ -747,17 +782,14 @@ export function useDashboard() {
         qrImg.onerror = reject;
       });
 
-      // Table Number
       ctx.fillStyle = '#2A1F17'; 
       ctx.font = 'bold 100px Arial';
       ctx.fillText(`MEJA ${table.table_number}`, 750, 1780);
       
-      // Instruction
       ctx.fillStyle = '#5C4B3E'; 
       ctx.font = 'bold 40px Arial';
       ctx.fillText('Scan untuk memesan menu', 750, 1860);
       
-      // Fallback text
       ctx.fillStyle = '#888888'; 
       ctx.font = '28px Arial';
       ctx.fillText('Jika QR tidak terbaca, silakan hubungi kasir', 750, 1915);
