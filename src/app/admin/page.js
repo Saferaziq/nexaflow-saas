@@ -29,6 +29,25 @@ const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com';
 
 const EMPTY_CONFIRM = { open: false, title: '', message: '', requireInput: '', inputValue: '', danger: true, loading: false, onConfirm: null };
 
+// === HELPERS (fix: null/0/undefined handling) ===
+const getPrice = (tenant) => {
+  const raw = tenant?.rental_price ?? 150000;
+  const num = Number(raw);
+  return isNaN(num) ? 150000 : num;
+};
+const getCommission = (tenant) => {
+  const raw = tenant?.sales_commission ?? 0;
+  const num = Number(raw);
+  return isNaN(num) ? 0 : num;
+};
+const hasEndDate = (tenant) => !!tenant?.subscription_end_date;
+const formatDateID = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('id-ID');
+};
+
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +100,19 @@ export default function AdminDashboard() {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Close sort menu on outside click (FIX #5)
+  useEffect(() => {
+    if (!showSortMenu) return;
+    const closeMenu = () => setShowSortMenu(false);
+    const timer = setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', closeMenu);
+    };
+  }, [showSortMenu]);
 
   // ESC to close all modals
   useEffect(() => {
@@ -143,10 +175,9 @@ export default function AdminDashboard() {
         if (daysLeft <= 7) warningCount++;
 
         if (daysLeft > 0 && t.is_active !== false) {
-          // Prorated: harga bulanan × (sisa hari / 30), maksimal 1 bulan penuh
           const ratio = Math.min(daysLeft, 30) / 30;
-          totalRevenue += Math.round((Number(t.rental_price) || 150000) * ratio);
-          totalCommission += Math.round((Number(t.sales_commission) || 0) * ratio);
+          totalRevenue += Math.round(getPrice(t) * ratio);
+          totalCommission += Math.round(getCommission(t) * ratio);
         }
       }
     });
@@ -288,9 +319,9 @@ export default function AdminDashboard() {
       open: true,
       tenant,
       loading: false,
-      price: tenant.rental_price || 150000,
+      price: tenant.rental_price ?? 150000,
       referral: tenant.referral_name || '',
-      commission: tenant.sales_commission || 0,
+      commission: tenant.sales_commission ?? 0,
     });
   };
 
@@ -334,21 +365,18 @@ export default function AdminDashboard() {
     setConfirmModal(prev => ({ ...prev, loading: true }));
     setTenantLoading(tenant.id, 'delete');
 
-    // 1) delete orders
     const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
     if (orderErr) {
       setTenantLoading(tenant.id, null);
       setConfirmModal(prev => ({ ...prev, loading: false }));
       return showToast('Gagal hapus orders: ' + orderErr.message, 'error');
     }
-    // 2) delete menus
     const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
     if (menuErr) {
       setTenantLoading(tenant.id, null);
       setConfirmModal(prev => ({ ...prev, loading: false }));
       return showToast('Gagal hapus menus: ' + menuErr.message, 'error');
     }
-    // 3) delete tenant
     const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
     setTenantLoading(tenant.id, null);
     if (tenantErr) {
@@ -413,7 +441,7 @@ export default function AdminDashboard() {
       const daysLeft = calculateDaysLeft(t.subscription_end_date);
       let matchStatus = true;
       if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true && t.is_active !== false;
-      else if (filterStatus === 'expired') matchStatus = daysLeft === 0 && t.is_active !== false;
+      else if (filterStatus === 'expired') matchStatus = hasEndDate(t) && daysLeft <= 0 && t.is_active !== false;
       else if (filterStatus === 'suspended') matchStatus = t.is_active === false;
       else if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 7 && t.is_active !== false;
 
@@ -425,7 +453,7 @@ export default function AdminDashboard() {
     const arr = [...filteredTenants];
     if (sortBy === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     else if (sortBy === 'daysLeft') arr.sort((a, b) => calculateDaysLeft(a.subscription_end_date) - calculateDaysLeft(b.subscription_end_date));
-    else if (sortBy === 'revenue') arr.sort((a, b) => (Number(b.rental_price) || 0) - (Number(a.rental_price) || 0));
+    else if (sortBy === 'revenue') arr.sort((a, b) => getPrice(b) - getPrice(a));
     else arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return arr;
   }, [filteredTenants, sortBy, now]);
@@ -507,9 +535,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}><Icons.BarChart /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}>Komisi Sales (Prorated)</p>
-            <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
+            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
+            <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
           </div>
         </div>
 
@@ -526,16 +554,18 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* Sort dropdown */}
           <div className="relative">
             <button
-              onClick={() => setShowSortMenu(v => !v)}
+              onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }}
               className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-3 py-2 rounded-lg text-[10px] w-full lg:w-auto`}
             >
               <Icons.Sort /> {sortLabels[sortBy]}
             </button>
             {showSortMenu && (
-              <div className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}
+              >
                 {Object.entries(sortLabels).map(([k, v]) => (
                   <button
                     key={k}
@@ -586,9 +616,9 @@ export default function AdminDashboard() {
               ) : sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
                 const isOnline = onlineUsers[tenant.id];
-                const isExpired = daysLeft <= 0 && tenant.is_active !== false;
                 const isSuspended = tenant.is_active === false;
-                const isWarning = daysLeft > 0 && daysLeft <= 7 && !isSuspended;
+                const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
+                const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
                 const busy = !!actionLoading[tenant.id];
 
                 return (
@@ -599,7 +629,7 @@ export default function AdminDashboard() {
                           <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
                         ) : (
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
-                            {tenant.name.charAt(0)}
+                            {(tenant.name || '?').charAt(0)}
                           </div>
                         )}
                         <div>
@@ -628,24 +658,24 @@ export default function AdminDashboard() {
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col gap-0.5">
-                        <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
-                          {isSuspended ? 'BEKU' : `${daysLeft} HARI`}
+                        <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
+                          {isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}
                         </span>
                         <p className={`text-[9px] font-bold uppercase tracking-wider ${textSub}`}>
-                          {isSuspended ? 'Disuspend' : new Date(tenant.subscription_end_date).toLocaleDateString('id-ID')}
+                          {isSuspended ? 'Disuspend' : hasEndDate(tenant) ? formatDateID(tenant.subscription_end_date) : 'Belum diatur'}
                         </p>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col gap-0.5">
                         <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                          Rp {(tenant.rental_price || 150000).toLocaleString('id-ID')}
+                          Rp {getPrice(tenant).toLocaleString('id-ID')}
                         </p>
                         <p className={`text-[9px] font-bold ${textSub}`}>
                           Ref: <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>{tenant.referral_name || '-'}</span>
                         </p>
                         <p className={`text-[9px] font-bold ${textSub}`}>
-                          Komisi: <span className={theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}>Rp {(tenant.sales_commission || 0).toLocaleString('id-ID')}</span>
+                          Komisi: <span className={theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span>
                         </p>
                       </div>
                     </td>
@@ -682,9 +712,9 @@ export default function AdminDashboard() {
           ) : sortedTenants.map((tenant) => {
             const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
             const isOnline = onlineUsers[tenant.id];
-            const isExpired = daysLeft <= 0 && tenant.is_active !== false;
             const isSuspended = tenant.is_active === false;
-            const isWarning = daysLeft > 0 && daysLeft <= 7 && !isSuspended;
+            const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
+            const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
             const busy = !!actionLoading[tenant.id];
 
             return (
@@ -695,7 +725,7 @@ export default function AdminDashboard() {
                       <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
                     ) : (
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
-                        {tenant.name.charAt(0)}
+                        {(tenant.name || '?').charAt(0)}
                       </div>
                     )}
                     <div>
@@ -719,13 +749,13 @@ export default function AdminDashboard() {
                 <div className={`rounded-lg p-2.5 border-2 flex flex-col gap-1.5 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                   <div className="flex justify-between items-center">
                     <p className={`text-[10px] font-bold uppercase ${textSub}`}>Sisa Waktu</p>
-                    <span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
-                      {isSuspended ? 'BEKU' : `${daysLeft} HARI`}
+                    <span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
+                      {isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <p className={`text-[10px] font-bold uppercase ${textSub}`}>Harga Sewa</p>
-                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {(tenant.rental_price || 150000).toLocaleString('id-ID')}</span>
+                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <p className={`text-[10px] font-bold uppercase ${textSub}`}>Referral</p>
@@ -733,7 +763,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex justify-between items-center">
                     <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p>
-                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`}>Rp {(tenant.sales_commission || 0).toLocaleString('id-ID')}</span>
+                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
 
@@ -745,7 +775,11 @@ export default function AdminDashboard() {
                   <button onClick={() => openWa(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> WA</button>
                   <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Settings /> Finansial</button>
                   <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.BarChart /> Statistik</button>
-                  <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? 'bg-emerald-500 text-black border-emerald-700' : 'bg-amber-500 text-black border-amber-700'} py-2 rounded-lg text-[10px] disabled:opacity-50`}>
+                  <button
+                    disabled={busy}
+                    onClick={() => requestToggleStatus(tenant)}
+                    className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} py-2 rounded-lg text-[10px] disabled:opacity-50`}
+                  >
                     {isSuspended ? 'Aktifkan' : 'Suspend'}
                   </button>
                   <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px] disabled:opacity-50`}><Icons.Trash /> Hapus</button>
@@ -762,7 +796,7 @@ export default function AdminDashboard() {
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider">Perpanjang Waktu</h3>
-              <button onClick={() => setExtendModal({ open: false, tenant: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+              <button disabled={extendModal.loading} onClick={() => setExtendModal({ open: false, tenant: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
               <p className={`text-xs font-bold text-center ${textSub}`}>Pilih durasi untuk <span className={textMain}>{extendModal.tenant.name}</span>:</p>
@@ -844,7 +878,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                     <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Omzet 30 Hari</p>
-                    <p className={`text-lg font-black ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p>
+                    <p className={`text-lg font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p>
                   </div>
                 </div>
               )}
@@ -932,7 +966,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* === MODAL KONFIRMASI (ganti confirm/prompt) === */}
+      {/* === MODAL KONFIRMASI === */}
       {confirmModal.open && (
         <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -978,7 +1012,7 @@ export default function AdminDashboard() {
           const c = isErr
             ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]'
             : isWarn
-              ? 'bg-amber-400 text-black border-amber-700 shadow-[2px_2px_0px_0px_#78350f]'
+              ? 'bg-violet-400 text-black border-violet-700 shadow-[2px_2px_0px_0px_#4c1d95]'
               : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
           return (
             <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-3 py-2 border-2 rounded-lg animate-in slide-in-from-right-8 ${c}`}>
