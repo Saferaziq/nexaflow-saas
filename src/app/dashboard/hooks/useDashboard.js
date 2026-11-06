@@ -15,7 +15,11 @@ export function useDashboard() {
   const [menus, setMenus] = useState([]);
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
-  const [settings, setSettings] = useState({ name: '', wa: '', address: '', logo_url: '', qris_string: '', banner_url: '', tax_percentage: 11, notify_order_ready: true });
+  const [settings, setSettings] = useState({ 
+    name: '', wa: '', address: '', logo_url: '', qris_string: '', 
+    banner_url: '', tax_percentage: 11, notify_order_ready: true,
+    is_pay_first: true // Default aktif
+  });
   const [isOpen, setIsOpen] = useState(true);
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -41,7 +45,7 @@ export function useDashboard() {
   const audioCtxRef = useRef(null);
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
-  const hasPendingOrderRef = useRef(false); // 🔥 TRACKING PESANAN PENDING
+  const hasPendingOrderRef = useRef(false);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -55,9 +59,7 @@ export function useDashboard() {
 
   const unlockAudio = () => {
     if (!audioCtxRef.current) {
-      try {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      } catch { }
+      try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { }
     }
     if (audioCtxRef.current?.state === 'suspended') {
       audioCtxRef.current.resume();
@@ -115,14 +117,15 @@ export function useDashboard() {
   const fetchOrders = async (tId) => {
     const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
     if (data) {
-      const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).map(o => o.id));
+      // Cek pesanan baru (hanya yang pending/paid)
+      const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status) && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status)).map(o => o.id));
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
-          playBeep(); // Bunyi instan saat pesanan baru masuk
+          playBeep();
           const first = data.find(o => o.id === newOnes[0]);
-          if (first) showToast(`Pesanan baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
+          if (first) showToast(`Pesanan lunas baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
       }
       prevOrderIdsRef.current = activeIds;
@@ -131,28 +134,23 @@ export function useDashboard() {
   };
 
   const fetchTenantStatus = async (tId) => {
-    const { data } = await supabase.from('tenants').select('is_open').eq('id', tId).single();
-    if (data && data.is_open !== undefined) setIsOpen(data.is_open !== false);
+    const { data } = await supabase.from('tenants').select('is_open, is_pay_first').eq('id', tId).single();
+    if (data) {
+      if (data.is_open !== undefined) setIsOpen(data.is_open !== false);
+      if (data.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: data.is_pay_first }));
+    }
   };
 
-  // 🔥 UPDATE REF PENDING SETIAP KALI ADA PERUBAHAN DATA
   useEffect(() => {
-    hasPendingOrderRef.current = orders.some(o => o.status === 'pending');
+    hasPendingOrderRef.current = orders.some(o => o.status === 'pending' && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status));
   }, [orders]);
 
-  // 🔥 INTERVAL BUNYI KASIR: Jalan terus di background tiap 10 detik
   useEffect(() => {
     beepIntervalRef.current = setInterval(() => {
-      if (hasPendingOrderRef.current) {
-        playBeep();
-      }
+      if (hasPendingOrderRef.current) playBeep();
     }, 10000);
-
     return () => {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
+      if (beepIntervalRef.current) { clearInterval(beepIntervalRef.current); beepIntervalRef.current = null; }
     };
   }, []);
 
@@ -238,6 +236,7 @@ export function useDashboard() {
           banner_url: userData.tenants.banner_url || '',
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
           notify_order_ready: userData.tenants.notify_order_ready !== false,
+          is_pay_first: userData.tenants.is_pay_first !== false,
         });
 
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
@@ -250,6 +249,7 @@ export function useDashboard() {
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
+            if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
           })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
@@ -284,6 +284,34 @@ export function useDashboard() {
     if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
     setIsOpen(newStatus);
     showToast(newStatus ? 'Kafe sekarang BUKA ✅' : 'Kafe sekarang TUTUP 🔒', newStatus ? 'success' : 'warning');
+  };
+
+  // === FUNGSI BARU: TOGGLE PAY FIRST ===
+  const handleTogglePayFirst = async () => {
+    if (!tenantId) return;
+    const newStatus = !settings.is_pay_first;
+    const { error } = await supabase.from('tenants').update({ is_pay_first: newStatus }).eq('id', tenantId);
+    if (error) { showToast('Gagal ubah pengaturan: ' + error.message, 'error'); return; }
+    setSettings(prev => ({ ...prev, is_pay_first: newStatus }));
+    showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF ✅' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF 🔒', newStatus ? 'success' : 'warning');
+  };
+
+  // === FUNGSI BARU: KONFIRMASI PEMBAYARAN (CASH / QRIS) ===
+  const handleConfirmPayment = (orderId) => {
+    askConfirm('Konfirmasi Pembayaran', 'Pastikan uang sudah diterima (Cash) atau mutasi sudah masuk (QRIS). Lanjutkan?', async () => {
+      const { error } = await supabase.from('orders').update({
+        payment_status: 'PAID',
+        paid_at: new Date().toISOString(),
+      }).eq('id', orderId);
+
+      if (error) {
+        showToast('Gagal konfirmasi: ' + error.message, 'error');
+        return;
+      }
+      
+      showToast('Pembayaran dikonfirmasi. Pesanan diteruskan ke dapur!', 'success');
+      fetchOrders(tenantId);
+    }, false);
   };
 
   const getLocalDateStr = (dateStr) => {
@@ -467,9 +495,9 @@ export function useDashboard() {
       await fetchMenus(tenantId);
     }
 
-    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', id);
+    await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
     fetchOrders(tenantId);
-    showToast('Pesanan ditolak', 'warning');
+    showToast('Pesanan ditolak dan dibatalkan', 'warning');
   }, true);
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => {
@@ -632,11 +660,22 @@ export function useDashboard() {
     }
   };
 
-  const displayOrders = orders.filter(o => 
-    queueFilter === "all" ? true : 
-    queueFilter === "active" ? ["pending", "cooking", "ready"].includes(o.status) : 
-    o.status === "completed"
-  );
+  // === UPDATE FILTER ANTREAN UNTUK MENDUKUNG PAY FIRST ===
+  const displayOrders = orders.filter(o => {
+    // Jika fitur Pay First aktif, pastikan 'active' hanya menampilkan yang sudah PAID
+    const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+    
+    if (queueFilter === "unpaid") {
+      return ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status) && o.status === 'pending';
+    }
+    if (queueFilter === "active") {
+      return ["pending", "cooking", "ready"].includes(o.status) && (!settings.is_pay_first || isPaid);
+    }
+    if (queueFilter === "completed") {
+      return o.status === "completed";
+    }
+    return true; // "all"
+  });
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen,
@@ -646,6 +685,8 @@ export function useDashboard() {
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleUpdateStock, 
     handleToggleCafeStatus, 
+    handleTogglePayFirst, 
+    handleConfirmPayment,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
