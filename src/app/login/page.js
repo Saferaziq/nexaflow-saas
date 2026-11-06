@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 const Icons = {
   ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
@@ -13,7 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
     const canvas = document.getElementById('network-canvas');
@@ -75,21 +73,12 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    const loginPromise = supabase.auth.signInWithPassword({ email, password });
-
-    const timeoutPromise = new Promise((resolve, reject) =>
-      setTimeout(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          resolve({ data: { session }, error: null });
-        } else {
-          reject(new Error('Waktu habis. Periksa koneksi internet Anda atau coba lagi.'));
-        }
-      }, 2000)
-    );
+    console.log('[LOGIN] Attempting login for:', email);
 
     try {
-      const { error } = await Promise.race([loginPromise, timeoutPromise]);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      console.log('[LOGIN] Response received:', { hasSession: !!data?.session, hasError: !!error, errorMsg: error?.message });
 
       if (error) {
         setErrorMsg(error.message === 'Invalid login credentials' ? 'Email atau password salah.' : error.message);
@@ -97,12 +86,26 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
-      
+      if (!data?.session) {
+        setErrorMsg('Login gagal: session tidak ditemukan. Coba lagi.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[LOGIN] Session OK, redirecting...');
+
+      // Hard navigation - 100% kompatibel Safari 15
+      window.location.href = '/dashboard';
+
     } catch (err) {
-      setErrorMsg(err.message);
+      console.error('[LOGIN] Exception:', err);
+      setErrorMsg(err?.message || 'Terjadi kesalahan. Coba lagi.');
       setLoading(false);
     }
+  };
+
+  const goToRegister = () => {
+    window.location.href = '/register';
   };
 
   return (
@@ -161,7 +164,7 @@ export default function LoginPage() {
             <div className="mt-8 text-center relative z-[999]">
               <p className="text-xs font-medium text-[#8C7A6B]">
                 Belum punya akun kafe/resto? 
-                <button type="button" onClick={() => router.push('/register')} className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2">Daftar di sini</button>
+                <button type="button" onClick={goToRegister} className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2">Daftar di sini</button>
               </p>
             </div>
           </div>
