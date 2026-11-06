@@ -2,6 +2,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
+import { generateDynamicQRIS } from '../dashboard/helpers/qris';
 
 const extractDominantColor = (imgUrl) => {
   try {
@@ -408,14 +409,13 @@ function OrderContent() {
 
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
-    // Tentukan status pembayaran berdasarkan metode dan setting cafe
     let finalStatus = 'pending';
     let finalPaymentStatus = 'unpaid';
     
     if (cafe.is_pay_first) {
       finalPaymentStatus = method === 'QRIS' ? 'WAITING_QRIS' : 'WAITING_CASH';
     } else {
-      finalPaymentStatus = 'unpaid'; // Perilaku lama jika fitur OFF
+      finalPaymentStatus = 'unpaid';
     }
 
     const orderData = { 
@@ -935,7 +935,7 @@ function OrderContent() {
 
             <div className="bg-white border-4 border-slate-300 rounded-2xl p-2 mb-4 flex justify-center">
               {cafe.qris_string ? (
-                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(cafe.qris_string)}&margin=10`} alt="QRIS" className="w-full max-w-[250px] object-contain" />
+                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generateDynamicQRIS(cafe.qris_string, totalPrice) || cafe.qris_string)}&margin=10`} alt="QRIS" className="w-full max-w-[250px] object-contain" />
               ) : (
                  <div className="text-center p-8 text-slate-500 font-bold text-sm">Gambar QRIS belum diset oleh Kafe.</div>
               )}
