@@ -3,9 +3,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-// === GANTI LINK INI DENGAN LINK GAMBAR QRIS ANDA ===
-const QRIS_LINK = 'https://link-gambar-qris-anda-disini.jpg'; 
-
 const Icons = {
   Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   Store: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
@@ -22,12 +19,13 @@ const Icons = {
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
   Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
   Key: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>,
   Sort: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>,
   Users: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   UserPlus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
+  Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 };
 
 const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com';
@@ -41,7 +39,6 @@ const formatDateID = (dateStr) => {
   const d = new Date(dateStr);
   return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('id-ID');
 };
-
 const formatPhone = (num) => {
   if (!num) return '';
   let phone = num.replace(/[^0-9]/g, '');
@@ -54,6 +51,7 @@ const formatPhone = (num) => {
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
   const [marketers, setMarketers] = useState([]);
+  const [appSettings, setAppSettings] = useState({ qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
@@ -61,14 +59,12 @@ export default function AdminDashboard() {
   const [toasts, setToasts] = useState([]);
   const [theme, setTheme] = useState('dark');
   
-  // Tabs & Filters
-  const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'marketers'
+  const [activeTab, setActiveTab] = useState('tenants');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-  // Modals
   const [extendModal, setExtendModal] = useState({ open: false, tenant: null, loading: false });
   const [statsModal, setStatsModal] = useState({ open: false, tenant: null, data: null, loading: false });
   const [financeModal, setFinanceModal] = useState({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
@@ -76,9 +72,9 @@ export default function AdminDashboard() {
   const [detailModal, setDetailModal] = useState({ open: false, tenant: null });
   const [pinModal, setPinModal] = useState({ open: false, tenant: null, pin: '', loading: false });
   
-  // Marketer Modals
   const [marketerModal, setMarketerModal] = useState({ open: false, name: '', wa: '', loading: false });
   const [marketerDetailModal, setMarketerDetailModal] = useState({ open: false, marketer: null });
+  const [settingsModal, setSettingsModal] = useState({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   
   const [actionLoading, setActionLoading] = useState({});
   const router = useRouter();
@@ -125,6 +121,7 @@ export default function AdminDashboard() {
       setPinModal({ open: false, tenant: null, pin: '', loading: false });
       setMarketerModal({ open: false, name: '', wa: '', loading: false });
       setMarketerDetailModal({ open: false, marketer: null });
+      setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
       setShowSortMenu(false);
     };
     window.addEventListener('keydown', handler);
@@ -140,7 +137,7 @@ export default function AdminDashboard() {
         setTimeout(() => router.push('/login'), 800);
         return;
       }
-      await Promise.all([fetchTenants(), fetchMarketers()]);
+      await Promise.all([fetchTenants(), fetchMarketers(), fetchSettings()]);
       setLoading(false);
     };
     checkAuthAndFetch();
@@ -158,6 +155,19 @@ export default function AdminDashboard() {
     else if (data) setMarketers(data);
   };
 
+  const fetchSettings = async () => {
+    const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
+    if (data) {
+      setAppSettings({ 
+        qris_link: data.qris_link || '', 
+        qris_string: data.qris_string || '',
+        bank_name: data.bank_name || '',
+        bank_account: data.bank_account || '',
+        bank_holder: data.bank_holder || ''
+      });
+    }
+  };
+
   useEffect(() => {
     calculateStats(tenants, onlineUsers);
   }, [tenants, onlineUsers]);
@@ -165,7 +175,6 @@ export default function AdminDashboard() {
   const calculateStats = (tenantData, onlineData) => {
     let onlineCount = 0, warningCount = 0, totalRevenue = 0, totalCommission = 0;
     const currentTime = Date.now();
-
     tenantData.forEach(t => {
       if (onlineData[t.id]) onlineCount++;
       if (t.subscription_end_date) {
@@ -197,6 +206,7 @@ export default function AdminDashboard() {
     const sub = supabase.channel('admin-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, fetchTenants)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'marketers' }, fetchMarketers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, fetchSettings)
       .subscribe();
     return () => { supabase.removeChannel(sub); };
   }, []);
@@ -211,13 +221,11 @@ export default function AdminDashboard() {
   const setTenantLoading = (id, val) => {
     setActionLoading(prev => {
       const next = { ...prev };
-      if (!val) delete next[id];
-      else next[id] = val;
+      if (!val) delete next[id]; else next[id] = val;
       return next;
     });
   };
 
-  // === CRUD ACTIONS ===
   const submitExtend = async (days) => {
     const { tenant } = extendModal;
     if (!tenant) return;
@@ -225,7 +233,6 @@ export default function AdminDashboard() {
     const currentEnd = new Date(tenant.subscription_end_date || Date.now()).getTime();
     const baseDate = Math.max(Date.now(), currentEnd);
     const newEndDate = new Date(baseDate + (days * 24 * 60 * 60 * 1000)).toISOString();
-
     const { error } = await supabase.from('tenants').update({ subscription_end_date: newEndDate, is_active: true }).eq('id', tenant.id);
     setExtendModal({ open: false, tenant: null, loading: false });
     if (error) showToast('Gagal: ' + error.message, 'error');
@@ -316,14 +323,45 @@ export default function AdminDashboard() {
     showToast('Kitchen PIN berhasil diubah', 'success'); setPinModal({ open: false, tenant: null, pin: '', loading: false }); fetchTenants();
   };
 
-  // === WHATSAPP INTEGRATION (TAGIHAN & MARKETING) ===
+  const saveSettings = async (e) => {
+    e.preventDefault();
+    setSettingsModal(prev => ({ ...prev, loading: true }));
+    const { error } = await supabase.from('app_settings').update({
+      qris_link: settingsModal.qris_link.trim(),
+      qris_string: settingsModal.qris_string.trim(),
+      bank_name: settingsModal.bank_name.trim(),
+      bank_account: settingsModal.bank_account.trim(),
+      bank_holder: settingsModal.bank_holder.trim()
+    }).eq('id', 1);
+    setSettingsModal(prev => ({ ...prev, loading: false }));
+    if (error) return showToast('Gagal simpan pengaturan: ' + error.message, 'error');
+    showToast('Pengaturan berhasil disimpan', 'success');
+    setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
+    fetchSettings();
+  };
+
   const openWaTenant = (tenant) => {
     if (!tenant.wa_number) return showToast('Nomor WA belum diatur', 'warning');
     const phone = formatPhone(tenant.wa_number);
     if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
     
     const price = getPrice(tenant);
-    const msg = `Halo Owner *${tenant.name}*,\n\nIni tagihan sewa sistem NexaFlow Kasir Anda sebesar *Rp ${price.toLocaleString('id-ID')}*.\n\nSilakan lakukan pembayaran melalui link QRIS berikut:\n${QRIS_LINK}\n\nJika sudah transfer, silakan kirim bukti transfernya ke chat ini. Terima kasih! 🙏`;
+    let msg = `Selamat pagi/siang/sore Bapak/Ibu Pengelola *${tenant.name}*,\n\nKami dari Admin NexaFlow Kasir ingin menginformasikan terkait perpanjangan layanan sistem kasir Anda.\n\n🧾 *Rincian Tagihan:*\n- Layanan: Perpanjangan Sistem NexaFlow\n- Nominal: *Rp ${price.toLocaleString('id-ID')}*\n\n`;
+    
+    msg += `💳 *Metode Pembayaran:*\n`;
+    if (appSettings.qris_link || appSettings.qris_string) {
+      msg += `*1. QRIS (Scan Gambar)*\n`;
+      if (appSettings.qris_link) msg += `${appSettings.qris_link}\n`;
+      if (appSettings.qris_string) msg += `\n(Atau scan teks QRIS di bawah ini jika Anda menggunakan aplikasi M-Banking)\n${appSettings.qris_string}\n\n`;
+    }
+    if (appSettings.bank_name && appSettings.bank_account) {
+      msg += `*2. Transfer Bank*\nBank: ${appSettings.bank_name}\nNo. Rek: ${appSettings.bank_account}\nA/N: ${appSettings.bank_holder || '-'}\n\n`;
+    }
+    if (!appSettings.qris_link && !appSettings.qris_string && !appSettings.bank_name) {
+      msg += `(Silakan hubungi Admin untuk info rekening/QRIS)\n\n`;
+    }
+    
+    msg += `Jika sudah melakukan pembayaran, mohon kirimkan bukti transfernya ke chat ini agar masa aktif akun Anda bisa segera kami perpanjang.\nTerima kasih atas kepercayaan Anda kepada NexaFlow. 🙏`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -332,27 +370,25 @@ export default function AdminDashboard() {
     const phone = formatPhone(marketer.wa_number);
     if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
 
-    const msg = `Halo *${marketer.name}*,\n\nBerikut rincian komisi (bagi hasil) Anda saat ini:\n\nTotal Kafe Direferensikan: *${statsData.count} Kafe*\nTotal Estimasi Komisi: *Rp ${statsData.commission.toLocaleString('id-ID')}*\n\nBerikut adalah daftar kafe yang Anda rekomendasikan:\n${statsData.tenantList || '- Belum ada'}\n\nTerima kasih atas kerja kerasnya! 🚀`;
+    const activeList = statsData.activeTenants.map(t => `- ${t.name} (Komisi: Rp ${getCommission(t).toLocaleString('id-ID')})`).join('\n') || '- Tidak ada';
+    const expiredList = statsData.expiredTenants.map(t => `- ${t.name} (Belum Bayar/Expired)`).join('\n') || '- Tidak ada';
+
+    const msg = `Halo *${marketer.name}*,\n\nBerikut rincian komisi (bagi hasil) Anda:\nTotal Kafe: *${statsData.count} Kafe*\nTotal Estimasi Komisi: *Rp ${statsData.commission.toLocaleString('id-ID')}*\n\n✅ *Kafe Aktif (Mendapat Komisi):*\n${activeList}\n\n⚠️ *Kafe Expired (Mohon di-follow up agar bayar):*\n${expiredList}\n\nLaporan detail (Excel/PDF) dapat Anda unduh melalui portal Admin. Terima kasih atas kerja kerasnya! 🚀`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  // === MARKETING CRUD ===
   const saveMarketer = async (e) => {
     e.preventDefault();
     setMarketerModal(prev => ({ ...prev, loading: true }));
     const payload = { name: marketerModal.name.trim(), wa_number: marketerModal.wa.trim() };
-    
-    // Cek apakah nama sudah ada
     const existing = marketers.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
     if (existing) {
       setMarketerModal(prev => ({ ...prev, loading: false }));
       return showToast('Nama marketing sudah ada', 'error');
     }
-
     const { error } = await supabase.from('marketers').insert([payload]);
     setMarketerModal(prev => ({ ...prev, loading: false }));
     if (error) return showToast('Gagal tambah marketing: ' + error.message, 'error');
-    
     showToast('Marketing berhasil ditambahkan', 'success');
     setMarketerModal({ open: false, name: '', wa: '', loading: false });
     fetchMarketers();
@@ -372,36 +408,67 @@ export default function AdminDashboard() {
     });
   };
 
-  // === DATA PROCESSING: MARKETING STATS ===
+  const handleExportMarketing = (m) => {
+    let csv = `Laporan Marketing: ${m.name}\n`;
+    csv += `Tanggal Unduh: ${new Date().toLocaleDateString('id-ID')}\n`;
+    csv += `Total Kafe: ${m.count}\n`;
+    csv += `Total Komisi: Rp ${m.commission.toLocaleString('id-ID')}\n\n`;
+    
+    csv += `KAFE AKTIF (Mendapat Komisi)\n`;
+    csv += `Nama Kafe,Harga Sewa,Komisi\n`;
+    m.activeTenants.forEach(t => {
+      csv += `"${t.name}",${getPrice(t)},${getCommission(t)}\n`;
+    });
+    
+    csv += `\nKAFE EXPIRED/BELUM BAYAR (Tidak Mendapat Komisi)\n`;
+    csv += `Nama Kafe,Status\n`;
+    m.expiredTenants.forEach(t => {
+      csv += `"${t.name}","${t.is_active === false ? 'Suspend' : 'Expired'}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Laporan_Marketing_${m.name.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const marketersWithStats = useMemo(() => {
     return marketers.map(m => {
       const myTenants = tenants.filter(t => (t.referral_name || '').toLowerCase() === m.name.toLowerCase());
-      let commission = 0;
-      let revenue = 0;
-      const tenantList = [];
+      let commission = 0; let revenue = 0;
+      const activeTenants = [];
+      const expiredTenants = [];
 
       myTenants.forEach(t => {
         const daysLeft = calculateDaysLeft(t.subscription_end_date);
-        if (daysLeft > 0 && t.is_active !== false) {
+        const isActive = daysLeft > 0 && t.is_active !== false;
+        
+        if (isActive) {
           const ratio = Math.min(daysLeft, 30) / 30;
           revenue += Math.round(getPrice(t) * ratio);
           commission += Math.round(getCommission(t) * ratio);
+          activeTenants.push(t);
+        } else {
+          expiredTenants.push(t);
         }
-        tenantList.push(`${t.name} (${daysLeft} Hari)`);
       });
 
-      return {
-        ...m,
-        count: myTenants.length,
-        revenue,
-        commission,
-        tenantList: tenantList.join('\n'),
-        rawTenants: myTenants
+      return { 
+        ...m, 
+        count: myTenants.length, 
+        revenue, 
+        commission, 
+        activeTenants, 
+        expiredTenants, 
+        rawTenants: myTenants 
       };
     });
   }, [marketers, tenants, now]);
 
-  // === FILTER + SORT ===
   const filteredTenants = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return tenants.filter(t => {
@@ -434,7 +501,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // === UI CLASSES ===
   const bgMain = theme === 'dark' ? 'bg-[#050b14]' : 'bg-[#f0f4f8]';
   const textMain = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textSub = theme === 'dark' ? 'text-slate-400' : 'text-slate-600';
@@ -458,6 +524,9 @@ export default function AdminDashboard() {
             </h1>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
+            <button onClick={() => setSettingsModal({ open: true, loading: false, qris_link: appSettings.qris_link, qris_string: appSettings.qris_string, bank_name: appSettings.bank_name, bank_account: appSettings.bank_account, bank_holder: appSettings.bank_holder })} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Pengaturan Sistem">
+              <Icons.Settings />
+            </button>
             <button onClick={toggleTheme} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Toggle Tema">
               {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
             </button>
@@ -470,7 +539,6 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         
-        {/* TABS MENU */}
         <div className={`flex p-1.5 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'} w-full sm:w-max`}>
           <button onClick={() => setActiveTab('tenants')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition-all ${activeTab === 'tenants' ? (theme === 'dark' ? 'bg-cyan-500 text-black shadow-[2px_2px_0px_0px_#000]' : 'bg-cyan-600 text-white shadow-[2px_2px_0px_0px_#000]') : textSub}`}>
             <Icons.Store /> Data Kafe ({stats.total})
@@ -480,7 +548,6 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* STATS (Hanya tampil di tab tenant) */}
         {activeTab === 'tenants' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-bottom-4">
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
@@ -506,10 +573,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ================= TAB TENANTS ================= */}
         {activeTab === 'tenants' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-            {/* Search + Filter */}
             <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
               <div className="relative flex-1 min-w-0">
                 <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSub}`}><Icons.Search /></span>
@@ -534,7 +599,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Desktop Table */}
             <div className={`hidden lg:block rounded-xl border-2 overflow-hidden ${theme === 'dark' ? 'border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -598,7 +662,6 @@ export default function AdminDashboard() {
               </table>
             </div>
 
-            {/* Mobile Cards */}
             <div className="lg:hidden space-y-5">
               {sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
@@ -641,7 +704,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ================= TAB MARKETERS ================= */}
         {activeTab === 'marketers' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center">
@@ -681,7 +743,8 @@ export default function AdminDashboard() {
 
                   <div className="grid grid-cols-2 gap-2 mt-auto">
                     <button onClick={() => setMarketerDetailModal({ open: true, marketer: m })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail Kafe</button>
-                    <button onClick={() => openWaMarketer(m, { count: m.count, commission: m.commission, tenantList: m.tenantList })} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Kirim Rincian</button>
+                    <button onClick={() => handleExportMarketing(m)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Download /> Export Excel</button>
+                    <button onClick={() => openWaMarketer(m, { count: m.count, commission: m.commission, activeTenants: m.activeTenants, expiredTenants: m.expiredTenants })} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} col-span-2 py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Kirim Rincian via WA</button>
                   </div>
                 </div>
               ))}
@@ -691,7 +754,26 @@ export default function AdminDashboard() {
 
       </main>
 
-      {/* === MODALS === */}
+      {/* MODAL PENGATURAN */}
+      {settingsModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-md`}>
+            <div className={modalHeader}>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Settings /> Pengaturan Sistem</h3>
+              <button onClick={() => setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+            </div>
+            <form onSubmit={saveSettings} className="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Link Gambar QRIS</label><input type="text" placeholder="https://..." value={settingsModal.qris_link} onChange={e => setSettingsModal({ ...settingsModal, qris_link: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>String QRIS (Teks Panjang)</label><textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} /></div>
+              <div className="border-t-2 border-slate-300 dark:border-slate-700 my-2 pt-2"></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Bank (Cth: Mandiri)</label><input type="text" placeholder="Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor Rekening</label><input type="text" placeholder="123-456-789" value={settingsModal.bank_account} onChange={e => setSettingsModal({ ...settingsModal, bank_account: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Atas Nama</label><input type="text" placeholder="Nama Pemilik" value={settingsModal.bank_holder} onChange={e => setSettingsModal({ ...settingsModal, bank_holder: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={settingsModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{settingsModal.loading ? 'Menyimpan...' : 'Simpan Pengaturan'}</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Extend */}
       {extendModal.open && extendModal.tenant && (
@@ -837,11 +919,12 @@ export default function AdminDashboard() {
               ) : (
                 marketerDetailModal.marketer.rawTenants.map(t => {
                   const daysLeft = calculateDaysLeft(t.subscription_end_date);
+                  const isActive = daysLeft > 0 && t.is_active !== false;
                   return (
                     <div key={t.id} className={`rounded-lg p-3 border-2 flex justify-between items-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                       <div>
                         <p className={`font-black text-sm ${textMain}`}>{t.name}</p>
-                        <p className={`text-[10px] font-bold ${textSub}`}>{t.is_active === false ? 'Suspended' : `${daysLeft} Hari Lagi`}</p>
+                        <p className={`text-[10px] font-bold ${isActive ? 'text-emerald-500' : 'text-rose-500'}`}>{t.is_active === false ? 'Suspend' : isActive ? `${daysLeft} Hari Lagi` : 'Expired'}</p>
                       </div>
                       <div className="text-right">
                         <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(t).toLocaleString('id-ID')}</p>
