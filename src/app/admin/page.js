@@ -48,6 +48,36 @@ const formatPhone = (num) => {
   return phone;
 };
 
+// Parser String QRIS Standar EMVCo
+const parseQRIS = (qris) => {
+  if (!qris) return { merchantName: 'MERCHANT NAME', nmid: 'ID...', terminalId: 'A01' };
+  let merchantName = 'MERCHANT NAME';
+  let nmid = 'ID...';
+  let terminalId = 'A01';
+  try {
+    let i = 0;
+    while (i < qris.length) {
+      const tag = qris.substr(i, 2);
+      const len = parseInt(qris.substr(i+2, 2), 10);
+      const value = qris.substr(i+4, len);
+      if (tag === '59') merchantName = value;
+      if (tag === '62') {
+         let j = 0;
+         while (j < value.length) {
+           const subTag = value.substr(j, 2);
+           const subLen = parseInt(value.substr(j+2, 2), 10);
+           const subValue = value.substr(j+4, subLen);
+           if (subTag === '01') nmid = subValue;
+           if (subTag === '07') terminalId = subValue;
+           j += 4 + subLen;
+         }
+      }
+      i += 4 + len;
+    }
+  } catch(e) {}
+  return { merchantName, nmid, terminalId };
+};
+
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
   const [marketers, setMarketers] = useState([]);
@@ -347,46 +377,147 @@ export default function AdminDashboard() {
     fetchSettings();
   };
 
+  // === FUNGSI GENERATE GAMBAR QRIS BERBINGKAI (STANDAR ASPI) ===
   const generateQRISImage = async (qrisString, tenantName) => {
     return new Promise(async (resolve, reject) => {
       try {
+        const parsed = parseQRIS(qrisString);
+        const merchantName = parsed.merchantName !== 'MERCHANT NAME' ? parsed.merchantName : tenantName;
+        
         const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 800;
+        canvas.width = 800;
+        canvas.height = 1130;
         const ctx = canvas.getContext('2d');
 
+        // 1. Background Putih
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#0ea5e9';
-        ctx.lineWidth = 20;
-        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 40px Arial';
+        // 2. Pola Background (Garis Isometrik Faint)
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1.5;
+        for (let i = -canvas.height; i < canvas.width; i += 30) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + canvas.height, canvas.height); ctx.stroke();
+        }
+        for (let i = 0; i < canvas.width + canvas.height; i += 30) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - canvas.height, canvas.height); ctx.stroke();
+        }
+
+        // 3. Gambar Segitiga Merah (Standar Cetak)
+        ctx.fillStyle = '#E21E26'; 
+        
+        // Segitiga Kiri Atas (Lebih tajam)
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(320, 0); ctx.lineTo(0, 320); ctx.fill();
+        
+        // Segitiga Kiri Tengah
+        ctx.beginPath(); ctx.moveTo(0, 320); ctx.lineTo(180, 500); ctx.lineTo(0, 680); ctx.fill();
+        
+        // Segitiga Kanan Bawah
+        ctx.beginPath(); ctx.moveTo(800, 1130); ctx.lineTo(480, 1130); ctx.lineTo(800, 810); ctx.fill();
+
+        // 4. Header Logos (Simulasi)
+        // --- Logo QRIS (Kiri) ---
+        ctx.fillStyle = '#000000';
+        ctx.font = '900 44px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('QRIS', 50, 80);
+        
+        // Garis siku khas QRIS
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(45, 85); ctx.lineTo(45, 60); ctx.lineTo(70, 60); ctx.stroke();
+
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('QR Code Standar', 50, 105);
+        ctx.fillText('Pembayaran Nasional', 50, 125);
+        
+        // --- Logo GPN (Kanan) ---
+        // Sayap Merah
+        ctx.fillStyle = '#E21E26';
+        ctx.beginPath();
+        ctx.moveTo(730, 70); ctx.lineTo(680, 40); ctx.lineTo(710, 75); ctx.lineTo(680, 90); ctx.lineTo(730, 85);
+        ctx.fill();
+        // Teks GPN
+        ctx.fillStyle = '#1e3a8a';
+        ctx.font = '900 38px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText('GPN', 760, 85);
+
+        // 5. Teks Informasi Merchant (Center)
         ctx.textAlign = 'center';
-        ctx.fillText('SCAN UNTUK BAYAR', 300, 100);
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 40px Arial';
+        ctx.fillText(merchantName, 400, 230);
 
-        ctx.fillStyle = '#64748b';
-        ctx.font = 'bold 30px Arial';
-        ctx.fillText(tenantName.toUpperCase(), 300, 150);
+        ctx.font = '26px Arial';
+        ctx.fillText(`NMID : ${parsed.nmid}`, 400, 285);
+        
+        // Terminal ID
+        ctx.font = '28px Arial';
+        ctx.fillText(parsed.terminalId, 400, 335);
 
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrisString)}&margin=10`;
+        // 6. Gambar QR Code (API)
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrisString)}&margin=0`;
         const qrImg = new Image();
         qrImg.crossOrigin = 'Anonymous';
         qrImg.src = qrApiUrl;
 
         await new Promise((res, rej) => {
           qrImg.onload = () => {
-            ctx.drawImage(qrImg, 100, 220, 400, 400);
+            ctx.drawImage(qrImg, 150, 370, 500, 500);
             res();
           };
           qrImg.onerror = rej;
         });
 
-        ctx.fillStyle = '#0ea5e9';
-        ctx.font = 'bold 30px Arial';
-        ctx.fillText('Powered by NexaFlow', 300, 700);
+        // 7. Teks Bawah QR Code
+        ctx.fillStyle = '#000000';
+        ctx.font = '28px Arial';
+        ctx.fillText('SATU QRIS UNTUK SEMUA', 400, 920);
+        
+        ctx.font = '22px Arial';
+        ctx.fillText('Cek aplikasi penyelenggara di:', 400, 965);
+        ctx.fillText('www.aspi-qris.id', 400, 1000);
 
+        // 8. Teks Kiri Bawah
+        ctx.textAlign = 'left';
+        ctx.font = '18px Arial';
+        ctx.fillText('Dicetak oleh: 93600915', 50, 1050);
+        ctx.fillText('Versi cetak: 1.0.05.11.26', 50, 1080);
+
+        // 9. Ikon Kanan Bawah
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText('Cara bayar dengan QRIS:', 650, 1010);
+        
+        // Ikon 1: Buka Aplikasi
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.beginPath(); ctx.arc(550, 1065, 25, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.font = '12px Arial'; 
+        ctx.fillText('Buka Aplikasi', 550, 1110);
+        ctx.fillText('Berlogo QRIS', 550, 1125);
+        
+        // Ikon HP
+        ctx.fillRect(543, 1052, 14, 24);
+        ctx.fillStyle = '#ffffff'; 
+        ctx.fillRect(545, 1054, 10, 16); 
+        ctx.fillStyle = '#000000';
+
+        // Ikon 2: Scan
+        ctx.beginPath(); ctx.arc(650, 1065, 25, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillText('Scan dan Cek', 650, 1110);
+        ctx.lineWidth = 3;
+        ctx.strokeRect(638, 1053, 24, 24);
+
+        // Ikon 3: Bayar
+        ctx.beginPath(); ctx.arc(750, 1065, 25, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillText('Bayar', 750, 1110);
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(750, 1065, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillText('Rp', 750, 1069);
+
+        // 10. Convert to Blob & Upload
         canvas.toBlob(async (blob) => {
           try {
             const fileName = `qris-${tenantName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.png`;
@@ -842,7 +973,7 @@ export default function AdminDashboard() {
               <div>
                 <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>String QRIS (Teks Panjang)</label>
                 <textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} />
-                <p className={`text-[9px] text-slate-500 mt-1`}>*Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai saat menagih via WA.</p>
+                <p className={`text-[9px] text-slate-500 mt-1`}>*Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai standar ASPI saat menagih via WA.</p>
               </div>
               <div className="border-t-2 border-slate-300 dark:border-slate-700 my-2 pt-2"></div>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Bank (Cth: Mandiri)</label><input type="text" placeholder="Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
