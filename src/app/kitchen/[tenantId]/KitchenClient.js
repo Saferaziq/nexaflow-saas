@@ -60,6 +60,7 @@ const Icons = {
   Undo: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>,
   Alert: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  Printer: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
 };
 
 export default function KitchenClient({ tenantId }) {
@@ -70,6 +71,7 @@ export default function KitchenClient({ tenantId }) {
 
   const [tenant, setTenant] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [isPayFirst, setIsPayFirst] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [nowTick, setNowTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -89,6 +91,9 @@ export default function KitchenClient({ tenantId }) {
   const wakeLockRef = useRef(null);
   const undoTimerRef = useRef(null);
   const cancelBannerTimerRef = useRef(null);
+  
+  // Ref untuk melacak status Pay First tanpa memicu re-render pada closure fetchOrders
+  const isPayFirstRef = useRef(false); 
 
   useEffect(() => {
     const update = () => setNowTick(Date.now());
@@ -211,7 +216,14 @@ export default function KitchenClient({ tenantId }) {
     if (!tenantId) return;
     const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true });
     if (data) {
-      const activeIds = new Set(data.filter(o => ['pending', 'cooking'].includes(o.status)).map(o => o.id));
+      // Logika Filter: Hanya tampilkan yang PAID jika Pay First aktif
+      const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+      
+      const activeIds = new Set(data.filter(o => 
+        ['pending', 'cooking'].includes(o.status) && 
+        (!isPayFirstRef.current || isPaid(o))
+      ).map(o => o.id));
+      
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
@@ -239,17 +251,30 @@ export default function KitchenClient({ tenantId }) {
 
   const loadData = async () => {
     try {
-      const { data: tenantData } = await supabase.from('tenants').select('name, logo_url, banner_url').eq('id', tenantId).single();
+      const { data: tenantData } = await supabase.from('tenants').select('name, logo_url, banner_url, is_pay_first').eq('id', tenantId).single();
       if (tenantData) {
         setTenant(tenantData);
+        const payFirstStatus = tenantData.is_pay_first !== false;
+        setIsPayFirst(payFirstStatus);
+        isPayFirstRef.current = payFirstStatus;
+        
         if (tenantData.banner_url) extractDominantColor(tenantData.banner_url);
         else if (tenantData.logo_url) extractDominantColor(tenantData.logo_url);
       }
     } catch {}
     await fetchOrders();
+    
     if (channelRef.current) supabase.removeChannel(channelRef.current);
     channelRef.current = supabase.channel('kitchen-' + tenantId + '-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => fetchOrders())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
+        if (payload.new.is_pay_first !== undefined) {
+          const pf = payload.new.is_pay_first !== false;
+          setIsPayFirst(pf);
+          isPayFirstRef.current = pf;
+          fetchOrders(); // Refresh antrean jika setting diubah dari dashboard
+        }
+      })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') setRealtimeStatus('online');
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('offline');
@@ -360,8 +385,78 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  const pendingOrders = orders.filter(o => o.status === 'pending').sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  const cookingOrders = orders.filter(o => o.status === 'cooking').sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // === FUNGSI PRINT ORDERAN DAPUR ===
+  const handlePrintOrder = (order) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
+      return;
+    }
+
+    const itemsHtml = order.items.map(item => `
+      <tr>
+        <td style="font-size: 22px; font-weight: bold; padding: 8px 0; border-bottom: 1px dotted #ccc;">${item.qty}x ${item.name}</td>
+      </tr>
+      ${item.note ? `<tr><td style="font-size: 18px; font-style: italic; color: #000; padding-bottom: 8px;">➔ Note: ${item.note}</td></tr>` : ''}
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Order Meja ${order.table_number}</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; padding: 10px; margin: 0; width: 80mm; color: #000; }
+            .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+            h1 { font-size: 32px; margin: 0 0 5px 0; font-weight: 900; }
+            h2 { font-size: 20px; margin: 0; font-weight: bold; }
+            .meta { font-size: 14px; margin-bottom: 5px; }
+            .items { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+            .notes { border: 2px solid #000; padding: 10px; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+            .footer { text-align: center; font-size: 12px; border-top: 2px dashed #000; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>MEJA ${order.table_number}</h1>
+            <h2>${order.customer_name || 'TAMU'}</h2>
+          </div>
+          <div class="meta">Waktu: ${new Date(order.created_at).toLocaleTimeString('id-ID')}</div>
+          <div class="meta">Order ID: #${order.id.slice(0, 6).toUpperCase()}</div>
+          <hr style="border-top: 1px solid #000; margin: 10px 0;" />
+          
+          <table class="items">
+            ${itemsHtml}
+          </table>
+
+          ${order.order_note ? `<div class="notes">CATATAN: ${order.order_note}</div>` : ''}
+
+          <div class="footer">
+            --- KITCHEN TICKET ---<br/>
+            Powered by NexaFlow
+          </div>
+          <script>
+            window.onload = function() { 
+              window.print(); 
+              setTimeout(() => window.close(), 1000); 
+            }
+          <\/script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // Filter Pesanan Berdasarkan Status & Settingan Pay First
+  const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+  
+  const pendingOrders = orders
+    .filter(o => o.status === 'pending' && (!isPayFirst || isPaid(o)))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    
+  const cookingOrders = orders
+    .filter(o => o.status === 'cooking' && (!isPayFirst || isPaid(o)))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    
   const displayOrders = activeTab === 'new' ? pendingOrders : activeTab === 'cooking' ? cookingOrders : [...pendingOrders, ...cookingOrders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
   const getTimeBadge = (createdAt) => {
@@ -554,10 +649,10 @@ export default function KitchenClient({ tenantId }) {
           <div className="text-center py-20">
             <div className="text-6xl mb-4 opacity-50">{activeTab === 'new' ? '📋' : activeTab === 'cooking' ? '🍳' : '✨'}</div>
             <p className="text-xl font-black mb-1 text-slate-300">
-              {activeTab === 'new' ? 'Belum ada pesanan baru' : activeTab === 'cooking' ? 'Tidak ada yang sedang dimasak' : 'Semua bersih!'}
+              {activeTab === 'new' ? 'Belum ada pesanan lunas yang masuk' : activeTab === 'cooking' ? 'Tidak ada yang sedang dimasak' : 'Semua bersih!'}
             </p>
             <p className="text-sm text-slate-500 font-medium">
-              {activeTab === 'new' ? 'Pesanan baru akan muncul otomatis' : 'Pesanan sedang dimasak akan tampil di sini'}
+              {activeTab === 'new' ? 'Pesanan akan muncul setelah pembayaran dikonfirmasi kasir' : 'Pesanan sedang dimasak akan tampil di sini'}
             </p>
           </div>
         ) : (
@@ -584,6 +679,15 @@ export default function KitchenClient({ tenantId }) {
                         </span>
                       )}
                       <p className="text-[10px] font-bold text-slate-500 mt-2">#{order.id.slice(0, 6).toUpperCase()}</p>
+                      {order.payment_method && (
+                        <span className={`inline-block mt-1 text-[9px] font-black px-2 py-0.5 rounded border ${
+                          order.payment_method === 'QRIS' 
+                            ? 'bg-cyan-900/50 text-cyan-400 border-cyan-700' 
+                            : 'bg-emerald-900/50 text-emerald-400 border-emerald-700'
+                        }`}>
+                          {order.payment_method}
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -608,13 +712,17 @@ export default function KitchenClient({ tenantId }) {
                       </div>
                     ))}
                   </div>
-                  <div className="p-4 pt-0">
+                  <div className="p-4 pt-0 flex gap-2">
+                    <button onClick={() => handlePrintOrder(order)} className="flex-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-black py-4 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 active:scale-95" title="Cetak Tiket Dapur">
+                      <Icons.Printer /> CETAK
+                    </button>
+                    
                     {isCooking ? (
-                      <button onClick={() => markReady(order)} className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-black py-4 rounded-2xl text-lg shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markReady(order)} className="flex-[2] bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-black py-4 rounded-2xl text-lg shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Check /> SIAP
                       </button>
                     ) : (
-                      <button onClick={() => markCooking(order.id)} className="w-full bg-[var(--primary-color)]/20 hover:bg-[var(--primary-color)]/30 border border-[var(--primary-color)]/30 text-[var(--primary-color)] font-black py-4 rounded-2xl text-lg shadow-lg shadow-[var(--primary-color)]/10 transition-all flex items-center justify-center gap-2 active:scale-95">
+                      <button onClick={() => markCooking(order.id)} className="flex-[2] bg-[var(--primary-color)]/20 hover:bg-[var(--primary-color)]/30 border border-[var(--primary-color)]/30 text-[var(--primary-color)] font-black py-4 rounded-2xl text-lg shadow-lg shadow-[var(--primary-color)]/10 transition-all flex items-center justify-center gap-2 active:scale-95">
                         <Icons.Fire /> MULAI MASAK
                       </button>
                     )}

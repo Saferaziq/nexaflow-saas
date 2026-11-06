@@ -13,6 +13,7 @@ export default function TabSettings({
   uploadingBanner,
   isOpen,
   onToggleCafeStatus,
+  onTogglePayFirst, // Prop baru dari TabContent
 }) {
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
@@ -185,6 +186,31 @@ export default function TabSettings({
         </button>
 
       </form>
+
+      {/* 🔥 FITUR BARU: PAY FIRST TOGGLE */}
+      <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className={`font-black text-lg ${textMainClass}`}>Wajib Bayar Dulu (Pay First)</h3>
+            <p className={`text-xs font-semibold mt-1 max-w-md ${textSubClass}`}>
+              Jika diaktifkan, pelanggan harus memilih metode pembayaran (QRIS/Cash) dan pesanan baru akan masuk ke Dapur setelah Kasir mengonfirmasi pembayaran.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); onTogglePayFirst && onTogglePayFirst(); }}
+            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 ${
+              settings.is_pay_first ? 'bg-[var(--primary-color)]' : theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-600'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                settings.is_pay_first ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
 
       {/* Notifikasi Pesanan Siap */}
       <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>

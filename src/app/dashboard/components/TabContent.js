@@ -18,7 +18,7 @@ export default function TabContent({
   isOpen, onToggleCafeStatus,
 }) {
   if (activeTab === 'queue') {
-    return <TabQueue theme={theme} displayOrders={displayOrders} queueFilter={queueFilter} setQueueFilter={setQueueFilter} nowTick={d.nowTick} rp={rp} onUpdateOrderStatus={d.handleUpdateOrderStatus} onCancelOrder={d.handleCancelOrder} onPrintBill={onPrintBill} />;
+    return <TabQueue theme={theme} displayOrders={displayOrders} queueFilter={queueFilter} setQueueFilter={setQueueFilter} nowTick={d.nowTick} rp={rp} onUpdateOrderStatus={d.handleUpdateOrderStatus} onCancelOrder={d.handleCancelOrder} onPrintBill={onPrintBill} onConfirmPayment={d.handleConfirmPayment} />;
   }
 
   if (activeTab === 'menu') {
@@ -34,7 +34,7 @@ export default function TabContent({
   }
 
   if (activeTab === 'settings') {
-    return <TabSettings theme={theme} settings={d.settings} setSettings={d.setSettings} onSave={onSaveSettings} onUploadImage={handleUploadImage} uploadingLogo={uploadingLogo} uploadingBanner={uploadingBanner} isOpen={isOpen} onToggleCafeStatus={onToggleCafeStatus} />;
+    return <TabSettings theme={theme} settings={d.settings} setSettings={d.setSettings} onSave={onSaveSettings} onUploadImage={handleUploadImage} uploadingLogo={uploadingLogo} uploadingBanner={uploadingBanner} isOpen={isOpen} onToggleCafeStatus={onToggleCafeStatus} onTogglePayFirst={d.handleTogglePayFirst} />;
   }
 
   return null;

@@ -58,7 +58,7 @@ function OrderContent() {
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true, is_open: true });
+  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true, is_open: true, is_pay_first: false, qris_string: '' });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +70,8 @@ function OrderContent() {
   const [toast, setToast] = useState(null);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showQrisModal, setShowQrisModal] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [globalNote, setGlobalNote] = useState('');
 
@@ -106,9 +108,9 @@ function OrderContent() {
   };
 
   const fetchCafeStatus = async () => {
-    const { data } = await supabase.from('tenants').select('is_open').eq('id', tenantId).single();
-    if (data && data.is_open !== undefined) {
-      setCafe(prev => ({ ...prev, is_open: data.is_open !== false }));
+    const { data } = await supabase.from('tenants').select('is_open, is_pay_first').eq('id', tenantId).single();
+    if (data) {
+      setCafe(prev => ({ ...prev, is_open: data.is_open !== false, is_pay_first: data.is_pay_first !== false }));
     }
   };
 
@@ -239,7 +241,6 @@ function OrderContent() {
     };
   }, []);
 
-  // 🔥 1. Bunyi Instan saat pesanan baru berstatus "ready"
   useEffect(() => {
     const hasReady = myOrders.some(o => o.status === 'ready');
     if (hasReady && !prevReadyRef.current && audioUnlocked && cafe.notify_order_ready !== false) {
@@ -248,7 +249,6 @@ function OrderContent() {
     prevReadyRef.current = hasReady;
   }, [myOrders, audioUnlocked, cafe.notify_order_ready]);
 
-  // 🔥 2. Bunyi Berulang tiap 20 detik
   useEffect(() => {
     if (!audioUnlocked) return;
     if (cafe.notify_order_ready === false) {
@@ -341,7 +341,20 @@ function OrderContent() {
     setShowConfirmModal(true);
   };
 
-  const handleCheckout = async () => {
+  const handleNextToPayment = () => {
+    if (!customerName.trim()) {
+      showToast('Mohon isi nama Anda');
+      return;
+    }
+    if (cafe.is_pay_first) {
+      setShowConfirmModal(false);
+      setShowPaymentModal(true);
+    } else {
+      handleCheckout('CASH'); // Langsung proses jika fitur OFF
+    }
+  };
+
+  const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
       return;
@@ -395,6 +408,16 @@ function OrderContent() {
 
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
+    // Tentukan status pembayaran berdasarkan metode dan setting cafe
+    let finalStatus = 'pending';
+    let finalPaymentStatus = 'unpaid';
+    
+    if (cafe.is_pay_first) {
+      finalPaymentStatus = method === 'QRIS' ? 'WAITING_QRIS' : 'WAITING_CASH';
+    } else {
+      finalPaymentStatus = 'unpaid'; // Perilaku lama jika fitur OFF
+    }
+
     const orderData = { 
       tenant_id: tenantId, 
       table_number: tableNumber, 
@@ -404,9 +427,9 @@ function OrderContent() {
       subtotal: subtotal,
       tax_amount: taxAmount,
       total_price: totalPrice, 
-      status: 'pending', 
-      payment_status: 'unpaid', 
-      payment_method: 'cash' 
+      status: finalStatus, 
+      payment_status: finalPaymentStatus, 
+      payment_method: method
     };
 
     const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
@@ -422,9 +445,7 @@ function OrderContent() {
         p_tenant_id: tenantId,
         p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
       });
-      if (decErr) {
-        console.error('Stock decrement error:', decErr);
-      }
+      if (decErr) console.error('Stock decrement error:', decErr);
     } catch (rpcErr) {
       console.error('RPC exception:', rpcErr);
     }
@@ -440,6 +461,8 @@ function OrderContent() {
     setGlobalNote('');
     setIsSubmitting(false); 
     setShowConfirmModal(false);
+    setShowPaymentModal(false);
+    setShowQrisModal(false);
     setActiveTab('status');
     fetchMyOrders(newIds);
     showToast('Pesanan terkirim! 🎉');
@@ -686,6 +709,10 @@ function OrderContent() {
                 <p className="text-slate-800 font-black text-base">Belum ada pesanan</p>
               </div>
             ) : myOrders.map(o => {
+              const isCancelled = o.payment_status === 'CANCELLED';
+              const isWaitingCash = o.payment_status === 'WAITING_CASH';
+              const isWaitingQris = o.payment_status === 'WAITING_QRIS';
+              
               const statusIdx = ['pending', 'cooking', 'ready', 'completed'].indexOf(o.status);
               const statusLabels = ['Diterima', 'Dimasak', 'Siap', 'Selesai'];
               const statusEmojis = ['✅', '👨‍🍳', '🍽️', '🎉'];
@@ -698,7 +725,11 @@ function OrderContent() {
                       <p className="text-[10px] text-slate-500 font-black tracking-wider">ORDER #{o.id.slice(0, 8).toUpperCase()}</p>
                       <p className="text-xs text-slate-600 font-bold mt-1">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
-                    <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase text-white shadow-sm border-2 border-black/10 ${statusColors[statusIdx]}`}>{o.status}</span>
+                    <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase text-white shadow-sm border-2 border-black/10 ${
+                      isCancelled ? 'bg-rose-600' : isWaitingCash || isWaitingQris ? 'bg-amber-500' : statusColors[statusIdx]
+                    }`}>
+                      {isCancelled ? 'Ditolak' : isWaitingCash || isWaitingQris ? 'Menunggu Bayar' : o.status}
+                    </span>
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -712,33 +743,58 @@ function OrderContent() {
                     ))}
                   </div>
 
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-slate-100">
+                  <div className="flex justify-between items-center pt-3 border-t-2 border-slate-100 mb-4">
                     <span className="text-xs text-slate-600 font-bold">Total</span>
                     <span className="text-base font-black text-[var(--primary-color)]">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
                   </div>
 
-                  <div className="mt-6 space-y-4">
-                    {statusLabels.map((label, i) => {
-                      const isDone = i <= statusIdx;
-                      const isActive = i === statusIdx;
-                      return (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all ${isDone ? statusColors[statusIdx] + ' text-white border-transparent shadow-sm' : 'bg-slate-50 text-slate-400 border-slate-300'}`}>
-                              {isDone ? statusEmojis[i] : (i + 1)}
+                  {/* STATUS PEMBAYARAN */}
+                  {isCancelled && (
+                    <div className="bg-rose-50 border-2 border-rose-300 p-4 rounded-xl text-center">
+                      <p className="text-rose-800 font-black text-sm">❌ Pesanan Ditolak</p>
+                      <p className="text-rose-600 text-xs font-bold mt-1">Pembayaran tidak ditemukan. Silakan lakukan pemesanan ulang.</p>
+                    </div>
+                  )}
+
+                  {isWaitingCash && (
+                    <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-xl text-center">
+                      <p className="text-amber-800 font-black text-sm">💵 Menunggu Pembayaran Tunai</p>
+                      <p className="text-amber-700 text-xs font-bold mt-1">Silakan menuju ke Kasir untuk melakukan pembayaran Anda.</p>
+                    </div>
+                  )}
+
+                  {isWaitingQris && (
+                    <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-xl text-center">
+                      <p className="text-blue-800 font-black text-sm">⏳ Menunggu Verifikasi Kasir</p>
+                      <p className="text-blue-700 text-xs font-bold mt-1">Pesanan akan diproses setelah kasir memverifikasi pembayaran Anda.</p>
+                    </div>
+                  )}
+
+                  {/* TIMELINE PROSES (Hanya muncul jika sudah PAID) */}
+                  {!isCancelled && !isWaitingCash && !isWaitingQris && (
+                    <div className="mt-2 space-y-4">
+                      {statusLabels.map((label, i) => {
+                        const isDone = i <= statusIdx;
+                        const isActive = i === statusIdx;
+                        return (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all ${isDone ? statusColors[statusIdx] + ' text-white border-transparent shadow-sm' : 'bg-slate-50 text-slate-400 border-slate-300'}`}>
+                                {isDone ? statusEmojis[i] : (i + 1)}
+                              </div>
+                              {i < statusLabels.length - 1 && (
+                                <div className={`w-1 h-6 mt-1 rounded-full ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-slate-200'}`}></div>
+                              )}
                             </div>
-                            {i < statusLabels.length - 1 && (
-                              <div className={`w-1 h-6 mt-1 rounded-full ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-slate-200'}`}></div>
-                            )}
+                            <div className="flex-1 pt-1.5">
+                              <p className={`text-sm font-black ${isDone ? 'text-slate-900' : 'text-slate-400'}`}>{label}</p>
+                              {isActive && <p className="text-[11px] text-[var(--primary-color)] font-bold mt-1 animate-pulse">Sedang berlangsung...</p>}
+                            </div>
                           </div>
-                          <div className="flex-1 pt-1.5">
-                            <p className={`text-sm font-black ${isDone ? 'text-slate-900' : 'text-slate-400'}`}>{label}</p>
-                            {isActive && <p className="text-[11px] text-[var(--primary-color)] font-bold mt-1 animate-pulse">Sedang berlangsung...</p>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -756,9 +812,6 @@ function OrderContent() {
           <p className="text-[11px] font-bold text-slate-500">
             Powered by <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-slate-900 font-black hover:text-[var(--primary-color)] transition-colors">NexaFlow</a>
           </p>
-          <a href="https://wa.me/6281389744957" target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-slate-500 hover:text-slate-700 transition-colors bg-slate-200 px-2.5 py-1 rounded-md border border-slate-300">
-            Ingin aplikasi seperti ini? WA Developer: 0813-8974-4957
-          </a>
         </div>
       </div>
 
@@ -803,6 +856,7 @@ function OrderContent() {
         </div>
       )}
 
+      {/* MODAL 1: KONFIRMASI PESANAN (Nama & Catatan) */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
@@ -822,28 +876,78 @@ function OrderContent() {
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border-2 border-slate-300 mb-6">
-              <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                <span>Subtotal</span>
-                <span>Rp {subtotal.toLocaleString('id-ID')}</span>
-              </div>
-              {taxRate > 0 && (
-                <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                  <span>PPN ({taxRate}%)</span>
-                  <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-base font-black text-slate-900 pt-3 border-t-2 border-slate-300">
-                <span>Total Bayar</span>
-                <span className="text-[var(--primary-color)]">Rp {totalPrice.toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-
             <div className="flex gap-3">
               <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3.5 rounded-xl font-black text-sm text-slate-700 bg-slate-200 hover:bg-slate-300 transition-colors border-2 border-slate-300">Batal</button>
-              <button onClick={handleCheckout} disabled={isSubmitting || !customerName.trim()} className="flex-[2] bg-[var(--primary-color)] text-white font-black py-3.5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 border-2 border-[var(--primary-dark)]">
-                {isSubmitting ? 'Memproses...' : 'Ya, Kirim Pesanan'}
+              <button onClick={handleNextToPayment} disabled={isSubmitting || !customerName.trim()} className="flex-[2] bg-[var(--primary-color)] text-white font-black py-3.5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 border-2 border-[var(--primary-dark)]">
+                {cafe.is_pay_first ? 'Pilih Metode Pembayaran' : (isSubmitting ? 'Memproses...' : 'Ya, Kirim Pesanan')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: PILIH METODE PEMBAYARAN */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
+          <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-6 sm:hidden"></div>
+            
+            <h3 className="text-xl font-black text-slate-900 text-center mb-1">Pilih Pembayaran</h3>
+            <p className="text-xs text-slate-600 font-bold text-center mb-6">Silakan pilih cara pembayaran Anda</p>
+
+            <div className="space-y-3 mb-6">
+              <button onClick={() => handleCheckout('CASH')} className="w-full bg-emerald-50 border-2 border-emerald-500 text-emerald-900 p-4 rounded-2xl flex items-center justify-between hover:bg-emerald-100 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">💵</span>
+                  <div className="text-left">
+                    <p className="font-black text-sm">Bayar Tunai (Cash)</p>
+                    <p className="text-[10px] font-bold text-emerald-700 mt-0.5">Bayar langsung ke kasir</p>
+                  </div>
+                </div>
+                <span className="text-emerald-500 font-black">➔</span>
+              </button>
+
+              <button onClick={() => { setShowPaymentModal(false); setShowQrisModal(true); }} className="w-full bg-blue-50 border-2 border-blue-500 text-blue-900 p-4 rounded-2xl flex items-center justify-between hover:bg-blue-100 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📱</span>
+                  <div className="text-left">
+                    <p className="font-black text-sm">QRIS (Scan Barcode)</p>
+                    <p className="text-[10px] font-bold text-blue-700 mt-0.5">Bayar via M-Banking / E-Wallet</p>
+                  </div>
+                </div>
+                <span className="text-blue-500 font-black">➔</span>
+              </button>
+            </div>
+
+            <button onClick={() => { setShowPaymentModal(false); setShowConfirmModal(true); }} className="w-full py-3.5 rounded-xl font-black text-sm text-slate-700 bg-slate-200 hover:bg-slate-300 transition-colors border-2 border-slate-300">Kembali</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: TAMPILKAN QRIS */}
+      {showQrisModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
+          <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 border-t-4 sm:border-4 border-slate-800">
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-6 sm:hidden"></div>
+            
+            <h3 className="text-xl font-black text-slate-900 text-center mb-1">Scan QRIS</h3>
+            <p className="text-xs text-slate-600 font-bold text-center mb-4">Total: <span className="text-[var(--primary-color)] font-black">Rp {totalPrice.toLocaleString('id-ID')}</span></p>
+
+            <div className="bg-white border-4 border-slate-300 rounded-2xl p-2 mb-4 flex justify-center">
+              {cafe.qris_string ? (
+                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(cafe.qris_string)}&margin=10`} alt="QRIS" className="w-full max-w-[250px] object-contain" />
+              ) : (
+                 <div className="text-center p-8 text-slate-500 font-bold text-sm">Gambar QRIS belum diset oleh Kafe.</div>
+              )}
+            </div>
+
+            <p className="text-[10px] text-slate-500 font-bold text-center mb-6">Silakan screenshot halaman ini atau tunjukkan ke kasir jika pembayaran berhasil.</p>
+
+            <div className="space-y-2">
+              <button onClick={() => handleCheckout('QRIS')} className="w-full bg-[var(--primary-color)] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[var(--primary-dark)]">
+                Saya Sudah Bayar
+              </button>
+              <button onClick={() => { setShowQrisModal(false); setShowPaymentModal(true); }} className="w-full py-3 rounded-xl font-black text-xs text-slate-600 hover:text-slate-900">Ganti Metode</button>
             </div>
           </div>
         </div>
