@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -58,7 +58,6 @@ const parseQRIS = (qris) => {
     while (i < qris.length) {
       const tag = qris.substr(i, 2);
       const len = parseInt(qris.substr(i+2, 2), 10);
-      if (isNaN(len)) break;
       const value = qris.substr(i+4, len);
       if (tag === '59') merchantName = value;
       if (tag === '62') {
@@ -66,7 +65,6 @@ const parseQRIS = (qris) => {
          while (j < value.length) {
            const subTag = value.substr(j, 2);
            const subLen = parseInt(value.substr(j+2, 2), 10);
-           if (isNaN(subLen)) break;
            const subValue = value.substr(j+4, subLen);
            if (subTag === '01') nmid = subValue;
            if (subTag === '07') terminalId = subValue;
@@ -74,79 +72,9 @@ const parseQRIS = (qris) => {
          }
       }
       i += 4 + len;
-      if (tag === '63') break;
     }
   } catch(e) {}
   return { merchantName, nmid, terminalId };
-};
-
-// === HELPER BARU: CRC16-CCITT (standar EMVCo QRIS) ===
-const crc16CCITT = (data) => {
-  let crc = 0xFFFF;
-  for (let i = 0; i < data.length; i++) {
-    crc ^= data.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4, '0');
-};
-
-// === HELPER BARU: Injeksi nominal ke string QRIS statis → jadi QRIS dinamis ===
-const injectNominalQRIS = (staticQRIS, amount) => {
-  if (!staticQRIS || !amount || amount <= 0) return staticQRIS;
-  try {
-    // 1. Parse semua tag EMVCo
-    const tags = [];
-    let i = 0;
-    while (i < staticQRIS.length) {
-      const tag = staticQRIS.substr(i, 2);
-      const len = parseInt(staticQRIS.substr(i + 2, 2), 10);
-      if (isNaN(len) || i + 4 + len > staticQRIS.length) break;
-      const val = staticQRIS.substr(i + 4, len);
-      tags.push({ tag, val });
-      i += 4 + len;
-      if (tag === '63') break;
-    }
-
-    if (tags.length === 0) return staticQRIS;
-
-    // 2. Hapus tag 54 (amount lama) & tag 63 (CRC lama)
-    const cleanTags = tags.filter(t => t.tag !== '54' && t.tag !== '63');
-
-    // 3. Ubah tag 01 (Point of Initiation) jadi '12' = dinamis
-    const tag01 = cleanTags.find(t => t.tag === '01');
-    if (tag01) tag01.val = '12';
-
-    // 4. Siapkan tag 54 (nominal)
-    const amountStr = String(Math.round(Number(amount)));
-    const tag54 = { tag: '54', val: amountStr };
-
-    // 5. Sisipkan setelah tag 53 (currency), atau sebelum tag 58 (country)
-    let insertIdx = cleanTags.findIndex(t => t.tag === '53');
-    if (insertIdx >= 0) {
-      insertIdx += 1;
-    } else {
-      insertIdx = cleanTags.findIndex(t => t.tag === '58');
-      if (insertIdx < 0) insertIdx = cleanTags.length;
-    }
-    cleanTags.splice(insertIdx, 0, tag54);
-
-    // 6. Rebuild string
-    let result = '';
-    for (const t of cleanTags) {
-      result += t.tag + String(t.val.length).padStart(2, '0') + t.val;
-    }
-
-    // 7. Tambah placeholder CRC "6304"
-    result += '6304';
-
-    // 8. Hitung & append CRC16
-    return result + crc16CCITT(result);
-  } catch (e) {
-    console.warn('injectNominalQRIS gagal, pakai string asli:', e);
-    return staticQRIS;
-  }
 };
 
 export default function AdminDashboard() {
@@ -179,6 +107,9 @@ export default function AdminDashboard() {
   
   const [actionLoading, setActionLoading] = useState({});
   const router = useRouter();
+  
+  // 🔥 Tambahan untuk Audio Notifikasi
+  const audioCtxRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('nexaflow_admin_theme');
@@ -196,6 +127,41 @@ export default function AdminDashboard() {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  }, []);
+
+  // 🔥 Fungsi Bunyi Beep saat ada pendaftar
+  const playBeep = () => {
+    if (!audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  };
+
+  useEffect(() => {
+    // Unlock Audio Context saat pertama kali klik di halaman admin
+    const unlockAudio = () => {
+      if (!audioCtxRef.current) {
+        try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { }
+      }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -260,7 +226,6 @@ export default function AdminDashboard() {
     const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
     if (error) {
       console.error('Fetch settings error:', error);
-      showToast('Gagal memuat pengaturan: ' + error.message, 'error');
       return;
     }
     if (data) {
@@ -307,9 +272,16 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // 🔥 REALTIME: Deteksi Pendaftar Baru
   useEffect(() => {
     const sub = supabase.channel('admin-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, fetchTenants)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tenants' }, (payload) => {
+        showToast(`🎉 Pendaftar Baru: ${payload.new.name}`, 'success');
+        playBeep(); // Bunyikan suara
+        fetchTenants(); // Refresh data
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants' }, fetchTenants)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tenants' }, fetchTenants)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'marketers' }, fetchMarketers)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, fetchSettings)
       .subscribe();
@@ -341,7 +313,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('tenants').update({ subscription_end_date: newEndDate, is_active: true }).eq('id', tenant.id);
     setExtendModal({ open: false, tenant: null, loading: false });
     if (error) showToast('Gagal: ' + error.message, 'error');
-    else { showToast(`${tenant.name} diperpanjang ${days} hari`, 'success'); fetchTenants(); }
+    else { showToast(`✅ ${tenant.name} diperpanjang ${days} Hari!`, 'success'); fetchTenants(); }
   };
 
   const requestToggleStatus = (tenant) => {
@@ -394,7 +366,7 @@ export default function AdminDashboard() {
   const requestDelete = (tenant) => {
     setConfirmModal({
       open: true, title: 'Hapus Permanen',
-      message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. Tindakan ini tidak bisa dibatalkan.`,
+      message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
       requireInput: tenant.name, inputValue: '', danger: true, loading: false,
       onConfirm: () => performDelete(tenant),
     });
@@ -448,14 +420,10 @@ export default function AdminDashboard() {
     fetchSettings();
   };
 
-  // === generateQRISImage: sekarang terima param amount, injeksi nominal otomatis ===
-  const generateQRISImage = async (qrisString, tenantName, amount) => {
+  const generateQRISImage = async (qrisString, tenantName) => {
     return new Promise(async (resolve, reject) => {
       try {
-        // Injeksi nominal ke QRIS (kalau amount valid) → jadi QRIS dinamis
-        const dynamicQRIS = amount && amount > 0 ? injectNominalQRIS(qrisString, amount) : qrisString;
-
-        const parsed = parseQRIS(dynamicQRIS);
+        const parsed = parseQRIS(qrisString);
         const merchantName = parsed.merchantName !== 'MERCHANT NAME' ? parsed.merchantName : tenantName;
         
         const canvas = document.createElement('canvas');
@@ -512,8 +480,7 @@ export default function AdminDashboard() {
         ctx.font = '28px Arial';
         ctx.fillText(parsed.terminalId, 400, 335);
 
-        // QR code dari string DINAMIS (sudah berisi nominal)
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(dynamicQRIS)}&margin=0`;
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrisString)}&margin=0`;
         const qrImg = new Image();
         qrImg.crossOrigin = 'Anonymous';
         qrImg.src = qrApiUrl;
@@ -597,9 +564,8 @@ export default function AdminDashboard() {
     if (appSettings.qris_string) {
       showToast('Menyiapkan gambar QRIS...', 'info');
       try {
-        // Kirim price sebagai amount → QRIS dinamis ter-inject nominal
-        const qrisImageUrl = await generateQRISImage(appSettings.qris_string, tenant.name, price);
-        msg += `*1. QRIS (Scan Gambar)*\nSilakan scan gambar QRIS berikut (nominal otomatis Rp ${price.toLocaleString('id-ID')}):\n${qrisImageUrl}\n\n`;
+        const qrisImageUrl = await generateQRISImage(appSettings.qris_string, tenant.name);
+        msg += `*1. QRIS (Scan Gambar)*\nSilakan scan gambar QRIS berikut:\n${qrisImageUrl}\n\n`;
       } catch (err) {
         showToast('Gagal membuat gambar QRIS, menggunakan teks.', 'warning');
         msg += `*1. QRIS (Copy Teks)*\nSilakan copy-paste teks QRIS di bawah ini ke M-Banking:\n${appSettings.qris_string}\n\n`;
@@ -751,146 +717,119 @@ export default function AdminDashboard() {
 
   if (loading || !now) {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center font-sans ${theme === 'dark' ? 'bg-slate-950 text-blue-400' : 'bg-slate-50 text-blue-700'}`}>
-        <div className="animate-spin w-10 h-10 border-4 border-current border-t-transparent rounded-full mb-4"></div>
-        <p className="text-sm font-medium text-slate-500">Memverifikasi hak akses...</p>
+      <div className={`min-h-screen flex flex-col items-center justify-center font-sans ${theme === 'dark' ? 'bg-[#050b14] text-cyan-400' : 'bg-slate-50 text-cyan-600'}`}>
+        <div className="animate-spin w-12 h-12 border-4 border-current border-t-transparent rounded-full mb-4"></div>
+        <p className="text-sm font-black tracking-widest uppercase">Memverifikasi Hak Akses...</p>
       </div>
     );
   }
 
-  const bgMain = theme === 'dark' ? 'bg-slate-950' : 'bg-slate-50';
-  const textMain = theme === 'dark' ? 'text-slate-100' : 'text-slate-900';
-  const textSub = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
-  const textMuted = theme === 'dark' ? 'text-slate-500' : 'text-slate-400';
-  const hoverText = theme === 'dark' ? 'hover:text-white' : 'hover:text-slate-900';
-  const cardClass = theme === 'dark' ? 'bg-slate-900 border border-slate-800 rounded-lg' : 'bg-white border border-slate-200 rounded-lg';
-  const btnBase = 'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-  const btnPrimary = 'bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500';
-  const btnSecondary = theme === 'dark' ? 'bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200';
-  const btnDanger = 'bg-red-600 text-white hover:bg-red-500';
-  const btnGhost = theme === 'dark' ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100';
-  const iconBtn = `p-2 rounded-lg transition-colors ${btnGhost}`;
-  const inputCls = `w-full rounded-lg px-3 py-2 text-sm font-normal outline-none transition-colors border ${theme === 'dark' ? 'bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600'}`;
-  const modalShell = `rounded-lg w-full overflow-hidden border shadow-sm ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`;
-  const modalHeader = `px-5 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`;
+  const bgMain = theme === 'dark' ? 'bg-[#050b14]' : 'bg-[#f0f4f8]';
+  const textMain = theme === 'dark' ? 'text-white' : 'text-slate-900';
+  const textSub = theme === 'dark' ? 'text-slate-400' : 'text-slate-600';
+  const cardClass = theme === 'dark' ? 'bg-[#0a192f] border-2 border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-2 border-slate-900 shadow-[4px_4px_0px_0px_#000000]';
+  const btnBase = 'border-2 font-black uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-2';
+  const btnDark = 'bg-slate-800 text-white border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-700';
+  const btnLight = 'bg-white text-slate-900 border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-100';
+  const inputCls = `w-full border-2 rounded-lg px-3 py-2 text-sm font-bold outline-none ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'}`;
+  const modalShell = `border-2 rounded-xl w-full overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`;
+  const modalHeader = `p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`;
   const sortLabels = { newest: 'Terbaru', name: 'Nama A-Z', daysLeft: 'Sisa Hari', revenue: 'Omset Tertinggi' };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${bgMain} ${textMain}`}>
-      <header className={`border-b sticky top-0 z-40 backdrop-blur-sm ${theme === 'dark' ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white/80'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+      <header className={`border-b-2 ${theme === 'dark' ? 'border-slate-800 bg-[#0a192f]' : 'border-slate-900 bg-white'} sticky top-0 z-40`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div>
-            <h1 className="text-lg font-semibold flex items-center gap-2.5">
-              <span className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}><Icons.Shield /></span>
-              Admin Control Center
+            <h1 className="text-2xl font-black tracking-tighter uppercase flex items-center gap-3">
+              <span className={`p-2 border-2 rounded-lg ${theme === 'dark' ? 'border-cyan-400 text-cyan-400 bg-cyan-400/10' : 'border-cyan-600 text-cyan-600 bg-cyan-50'}`}><Icons.Shield /></span>
+              Control Center
             </h1>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <button onClick={() => setSettingsModal({ open: true, loading: false, qris_string: appSettings.qris_string, bank_name: appSettings.bank_name, bank_account: appSettings.bank_account, bank_holder: appSettings.bank_holder })} className={`${btnBase} ${btnSecondary} px-3 py-2 text-sm`} title="Pengaturan Sistem">
+            <button onClick={() => setSettingsModal({ open: true, loading: false, qris_string: appSettings.qris_string, bank_name: appSettings.bank_name, bank_account: appSettings.bank_account, bank_holder: appSettings.bank_holder })} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Pengaturan Sistem">
               <Icons.Settings />
             </button>
-            <button onClick={toggleTheme} className={`${btnBase} ${btnSecondary} px-3 py-2 text-sm`} title="Toggle Tema">
+            <button onClick={toggleTheme} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Toggle Tema">
               {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
             </button>
-            <button onClick={handleLogout} className={`${btnBase} ${btnDanger} flex-1 sm:flex-none px-4 py-2 text-sm`}>
+            <button onClick={handleLogout} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600 flex-1 sm:flex-none px-4 py-2 rounded-lg`}>
               <Icons.Logout /> Logout
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         
-        <div className={`inline-flex p-1 rounded-lg border w-full sm:w-auto ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <button onClick={() => setActiveTab('tenants')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'tenants' ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-700 text-white') : textSub + ' ' + hoverText}`}>
-            <Icons.Store /> <span>Data Kafe</span> <span className={`text-xs ${activeTab === 'tenants' ? 'text-white/80' : textMuted}`}>({stats.total})</span>
+        <div className={`flex p-1.5 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'} w-full sm:w-max`}>
+          <button onClick={() => setActiveTab('tenants')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition-all ${activeTab === 'tenants' ? (theme === 'dark' ? 'bg-cyan-500 text-black shadow-[2px_2px_0px_0px_#000]' : 'bg-cyan-600 text-white shadow-[2px_2px_0px_0px_#000]') : textSub}`}>
+            <Icons.Store /> Data Kafe ({stats.total})
           </button>
-          <button onClick={() => setActiveTab('marketers')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'marketers' ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-700 text-white') : textSub + ' ' + hoverText}`}>
-            <Icons.Users /> <span>Tim Marketing</span> <span className={`text-xs ${activeTab === 'marketers' ? 'text-white/80' : textMuted}`}>({marketers.length})</span>
+          <button onClick={() => setActiveTab('marketers')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition-all ${activeTab === 'marketers' ? (theme === 'dark' ? 'bg-cyan-500 text-black shadow-[2px_2px_0px_0px_#000]' : 'bg-cyan-600 text-white shadow-[2px_2px_0px_0px_#000]') : textSub}`}>
+            <Icons.Users /> Tim Marketing ({marketers.length})
           </button>
         </div>
 
         {activeTab === 'tenants' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4">
-            <div className={`${cardClass} p-5`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-sm font-medium ${textSub}`}>Total Klien</p>
-                <span className={textMuted}><Icons.Store /></span>
-              </div>
-              <p className="text-3xl font-semibold tracking-tight">{stats.total}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-bottom-4">
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}><Icons.Store /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Klien</p>
+              <h3 className="text-4xl font-black">{stats.total}</h3>
             </div>
-            <div className={`${cardClass} p-5`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-sm font-medium ${textSub}`}>Kafe Online</p>
-                <span className={theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}><Icons.Activity /></span>
-              </div>
-              <p className={`text-3xl font-semibold tracking-tight ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>
-                {stats.online} <span className={`text-base font-normal ${textMuted}`}>/ {stats.total}</span>
-              </p>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
+              <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span></h3>
             </div>
-            <div className={`${cardClass} p-5`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-sm font-medium ${textSub}`}>Omset / Bulan</p>
-                <span className={theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}><Icons.Dollar /></span>
-              </div>
-              <p className={`text-2xl font-semibold tracking-tight ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>
-                Rp {stats.revenue.toLocaleString('id-ID')}
-              </p>
-              <p className={`text-xs mt-1 ${textMuted}`}>Prorated</p>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
+              <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
             </div>
-            <div className={`${cardClass} p-5`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-sm font-medium ${textSub}`}>Komisi Sales</p>
-                <span className={theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}><Icons.BarChart /></span>
-              </div>
-              <p className={`text-2xl font-semibold tracking-tight ${theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}`}>
-                Rp {stats.commission.toLocaleString('id-ID')}
-              </p>
-              <p className={`text-xs mt-1 ${textMuted}`}>Prorated</p>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
+              <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
             </div>
           </div>
         )}
 
         {activeTab === 'tenants' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-            <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
               <div className="relative flex-1 min-w-0">
-                <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMuted}`}><Icons.Search /></span>
-                <input type="text" placeholder="Cari kafe, referral, atau nomor WA..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={`w-full bg-transparent border-none outline-none pl-10 pr-4 py-2 text-sm font-normal ${theme === 'dark' ? 'text-slate-100 placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`} />
+                <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSub}`}><Icons.Search /></span>
+                <input type="text" placeholder="Cari kafe / referral / WA..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={`w-full bg-transparent border-none outline-none pl-10 pr-4 py-2 text-sm font-bold ${theme === 'dark' ? 'text-white placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`} />
               </div>
               <div className="relative">
-                <button onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }} className={`${btnBase} ${btnSecondary} px-3 py-2 text-sm w-full lg:w-auto`}>
-                  <Icons.Sort /> <span>{sortLabels[sortBy]}</span>
+                <button onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-3 py-2 rounded-lg text-[10px] w-full lg:w-auto`}>
+                  <Icons.Sort /> {sortLabels[sortBy]}
                 </button>
                 {showSortMenu && (
-                  <div onClick={(e) => e.stopPropagation()} className={`absolute right-0 top-full mt-1 z-50 rounded-lg border overflow-hidden shadow-sm ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <div onClick={(e) => e.stopPropagation()} className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}>
                     {Object.entries(sortLabels).map(([k, v]) => (
-                      <button key={k} onClick={() => { setSortBy(k); setShowSortMenu(false); }} className={`block w-full text-left px-4 py-2 text-sm whitespace-nowrap transition-colors ${sortBy === k ? (theme === 'dark' ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700') : `${textSub} ${hoverText}`}`}>{v}</button>
+                      <button key={k} onClick={() => { setSortBy(k); setShowSortMenu(false); }} className={`block w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${sortBy === k ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}>{v}</button>
                     ))}
                   </div>
                 )}
               </div>
-              <div className={`flex p-1 rounded-lg border ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'} overflow-x-auto`}>
+              <div className={`flex p-1 rounded-lg border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-100 border-slate-300'} overflow-x-auto`}>
                 {['all', 'online', 'expired', 'suspended', 'warning'].map(f => (
-                  <button key={f} onClick={() => setFilterStatus(f)} className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${filterStatus === f ? (theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : `${textSub} ${hoverText}`}`}>
-                    {f === 'all' ? 'Semua' : f === 'suspended' ? 'Suspend' : f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
+                  <button key={f} onClick={() => setFilterStatus(f)} className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${filterStatus === f ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}>{f === 'all' ? 'Semua' : f === 'suspended' ? 'Suspend' : f}</button>
                 ))}
               </div>
             </div>
 
-            <div className={`hidden lg:block rounded-lg border overflow-hidden ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className={`hidden lg:block rounded-xl border-2 overflow-hidden ${theme === 'dark' ? 'border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className={`text-xs font-medium border-b ${theme === 'dark' ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                    <th className="px-4 py-3">Nama Kafe</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Sisa Waktu</th>
-                    <th className="px-4 py-3">Finansial</th>
-                    <th className="px-4 py-3 text-right">Aksi</th>
+                  <tr className={`text-[10px] font-black uppercase tracking-widest border-b-2 ${theme === 'dark' ? 'bg-[#050b14] text-cyan-400 border-slate-700' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
+                    <th className="p-4">Nama Kafe</th><th className="p-4">Status</th><th className="p-4">Sisa Waktu</th><th className="p-4">Finansial</th><th className="p-4 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${theme === 'dark' ? 'divide-slate-800 bg-slate-900/50' : 'divide-slate-100 bg-white'}`}>
+                <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
                   {sortedTenants.map((tenant) => {
                     const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
                     const isOnline = onlineUsers[tenant.id];
@@ -899,43 +838,44 @@ export default function AdminDashboard() {
                     const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
                     const busy = !!actionLoading[tenant.id];
                     return (
-                      <tr key={tenant.id} className={`transition-colors ${isSuspended ? 'opacity-60' : (theme === 'dark' ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50')}`}>
-                        <td className="px-4 py-3">
+                      <tr key={tenant.id} className={`transition-colors ${isSuspended ? 'opacity-50 grayscale' : (theme === 'dark' ? 'hover:bg-[#0d2137]' : 'hover:bg-slate-50')}`}>
+                        <td className="p-4">
                           <div className="flex items-center gap-3">
-                            {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-9 h-9 rounded-lg object-cover ${theme === 'dark' ? 'ring-1 ring-slate-700' : 'ring-1 ring-slate-200'}`} /> : <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold ${theme === 'dark' ? 'bg-slate-800 text-blue-400' : 'bg-slate-100 text-slate-700'}`}>{(tenant.name || '?').charAt(0)}</div>}
+                            {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} /> : <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>{(tenant.name || '?').charAt(0)}</div>}
                             <div>
-                              <p className="font-medium text-sm">{tenant.name}</p>
-                              <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[11px] font-mono ${textMuted} ${hoverText} flex items-center gap-1 transition-colors`}>ID: {tenant.id.slice(0, 8)}… <Icons.Copy /></button>
+                              <p className="font-black text-base">{tenant.name}</p>
+                              <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} hover:text-cyan-400 flex items-center gap-1`}>ID: {tenant.id.slice(0, 8)}... <Icons.Copy /></button>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold ${isSuspended ? 'bg-red-600 text-white' : isOnline ? 'bg-emerald-600 text-white' : (theme === 'dark' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-700')}`}>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border-2 ${isSuspended ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700') : isOnline ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700') : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${!isSuspended && isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
                             {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="p-4">
                           <div className="flex flex-col gap-0.5">
-                            <span className={`text-base font-semibold ${isExpired ? 'text-red-600 dark:text-red-500' : isWarning ? 'text-amber-600 dark:text-amber-500' : (theme === 'dark' ? 'text-blue-400' : 'text-blue-700')}`}>{isSuspended ? 'Beku' : hasEndDate(tenant) ? `${daysLeft} hari` : '—'}</span>
-                            <p className={`text-[11px] ${textMuted}`}>{isSuspended ? 'Disuspend' : hasEndDate(tenant) ? formatDateID(tenant.subscription_end_date) : 'Belum diatur'}</p>
+                            <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>{isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}</span>
+                            <p className={`text-[9px] font-bold uppercase tracking-wider ${textSub}`}>{isSuspended ? 'Disuspend' : hasEndDate(tenant) ? formatDateID(tenant.subscription_end_date) : 'Belum diatur'}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="p-4">
                           <div className="flex flex-col gap-0.5">
-                            <p className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</p>
-                            <p className={`text-[11px] ${textMuted}`}>Ref: <span className={textMain}>{tenant.referral_name || '-'}</span></p>
-                            <p className={`text-[11px] ${textMuted}`}>Komisi: <span className={theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></p>
+                            <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</p>
+                            <p className={`text-[9px] font-bold ${textSub}`}>Ref: <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>{tenant.referral_name || '-'}</span></p>
+                            <p className={`text-[9px] font-bold ${textSub}`}>Komisi: <span className={theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></p>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1 flex-wrap">
-                            <button onClick={() => setDetailModal({ open: true, tenant })} className={iconBtn} title="Detail Tenant"><Icons.Eye /></button>
-                            <button onClick={() => openWaTenant(tenant)} className={`${iconBtn} ${theme === 'dark' ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50'}`} title="Kirim Tagihan via WA"><Icons.WhatsApp /></button>
-                            <button onClick={() => openStats(tenant)} className={iconBtn} title="Statistik"><Icons.BarChart /></button>
-                            <button onClick={() => openFinance(tenant)} className={`${iconBtn} ${theme === 'dark' ? 'text-blue-400 hover:bg-blue-500/10' : 'text-blue-700 hover:bg-blue-50'}`} title="Finansial"><Icons.Settings /></button>
-                            <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} px-3 py-1.5 text-xs ${isSuspended ? 'bg-emerald-600 text-white hover:bg-emerald-500' : (theme === 'dark' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
-                            <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} ${btnPrimary} px-3 py-1.5 text-xs`}><Icons.Plus /> Extend</button>
-                            <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${iconBtn} ${theme === 'dark' ? 'text-red-500 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`} title="Hapus"><Icons.Trash /></button>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Detail Tenant"><Icons.Eye /></button>
+                            <button onClick={() => openWaTenant(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-600 border-emerald-600 hover:bg-emerald-200'} p-2 rounded-lg`} title="Kirim Tagihan & QRIS via WA"><Icons.WhatsApp /></button>
+                            <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Statistik"><Icons.BarChart /></button>
+                            <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 border-cyan-700 hover:bg-cyan-200'} p-2 rounded-lg`} title="Finansial"><Icons.Settings /></button>
+                            <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} px-3 py-2 rounded-lg text-[10px] disabled:opacity-50`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
+                            <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] hover:bg-blue-500 px-3 py-2 rounded-lg text-[10px]`}><Icons.Plus /> Extend</button>
+                            <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-600 border-rose-600 hover:bg-rose-200'} p-2 rounded-lg disabled:opacity-50`} title="Hapus"><Icons.Trash /></button>
                           </div>
                         </td>
                       </tr>
@@ -945,7 +885,7 @@ export default function AdminDashboard() {
               </table>
             </div>
 
-            <div className="lg:hidden space-y-3">
+            <div className="lg:hidden space-y-5">
               {sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
                 const isOnline = onlineUsers[tenant.id];
@@ -954,33 +894,31 @@ export default function AdminDashboard() {
                 const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
                 const busy = !!actionLoading[tenant.id];
                 return (
-                  <div key={tenant.id} className={`${cardClass} p-4 flex flex-col gap-3 ${isSuspended ? 'opacity-60' : ''}`}>
+                  <div key={tenant.id} className={`${cardClass} rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden ${isSuspended ? 'opacity-60 grayscale' : ''}`}>
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2.5">
-                        {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover ${theme === 'dark' ? 'ring-1 ring-slate-700' : 'ring-1 ring-slate-200'}`} /> : <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold ${theme === 'dark' ? 'bg-slate-800 text-blue-400' : 'bg-slate-100 text-slate-700'}`}>{(tenant.name || '?').charAt(0)}</div>}
+                        {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} /> : <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>{(tenant.name || '?').charAt(0)}</div>}
                         <div>
-                          <h3 className="font-medium text-base leading-tight">{tenant.name}</h3>
-                          <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[11px] font-mono ${textMuted} flex items-center gap-1`}>ID: {tenant.id.slice(0, 8)}… <Icons.Copy /></button>
+                          <h3 className="font-black text-base leading-tight">{tenant.name}</h3>
+                          <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} flex items-center gap-1`}>ID: {tenant.id.slice(0, 8)}... <Icons.Copy /></button>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold ${isSuspended ? 'bg-red-600 text-white' : isOnline ? 'bg-emerald-600 text-white' : (theme === 'dark' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-700')}`}>
-                        {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
-                      </span>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border-2 ${isSuspended ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700') : isOnline ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700') : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')}`}>{isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}</span>
                     </div>
-                    <div className={`rounded-lg p-3 border flex flex-col gap-2 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                      <div className="flex justify-between items-center"><p className={`text-xs ${textSub}`}>Sisa Waktu</p><span className={`text-base font-semibold ${isExpired ? 'text-red-600 dark:text-red-500' : isWarning ? 'text-amber-600 dark:text-amber-500' : (theme === 'dark' ? 'text-blue-400' : 'text-blue-700')}`}>{isSuspended ? 'Beku' : hasEndDate(tenant) ? `${daysLeft} hari` : '—'}</span></div>
-                      <div className="flex justify-between items-center"><p className={`text-xs ${textSub}`}>Harga Sewa</p><span className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</span></div>
-                      <div className="flex justify-between items-center"><p className={`text-xs ${textSub}`}>Referral</p><span className={`text-sm font-medium ${textMain}`}>{tenant.referral_name || '-'}</span></div>
-                      <div className="flex justify-between items-center"><p className={`text-xs ${textSub}`}>Komisi</p><span className={`text-sm font-medium ${theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}`}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></div>
+                    <div className={`rounded-lg p-2.5 border-2 flex flex-col gap-1.5 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Sisa Waktu</p><span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>{isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Harga Sewa</p><span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Referral</p><span className={`text-xs font-black ${textMain}`}>{tenant.referral_name || '-'}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p><span className={`text-xs font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} ${btnPrimary} col-span-2 py-2 text-sm`}><Icons.Plus /> Perpanjang</button>
-                      <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${btnSecondary} py-2 text-sm`}><Icons.Eye /> Detail</button>
-                      <button onClick={() => openWaTenant(tenant)} className={`${btnBase} py-2 text-sm ${theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}><Icons.WhatsApp /> Tagih WA</button>
-                      <button onClick={() => openFinance(tenant)} className={`${btnBase} py-2 text-sm ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}><Icons.Settings /> Finansial</button>
-                      <button onClick={() => openStats(tenant)} className={`${btnBase} ${btnSecondary} py-2 text-sm`}><Icons.BarChart /> Statistik</button>
-                      <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} py-2 text-sm ${isSuspended ? 'bg-emerald-600 text-white hover:bg-emerald-500' : (theme === 'dark' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
-                      <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} py-2 text-sm ${theme === 'dark' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}><Icons.Trash /> Hapus</button>
+                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                      <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] col-span-2 py-2.5 rounded-lg text-xs`}><Icons.Plus /> Perpanjang</button>
+                      <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail</button>
+                      <button onClick={() => openWaTenant(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Tagih WA</button>
+                      <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Settings /> Finansial</button>
+                      <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.BarChart /> Statistik</button>
+                      <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} py-2 rounded-lg text-[10px] disabled:opacity-50`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
+                      <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px] disabled:opacity-50`}><Icons.Trash /> Hapus</button>
                     </div>
                   </div>
                 );
@@ -990,46 +928,46 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'marketers' && (
-          <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-base font-semibold">Tim Marketing & Bagi Hasil</h2>
-              <button onClick={() => setMarketerModal({ open: true, name: '', wa: '', loading: false })} className={`${btnBase} ${btnPrimary} px-4 py-2 text-sm`}>
+              <h2 className="text-xl font-black uppercase tracking-wider">Tim Marketing & Bagi Hasil</h2>
+              <button onClick={() => setMarketerModal({ open: true, name: '', wa: '', loading: false })} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 px-4 py-2 rounded-lg text-xs`}>
                 <Icons.UserPlus /> Tambah Marketing
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {marketersWithStats.length === 0 ? (
-                <div className={`col-span-full p-8 text-center rounded-lg border border-dashed ${theme === 'dark' ? 'border-slate-800 text-slate-500' : 'border-slate-300 text-slate-400'}`}>Belum ada data marketing. Silakan tambah.</div>
+                <div className={`col-span-full p-8 text-center rounded-xl border-2 border-dashed ${theme === 'dark' ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-400'}`}>Belum ada data marketing. Silakan tambah.</div>
               ) : marketersWithStats.map(m => (
-                <div key={m.id} className={`${cardClass} p-5 flex flex-col`}>
+                <div key={m.id} className={`${cardClass} rounded-xl p-5 flex flex-col relative overflow-hidden`}>
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className={`font-semibold text-base ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>{m.name}</h3>
-                      <p className={`text-xs ${textMuted}`}>{m.wa_number || 'Tanpa WA'}</p>
+                      <h3 className="font-black text-lg text-cyan-500">{m.name}</h3>
+                      <p className={`text-xs font-bold ${textSub}`}>{m.wa_number || 'Tanpa WA'}</p>
                     </div>
-                    <button onClick={() => requestDeleteMarketer(m)} className={`${iconBtn} ${theme === 'dark' ? 'text-red-500 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`} title="Hapus Marketing"><Icons.Trash /></button>
+                    <button onClick={() => requestDeleteMarketer(m)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500' : 'bg-rose-100 text-rose-600 border-rose-600'} p-2 rounded-lg`} title="Hapus Marketing"><Icons.Trash /></button>
                   </div>
                   
-                  <div className={`rounded-lg p-3 border flex flex-col gap-2 mb-4 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className={`rounded-lg p-3 border-2 flex flex-col gap-2 mb-4 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                     <div className="flex justify-between items-center">
-                      <p className={`text-xs ${textSub}`}>Kafe Direferensi</p>
-                      <span className={`text-sm font-semibold ${textMain}`}>{m.count} Kafe</span>
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Kafe Direferensi</p>
+                      <span className={`text-sm font-black ${textMain}`}>{m.count} Kafe</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className={`text-xs ${textSub}`}>Total Omset Klien</p>
-                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>Rp {m.revenue.toLocaleString('id-ID')}</span>
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Total Omset Klien</p>
+                      <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {m.revenue.toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className={`text-xs ${textSub}`}>Komisi (Prorated)</p>
-                      <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}`}>Rp {m.commission.toLocaleString('id-ID')}</span>
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi (Prorated)</p>
+                      <span className={`text-sm font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {m.commission.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mt-auto">
-                    <button onClick={() => setMarketerDetailModal({ open: true, marketer: m })} className={`${btnBase} ${btnSecondary} py-2 text-sm`}><Icons.Eye /> Detail</button>
-                    <button onClick={() => handleExportMarketing(m)} className={`${btnBase} py-2 text-sm ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}><Icons.Download /> Excel</button>
-                    <button onClick={() => openWaMarketer(m, { count: m.count, commission: m.commission, activeTenants: m.activeTenants, expiredTenants: m.expiredTenants })} className={`${btnBase} col-span-2 py-2 text-sm ${theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}><Icons.WhatsApp /> Kirim Rincian via WA</button>
+                    <button onClick={() => setMarketerDetailModal({ open: true, marketer: m })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail Kafe</button>
+                    <button onClick={() => handleExportMarketing(m)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Download /> Export Excel</button>
+                    <button onClick={() => openWaMarketer(m, { count: m.count, commission: m.commission, activeTenants: m.activeTenants, expiredTenants: m.expiredTenants })} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} col-span-2 py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Kirim Rincian via WA</button>
                   </div>
                 </div>
               ))}
@@ -1039,43 +977,45 @@ export default function AdminDashboard() {
 
       </main>
 
+      {/* MODAL PENGATURAN */}
       {settingsModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.Settings /> Pengaturan Sistem</h3>
-              <button onClick={() => setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Settings /> Pengaturan Sistem</h3>
+              <button onClick={() => setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveSettings} className="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
               <div>
-                <label className={`block text-xs font-medium mb-1.5 ${textSub}`}>String QRIS (teks panjang)</label>
+                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>String QRIS (Teks Panjang)</label>
                 <textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} />
-                <p className={`text-[11px] mt-1 ${textMuted}`}>Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai standar ASPI saat menagih via WA, sekaligus meng-inject nominal tagihan ke dalam QR.</p>
+                <p className={`text-[9px] text-slate-500 mt-1`}>*Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai standar ASPI saat menagih via WA.</p>
               </div>
-              <div className={`border-t my-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nama Bank</label><input type="text" placeholder="Cth: Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nomor Rekening</label><input type="text" placeholder="123-456-789" value={settingsModal.bank_account} onChange={e => setSettingsModal({ ...settingsModal, bank_account: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Atas Nama</label><input type="text" placeholder="Nama Pemilik" value={settingsModal.bank_holder} onChange={e => setSettingsModal({ ...settingsModal, bank_holder: e.target.value })} className={inputCls} /></div>
-              <button type="submit" disabled={settingsModal.loading} className={`${btnBase} ${btnPrimary} w-full py-2.5 text-sm mt-2`}>{settingsModal.loading ? 'Menyimpan...' : 'Simpan Pengaturan'}</button>
+              <div className="border-t-2 border-slate-300 dark:border-slate-700 my-2 pt-2"></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Bank (Cth: Mandiri)</label><input type="text" placeholder="Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor Rekening</label><input type="text" placeholder="123-456-789" value={settingsModal.bank_account} onChange={e => setSettingsModal({ ...settingsModal, bank_account: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Atas Nama</label><input type="text" placeholder="Nama Pemilik" value={settingsModal.bank_holder} onChange={e => setSettingsModal({ ...settingsModal, bank_holder: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={settingsModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{settingsModal.loading ? 'Menyimpan...' : 'Simpan Pengaturan'}</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal Extend */}
       {extendModal.open && extendModal.tenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base">Perpanjang Waktu</h3>
-              <button disabled={extendModal.loading} onClick={() => setExtendModal({ open: false, tenant: null, loading: false })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider">Perpanjang Waktu</h3>
+              <button disabled={extendModal.loading} onClick={() => setExtendModal({ open: false, tenant: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
-              <p className={`text-sm text-center ${textSub}`}>Pilih durasi untuk <span className={`font-medium ${textMain}`}>{extendModal.tenant.name}</span>:</p>
+              <p className={`text-xs font-bold text-center ${textSub}`}>Pilih durasi untuk <span className={textMain}>{extendModal.tenant.name}</span>:</p>
               <div className="grid grid-cols-2 gap-2">
                 {[7, 30, 90, 365].map(days => (
-                  <button key={days} disabled={extendModal.loading} onClick={() => submitExtend(days)} className={`py-4 rounded-lg flex flex-col items-center justify-center transition-colors border ${theme === 'dark' ? 'bg-slate-950 border-slate-800 hover:border-blue-500 hover:bg-slate-900' : 'bg-white border-slate-200 hover:border-blue-600 hover:bg-slate-50'}`}>
-                    <span className="text-2xl font-semibold">{days}</span>
-                    <span className={`text-xs ${textMuted}`}>hari</span>
+                  <button key={days} disabled={extendModal.loading} onClick={() => submitExtend(days)} className={`py-3 rounded-lg flex flex-col items-center justify-center transition-all border-2 disabled:opacity-50 ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 hover:border-cyan-500 hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]' : 'bg-slate-50 border-slate-300 hover:border-cyan-600 hover:bg-white shadow-[2px_2px_0px_0px_#000]'}`}>
+                    <span className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{days}</span>
+                    <span className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Hari</span>
                   </button>
                 ))}
               </div>
@@ -1084,43 +1024,45 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Modal Finansial */}
       {financeModal.open && financeModal.tenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base">Data Finansial</h3>
-              <button onClick={() => setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider">Data Finansial</h3>
+              <button onClick={() => setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveFinance} className="p-5 space-y-3">
-              <h4 className={`font-medium text-center text-base ${textMain}`}>{financeModal.tenant.name}</h4>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Harga Sewa / Bulan (Rp)</label><input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nama Sales / Referral</label><input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label><input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} /></div>
-              <button type="submit" disabled={financeModal.loading} className={`${btnBase} ${btnPrimary} w-full py-2.5 text-sm mt-2`}>{financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}</button>
+              <h4 className={`font-black text-center text-base ${textMain}`}>{financeModal.tenant.name}</h4>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Harga Sewa / Bulan (Rp)</label><input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label><input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label><input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal Statistik */}
       {statsModal.open && statsModal.tenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.BarChart /> Statistik</h3>
-              <button onClick={() => setStatsModal({ open: false, tenant: null, data: null, loading: false })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.BarChart /> Statistik</h3>
+              <button onClick={() => setStatsModal({ open: false, tenant: null, data: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5">
-              <h4 className={`text-base font-semibold mb-5 text-center ${textMain}`}>{statsModal.tenant.name}</h4>
+              <h4 className={`text-lg font-black mb-5 text-center uppercase ${textMain}`}>{statsModal.tenant.name}</h4>
               {statsModal.loading ? (
-                <div className="flex justify-center py-6"><div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${theme === 'dark' ? 'border-blue-400' : 'border-blue-700'}`}></div></div>
+                <div className="flex justify-center py-6"><div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${theme === 'dark' ? 'border-cyan-400' : 'border-cyan-600'}`}></div></div>
               ) : statsModal.data?.error ? (
-                <p className="text-center text-sm font-medium text-red-600 dark:text-red-500">Gagal memuat statistik. Coba lagi.</p>
+                <p className="text-center text-sm font-black text-rose-500">Gagal memuat statistik. Coba lagi.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className={`border rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}><p className={`text-xs mb-1 ${textMuted}`}>Total Menu</p><p className={`text-3xl font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>{statsModal.data?.menus ?? '-'}</p></div>
-                  <div className={`border rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}><p className={`text-xs mb-1 ${textMuted}`}>Total Order</p><p className={`text-3xl font-semibold ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>{statsModal.data?.orders ?? '-'}</p></div>
-                  <div className={`border rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}><p className={`text-xs mb-1 ${textMuted}`}>Order 30 Hari</p><p className={`text-2xl font-semibold ${textMain}`}>{statsModal.data?.recentCount ?? '-'}</p></div>
-                  <div className={`border rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}><p className={`text-xs mb-1 ${textMuted}`}>Omzet 30 Hari</p><p className={`text-base font-semibold ${theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Menu</p><p className={`text-3xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{statsModal.data?.menus ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Order</p><p className={`text-3xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{statsModal.data?.orders ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Order 30 Hari</p><p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{statsModal.data?.recentCount ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Omzet 30 Hari</p><p className={`text-lg font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p></div>
                 </div>
               )}
             </div>
@@ -1128,87 +1070,91 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Modal Detail Tenant */}
       {detailModal.open && detailModal.tenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.Eye /> Detail Tenant</h3>
-              <button onClick={() => setDetailModal({ open: false, tenant: null })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Eye /> Detail Tenant</h3>
+              <button onClick={() => setDetailModal({ open: false, tenant: null })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-2 max-h-[70vh] overflow-y-auto">
-              <h4 className={`text-base font-semibold mb-3 ${textMain}`}>{detailModal.tenant.name}</h4>
+              <h4 className={`text-lg font-black mb-3 ${textMain}`}>{detailModal.tenant.name}</h4>
               {[
-                ['Tenant ID', detailModal.tenant.id, true], ['No. WhatsApp', detailModal.tenant.wa_number || '—', false], ['Status Buka Kafe', detailModal.tenant.is_open ? 'Buka' : 'Tutup', false], ['Status Akun', detailModal.tenant.is_active === false ? 'Suspended' : 'Aktif', false], ['QRIS', detailModal.tenant.qris_string || '—', true], ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false], ['Banner URL', detailModal.tenant.banner_url || '—', true], ['Logo URL', detailModal.tenant.logo_url || '—', true], ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
+                ['Tenant ID', detailModal.tenant.id, true], ['No. WhatsApp', detailModal.tenant.wa_number || '—', false], ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false], ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false], ['QRIS', detailModal.tenant.qris_string || '—', true], ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false], ['Banner URL', detailModal.tenant.banner_url || '—', true], ['Logo URL', detailModal.tenant.logo_url || '—', true], ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
               ].map(([label, value, copyable]) => (
-                <div key={label} className={`rounded-lg p-2.5 border flex justify-between items-start gap-2 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                  <div className="min-w-0 flex-1"><p className={`text-xs ${textMuted}`}>{label}</p><p className={`text-sm font-medium break-all ${textMain}`}>{value}</p></div>
-                  {copyable && value !== '—' && (<button onClick={() => copyToClipboard(value, label)} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.Copy /></button>)}
+                <div key={label} className={`rounded-lg p-2 border-2 flex justify-between items-start gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                  <div className="min-w-0 flex-1"><p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>{label}</p><p className={`text-xs font-bold break-all ${textMain}`}>{value}</p></div>
+                  {copyable && value !== '—' && (<button onClick={() => copyToClipboard(value, label)} className={`p-1.5 border-2 rounded ${theme === 'dark' ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.Copy /></button>)}
                 </div>
               ))}
-              <div className={`rounded-lg p-3 border flex justify-between items-center gap-2 ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                <div><p className={`text-xs ${textMuted}`}>Kitchen PIN</p><p className={`text-sm font-medium ${textMain}`}>{detailModal.tenant.kitchen_pin ? '••••••' : 'Belum diset'}</p></div>
-                <button onClick={() => openPinModal(detailModal.tenant)} className={`${btnBase} ${btnPrimary} px-3 py-1.5 text-xs`}><Icons.Key /> Reset PIN</button>
+              <div className={`rounded-lg p-3 border-2 flex justify-between items-center gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                <div><p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Kitchen PIN</p><p className={`text-xs font-bold ${textMain}`}>{detailModal.tenant.kitchen_pin ? '••••••' : 'Belum diset'}</p></div>
+                <button onClick={() => openPinModal(detailModal.tenant)} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] px-3 py-1.5 rounded text-[10px]`}><Icons.Key /> Reset PIN</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal Reset PIN */}
       {pinModal.open && pinModal.tenant && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.Key /> Reset PIN Dapur</h3>
-              <button onClick={() => setPinModal({ open: false, tenant: null, pin: '', loading: false })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Key /> Reset PIN Dapur</h3>
+              <button onClick={() => setPinModal({ open: false, tenant: null, pin: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={savePin} className="p-5 space-y-3">
-              <p className={`text-sm text-center ${textSub}`}>PIN baru untuk <span className={`font-medium ${textMain}`}>{pinModal.tenant.name}</span></p>
+              <p className={`text-xs font-bold text-center ${textSub}`}>PIN baru untuk <span className={textMain}>{pinModal.tenant.name}</span></p>
               <input type="text" inputMode="numeric" pattern="\d*" maxLength={8} required value={pinModal.pin} onChange={e => setPinModal({ ...pinModal, pin: e.target.value.replace(/\D/g, '') })} placeholder="4–8 digit angka" className={`${inputCls} text-center text-2xl tracking-widest`} />
-              <button type="submit" disabled={pinModal.loading} className={`${btnBase} ${btnPrimary} w-full py-2.5 text-sm`}>{pinModal.loading ? 'Menyimpan...' : 'Simpan PIN Baru'}</button>
+              <button type="submit" disabled={pinModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 rounded-lg text-sm disabled:opacity-50`}>{pinModal.loading ? 'Menyimpan...' : 'Simpan PIN Baru'}</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal Tambah Marketing */}
       {marketerModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.UserPlus /> Tambah Marketing</h3>
-              <button onClick={() => setMarketerModal({ open: false, name: '', wa: '', loading: false })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.UserPlus /> Tambah Marketing</h3>
+              <button onClick={() => setMarketerModal({ open: false, name: '', wa: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveMarketer} className="p-5 space-y-3">
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nama Marketing</label><input type="text" required placeholder="Cth: Budi Santoso" value={marketerModal.name} onChange={e => setMarketerModal({ ...marketerModal, name: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nomor WhatsApp</label><input type="text" required placeholder="Cth: 08123456789" value={marketerModal.wa} onChange={e => setMarketerModal({ ...marketerModal, wa: e.target.value })} className={inputCls} /></div>
-              <button type="submit" disabled={marketerModal.loading} className={`${btnBase} ${btnPrimary} w-full py-2.5 text-sm mt-2`}>{marketerModal.loading ? 'Menyimpan...' : 'Simpan Marketing'}</button>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Marketing</label><input type="text" required placeholder="Cth: Budi Santoso" value={marketerModal.name} onChange={e => setMarketerModal({ ...marketerModal, name: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor WhatsApp</label><input type="text" required placeholder="Cth: 08123456789" value={marketerModal.wa} onChange={e => setMarketerModal({ ...marketerModal, wa: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={marketerModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{marketerModal.loading ? 'Menyimpan...' : 'Simpan Marketing'}</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal Detail Marketing (Daftar Kafe) */}
       {marketerDetailModal.open && marketerDetailModal.marketer && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
             <div className={modalHeader}>
-              <h3 className="font-semibold text-base flex items-center gap-2"><Icons.Users /> Kafe Rekomendasi {marketerDetailModal.marketer.name}</h3>
-              <button onClick={() => setMarketerDetailModal({ open: false, marketer: null })} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Users /> Kafe Rekomendasi {marketerDetailModal.marketer.name}</h3>
+              <button onClick={() => setMarketerDetailModal({ open: false, marketer: null })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5 max-h-[70vh] overflow-y-auto space-y-2">
               {marketerDetailModal.marketer.rawTenants.length === 0 ? (
-                <p className={`text-center text-sm font-medium ${textSub}`}>Belum ada kafe yang direferensikan.</p>
+                <p className={`text-center text-sm font-bold ${textSub}`}>Belum ada kafe yang direferensikan.</p>
               ) : (
                 marketerDetailModal.marketer.rawTenants.map(t => {
                   const daysLeft = calculateDaysLeft(t.subscription_end_date);
                   const isActive = daysLeft > 0 && t.is_active !== false;
                   return (
-                    <div key={t.id} className={`rounded-lg p-3 border flex justify-between items-center ${theme === 'dark' ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                    <div key={t.id} className={`rounded-lg p-3 border-2 flex justify-between items-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                       <div>
-                        <p className={`font-medium text-sm ${textMain}`}>{t.name}</p>
-                        <p className={`text-xs ${isActive ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>{t.is_active === false ? 'Suspend' : isActive ? `${daysLeft} hari lagi` : 'Expired'}</p>
+                        <p className={`font-black text-sm ${textMain}`}>{t.name}</p>
+                        <p className={`text-[10px] font-bold ${isActive ? 'text-emerald-500' : 'text-rose-500'}`}>{t.is_active === false ? 'Suspend' : isActive ? `${daysLeft} Hari Lagi` : 'Expired'}</p>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'}`}>Rp {getPrice(t).toLocaleString('id-ID')}</p>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-amber-500' : 'text-amber-600'}`}>Komisi: Rp {getCommission(t).toLocaleString('id-ID')}</p>
+                        <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(t).toLocaleString('id-ID')}</p>
+                        <p className={`text-[10px] font-bold ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi: Rp {getCommission(t).toLocaleString('id-ID')}</p>
                       </div>
                     </div>
                   );
@@ -1219,43 +1165,40 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Modal Konfirmasi */}
       {confirmModal.open && (
-        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
-              <h3 className={`font-semibold text-base ${confirmModal.danger ? 'text-red-600 dark:text-red-500' : ''}`}>{confirmModal.title}</h3>
-              <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`p-1.5 rounded-lg ${btnGhost}`}><Icons.X /></button>
+              <h3 className={`font-black text-base uppercase tracking-wider ${confirmModal.danger ? 'text-rose-500' : ''}`}>{confirmModal.title}</h3>
+              <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
-              <p className={`text-sm ${textSub}`}>{confirmModal.message}</p>
+              <p className={`text-xs font-bold ${textSub}`}>{confirmModal.message}</p>
               {confirmModal.requireInput && (
                 <>
-                  <p className={`text-xs ${textSub}`}>Ketik <span className={`font-medium ${confirmModal.danger ? 'text-red-600 dark:text-red-500' : 'text-blue-700 dark:text-blue-400'}`}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>
+                  <p className={`text-[10px] font-black uppercase ${textSub}`}>Ketik <span className={confirmModal.danger ? 'text-rose-500' : 'text-cyan-500'}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>
                   <input type="text" value={confirmModal.inputValue} onChange={e => setConfirmModal(prev => ({ ...prev, inputValue: e.target.value }))} className={inputCls} autoFocus disabled={confirmModal.loading} />
                 </>
               )}
               <div className="flex gap-2 pt-2">
-                <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`${btnBase} ${btnSecondary} flex-1 py-2 text-sm`}>Batal</button>
-                <button disabled={confirmModal.loading || (confirmModal.requireInput && confirmModal.inputValue !== confirmModal.requireInput)} onClick={async () => { if (confirmModal.onConfirm) await confirmModal.onConfirm(); }} className={`${btnBase} flex-1 py-2 text-sm text-white ${confirmModal.danger ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}>{confirmModal.loading ? 'Proses...' : confirmModal.danger ? 'Ya, Lanjut' : 'Ya, Aktifkan'}</button>
+                <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} flex-1 py-2 rounded-lg text-xs disabled:opacity-50`}>Batal</button>
+                <button disabled={confirmModal.loading || (confirmModal.requireInput && confirmModal.inputValue !== confirmModal.requireInput)} onClick={async () => { if (confirmModal.onConfirm) await confirmModal.onConfirm(); }} className={`${btnBase} flex-1 py-2 rounded-lg text-xs disabled:opacity-50 ${confirmModal.danger ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b] hover:bg-emerald-600'}`}>{confirmModal.loading ? 'Proses...' : confirmModal.danger ? 'Ya, Lanjut' : 'Ya, Aktifkan'}</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* TOASTS */}
       <div className="fixed bottom-6 right-6 z-[100] space-y-2 w-[calc(100%-3rem)] sm:w-80 pointer-events-none">
         {toasts.map(t => {
-          const isErr = t.type === 'error';
-          const isWarn = t.type === 'warning';
-          const accent = isErr ? 'border-l-red-600' : isWarn ? 'border-l-amber-600' : 'border-l-emerald-600';
-          const accentText = isErr ? 'text-red-600 dark:text-red-500' : isWarn ? 'text-amber-600 dark:text-amber-500' : 'text-emerald-600 dark:text-emerald-500';
-          const bgCard = theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
+          const isErr = t.type === 'error'; const isWarn = t.type === 'warning';
+          const c = isErr ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]' : isWarn ? 'bg-violet-400 text-black border-violet-700 shadow-[2px_2px_0px_0px_#4c1d95]' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
           return (
-            <div key={t.id} className={`pointer-events-auto flex items-start gap-2.5 px-3.5 py-3 border border-l-4 rounded-lg shadow-sm animate-in slide-in-from-right-8 ${bgCard} ${accent}`}>
-              <span className={`mt-0.5 ${accentText}`}>
-                {isErr || isWarn ? <Icons.X /> : <Icons.Check />}
-              </span>
-              <p className={`text-sm font-medium flex-1 ${textMain}`}>{t.message}</p>
+            <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-3 py-2 border-2 rounded-lg animate-in slide-in-from-right-8 ${c}`}>
+              <span className="text-lg">{isErr ? '❌' : isWarn ? '⚠️' : <Icons.Check />}</span>
+              <p className="text-xs font-black uppercase tracking-wider flex-1">{t.message}</p>
             </div>
           );
         })}
