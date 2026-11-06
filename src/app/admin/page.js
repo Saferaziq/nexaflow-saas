@@ -3,6 +3,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+// === GANTI LINK INI DENGAN LINK GAMBAR QRIS ANDA ===
+const QRIS_LINK = 'https://link-gambar-qris-anda-disini.jpg'; 
+
 const Icons = {
   Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   Store: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
@@ -23,63 +26,67 @@ const Icons = {
   Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
   Key: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>,
   Sort: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>,
+  Users: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  UserPlus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
 };
 
 const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com';
-
 const EMPTY_CONFIRM = { open: false, title: '', message: '', requireInput: '', inputValue: '', danger: true, loading: false, onConfirm: null };
 
-// === HELPERS (fix: null/0/undefined handling) ===
-const getPrice = (tenant) => {
-  const raw = tenant?.rental_price ?? 150000;
-  const num = Number(raw);
-  return isNaN(num) ? 150000 : num;
-};
-const getCommission = (tenant) => {
-  const raw = tenant?.sales_commission ?? 0;
-  const num = Number(raw);
-  return isNaN(num) ? 0 : num;
-};
+const getPrice = (tenant) => Number(tenant?.rental_price ?? 150000);
+const getCommission = (tenant) => Number(tenant?.sales_commission ?? 0);
 const hasEndDate = (tenant) => !!tenant?.subscription_end_date;
 const formatDateID = (dateStr) => {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('id-ID');
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('id-ID');
+};
+
+const formatPhone = (num) => {
+  if (!num) return '';
+  let phone = num.replace(/[^0-9]/g, '');
+  if (phone.startsWith('0')) return '62' + phone.slice(1);
+  if (phone.startsWith('8')) return '62' + phone;
+  if (phone.startsWith('620')) return '62' + phone.slice(3);
+  return phone;
 };
 
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
+  const [marketers, setMarketers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
   const [now, setNow] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [theme, setTheme] = useState('dark');
+  
+  // Tabs & Filters
+  const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'marketers'
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-  // Modal states
+  // Modals
   const [extendModal, setExtendModal] = useState({ open: false, tenant: null, loading: false });
   const [statsModal, setStatsModal] = useState({ open: false, tenant: null, data: null, loading: false });
   const [financeModal, setFinanceModal] = useState({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
   const [confirmModal, setConfirmModal] = useState(EMPTY_CONFIRM);
   const [detailModal, setDetailModal] = useState({ open: false, tenant: null });
   const [pinModal, setPinModal] = useState({ open: false, tenant: null, pin: '', loading: false });
+  
+  // Marketer Modals
+  const [marketerModal, setMarketerModal] = useState({ open: false, name: '', wa: '', loading: false });
+  const [marketerDetailModal, setMarketerDetailModal] = useState({ open: false, marketer: null });
+  
   const [actionLoading, setActionLoading] = useState({});
-
   const router = useRouter();
 
-  // Theme init + auto-detect OS
   useEffect(() => {
     const saved = localStorage.getItem('nexaflow_admin_theme');
-    if (saved === 'light' || saved === 'dark') {
-      setTheme(saved);
-    } else if (typeof window !== 'undefined' && window.matchMedia) {
-      setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-    }
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+    else if (typeof window !== 'undefined' && window.matchMedia) setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   }, []);
 
   const toggleTheme = () => {
@@ -94,27 +101,19 @@ export default function AdminDashboard() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   }, []);
 
-  // Clock ticker
   useEffect(() => {
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Close sort menu on outside click (FIX #5)
   useEffect(() => {
     if (!showSortMenu) return;
     const closeMenu = () => setShowSortMenu(false);
-    const timer = setTimeout(() => {
-      document.addEventListener('click', closeMenu);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', closeMenu);
-    };
+    const timer = setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('click', closeMenu); };
   }, [showSortMenu]);
 
-  // ESC to close all modals
   useEffect(() => {
     const handler = (e) => {
       if (e.key !== 'Escape') return;
@@ -124,13 +123,14 @@ export default function AdminDashboard() {
       setConfirmModal(EMPTY_CONFIRM);
       setDetailModal({ open: false, tenant: null });
       setPinModal({ open: false, tenant: null, pin: '', loading: false });
+      setMarketerModal({ open: false, name: '', wa: '', loading: false });
+      setMarketerDetailModal({ open: false, marketer: null });
       setShowSortMenu(false);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Auth + initial fetch
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -140,32 +140,30 @@ export default function AdminDashboard() {
         setTimeout(() => router.push('/login'), 800);
         return;
       }
-      await fetchTenants();
+      await Promise.all([fetchTenants(), fetchMarketers()]);
       setLoading(false);
     };
     checkAuthAndFetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const fetchTenants = async () => {
     const { data, error } = await supabase.from('tenants').select('*').order('created_at', { ascending: false });
-    if (error) {
-      showToast('Gagal memuat data: ' + error.message, 'error');
-      return;
-    }
-    if (data) setTenants(data);
+    if (error) showToast('Gagal memuat tenants: ' + error.message, 'error');
+    else if (data) setTenants(data);
   };
 
-  // Recalc stats whenever data changes
+  const fetchMarketers = async () => {
+    const { data, error } = await supabase.from('marketers').select('*').order('name', { ascending: true });
+    if (error) showToast('Gagal memuat marketing: ' + error.message, 'error');
+    else if (data) setMarketers(data);
+  };
+
   useEffect(() => {
     calculateStats(tenants, onlineUsers);
   }, [tenants, onlineUsers]);
 
   const calculateStats = (tenantData, onlineData) => {
-    let onlineCount = 0;
-    let warningCount = 0;
-    let totalRevenue = 0;
-    let totalCommission = 0;
+    let onlineCount = 0, warningCount = 0, totalRevenue = 0, totalCommission = 0;
     const currentTime = Date.now();
 
     tenantData.forEach(t => {
@@ -173,7 +171,6 @@ export default function AdminDashboard() {
       if (t.subscription_end_date) {
         const daysLeft = Math.max(0, Math.ceil((new Date(t.subscription_end_date).getTime() - currentTime) / (1000 * 60 * 60 * 24)));
         if (daysLeft <= 7) warningCount++;
-
         if (daysLeft > 0 && t.is_active !== false) {
           const ratio = Math.min(daysLeft, 30) / 30;
           totalRevenue += Math.round(getPrice(t) * ratio);
@@ -181,39 +178,27 @@ export default function AdminDashboard() {
         }
       }
     });
-
-    setStats({
-      total: tenantData.length,
-      online: onlineCount,
-      warning: warningCount,
-      revenue: totalRevenue,
-      commission: totalCommission,
-    });
+    setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
   };
 
-  // Presence online
   useEffect(() => {
     const channel = supabase.channel('online-rooms', { config: { presence: { key: 'user_id' } } });
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const onlineMap = {};
-      Object.keys(state).forEach((key) => {
-        state[key].forEach((presence) => { if (presence.tenant_id) onlineMap[presence.tenant_id] = true; });
-      });
+      Object.keys(state).forEach((key) => { state[key].forEach((p) => { if (p.tenant_id) onlineMap[p.tenant_id] = true; }); });
       setOnlineUsers(onlineMap);
     });
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Realtime tenant changes
   useEffect(() => {
-    const sub = supabase
-      .channel('admin-tenants-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, () => { fetchTenants(); })
+    const sub = supabase.channel('admin-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, fetchTenants)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'marketers' }, fetchMarketers)
       .subscribe();
     return () => { supabase.removeChannel(sub); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
@@ -232,58 +217,39 @@ export default function AdminDashboard() {
     });
   };
 
-  // === EXTEND ===
+  // === CRUD ACTIONS ===
   const submitExtend = async (days) => {
     const { tenant } = extendModal;
     if (!tenant) return;
     setExtendModal(prev => ({ ...prev, loading: true }));
-
     const currentEnd = new Date(tenant.subscription_end_date || Date.now()).getTime();
     const baseDate = Math.max(Date.now(), currentEnd);
     const newEndDate = new Date(baseDate + (days * 24 * 60 * 60 * 1000)).toISOString();
 
-    const { error } = await supabase.from('tenants').update({
-      subscription_end_date: newEndDate,
-      is_active: true,
-    }).eq('id', tenant.id);
-
+    const { error } = await supabase.from('tenants').update({ subscription_end_date: newEndDate, is_active: true }).eq('id', tenant.id);
     setExtendModal({ open: false, tenant: null, loading: false });
     if (error) showToast('Gagal: ' + error.message, 'error');
-    else {
-      showToast(`✅ ${tenant.name} diperpanjang ${days} Hari!`, 'success');
-      fetchTenants();
-    }
+    else { showToast(`✅ ${tenant.name} diperpanjang ${days} Hari!`, 'success'); fetchTenants(); }
   };
 
-  // === TOGGLE STATUS via Confirm Modal ===
   const requestToggleStatus = (tenant) => {
     const currentlyActive = tenant.is_active !== false;
     const newStatus = !currentlyActive;
     setConfirmModal({
-      open: true,
-      title: newStatus ? 'Suspend Akun' : 'Aktifkan Akun',
-      message: `Akun "${tenant.name}" akan ${newStatus ? 'disuspend. Tenant TIDAK BISA login sampai diaktifkan kembali.' : 'diaktifkan kembali dan bisa login normal.'}`,
-      requireInput: '',
-      inputValue: '',
-      danger: newStatus,
-      loading: false,
+      open: true, title: newStatus ? 'Suspend Akun' : 'Aktifkan Akun',
+      message: `Akun "${tenant.name}" akan ${newStatus ? 'disuspend.' : 'diaktifkan kembali.'}`,
+      requireInput: '', inputValue: '', danger: newStatus, loading: false,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, loading: true }));
         setTenantLoading(tenant.id, 'toggle');
         const { error } = await supabase.from('tenants').update({ is_active: newStatus }).eq('id', tenant.id);
         setTenantLoading(tenant.id, null);
-        if (error) {
-          setConfirmModal(prev => ({ ...prev, loading: false }));
-          return showToast('Gagal: ' + error.message, 'error');
-        }
-        setConfirmModal(EMPTY_CONFIRM);
-        showToast(`Akun ${tenant.name} ${newStatus ? 'disuspend' : 'diaktifkan'}`, 'success');
-        fetchTenants();
+        if (error) { setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal: ' + error.message, 'error'); }
+        setConfirmModal(EMPTY_CONFIRM); showToast(`Akun ${tenant.name} ${newStatus ? 'disuspend' : 'diaktifkan'}`, 'success'); fetchTenants();
       },
     });
   };
 
-  // === STATS ===
   const openStats = async (tenant) => {
     setStatsModal({ open: true, tenant, data: null, loading: true });
     try {
@@ -293,158 +259,159 @@ export default function AdminDashboard() {
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('orders').select('subtotal, tax_amount, created_at').eq('tenant_id', tenant.id).gte('created_at', thirtyDaysAgo),
       ]);
-
       const recentOrders = recentOrdersRes.data || [];
       const revenue30 = recentOrders.reduce((sum, o) => sum + (Number(o.subtotal) || 0) + (Number(o.tax_amount) || 0), 0);
-
-      setStatsModal(prev => ({
-        ...prev,
-        loading: false,
-        data: {
-          menus: menusRes.count || 0,
-          orders: ordersAllRes.count || 0,
-          recentCount: recentOrders.length,
-          revenue30,
-          error: false,
-        },
-      }));
-    } catch (err) {
-      setStatsModal(prev => ({ ...prev, loading: false, data: { error: true } }));
-    }
+      setStatsModal(prev => ({ ...prev, loading: false, data: { menus: menusRes.count || 0, orders: ordersAllRes.count || 0, recentCount: recentOrders.length, revenue30, error: false } }));
+    } catch (err) { setStatsModal(prev => ({ ...prev, loading: false, data: { error: true } })); }
   };
 
-  // === FINANCE ===
   const openFinance = (tenant) => {
-    setFinanceModal({
-      open: true,
-      tenant,
-      loading: false,
-      price: tenant.rental_price ?? 150000,
-      referral: tenant.referral_name || '',
-      commission: tenant.sales_commission ?? 0,
-    });
+    setFinanceModal({ open: true, tenant, loading: false, price: tenant.rental_price ?? 150000, referral: tenant.referral_name || '', commission: tenant.sales_commission ?? 0 });
   };
 
   const saveFinance = async (e) => {
     e.preventDefault();
     setFinanceModal(prev => ({ ...prev, loading: true }));
-
-    const payload = {
-      rental_price: Number(financeModal.price) || 0,
-      referral_name: financeModal.referral.trim(),
-      sales_commission: Number(financeModal.commission) || 0,
-    };
-
+    const payload = { rental_price: Number(financeModal.price) || 0, referral_name: financeModal.referral.trim(), sales_commission: Number(financeModal.commission) || 0 };
     const { error } = await supabase.from('tenants').update(payload).eq('id', financeModal.tenant.id);
     setFinanceModal(prev => ({ ...prev, loading: false }));
-
-    if (error) {
-      console.error('Supabase Error:', error);
-      return showToast('Gagal simpan: ' + error.message, 'error');
-    }
-    showToast('Data finansial disimpan', 'success');
-    setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
-    fetchTenants();
+    if (error) return showToast('Gagal simpan: ' + error.message, 'error');
+    showToast('Data finansial disimpan', 'success'); setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' }); fetchTenants();
   };
 
-  // === DELETE (with cascade) ===
   const requestDelete = (tenant) => {
     setConfirmModal({
-      open: true,
-      title: 'Hapus Permanen',
+      open: true, title: 'Hapus Permanen',
       message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
-      requireInput: tenant.name,
-      inputValue: '',
-      danger: true,
-      loading: false,
+      requireInput: tenant.name, inputValue: '', danger: true, loading: false,
       onConfirm: () => performDelete(tenant),
     });
   };
 
   const performDelete = async (tenant) => {
-    setConfirmModal(prev => ({ ...prev, loading: true }));
-    setTenantLoading(tenant.id, 'delete');
-
+    setConfirmModal(prev => ({ ...prev, loading: true })); setTenantLoading(tenant.id, 'delete');
     const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
-    if (orderErr) {
-      setTenantLoading(tenant.id, null);
-      setConfirmModal(prev => ({ ...prev, loading: false }));
-      return showToast('Gagal hapus orders: ' + orderErr.message, 'error');
-    }
+    if (orderErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus orders: ' + orderErr.message, 'error'); }
     const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
-    if (menuErr) {
-      setTenantLoading(tenant.id, null);
-      setConfirmModal(prev => ({ ...prev, loading: false }));
-      return showToast('Gagal hapus menus: ' + menuErr.message, 'error');
-    }
+    if (menuErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus menus: ' + menuErr.message, 'error'); }
     const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
     setTenantLoading(tenant.id, null);
-    if (tenantErr) {
-      setConfirmModal(prev => ({ ...prev, loading: false }));
-      return showToast('Gagal hapus tenant: ' + tenantErr.message, 'error');
-    }
-
-    setConfirmModal(EMPTY_CONFIRM);
-    showToast(`Kafe ${tenant.name} berhasil dihapus total.`, 'success');
-    fetchTenants();
+    if (tenantErr) { setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus tenant: ' + tenantErr.message, 'error'); }
+    setConfirmModal(EMPTY_CONFIRM); showToast(`Kafe ${tenant.name} berhasil dihapus total.`, 'success'); fetchTenants();
   };
 
-  // === COPY / WA ===
   const copyToClipboard = async (text, label = 'ID') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(`${label} disalin`, 'success');
-    } catch {
-      showToast('Gagal menyalin', 'error');
-    }
+    try { await navigator.clipboard.writeText(text); showToast(`${label} disalin`, 'success'); } catch { showToast('Gagal menyalin', 'error'); }
   };
 
-  const openWa = (tenant) => {
-    if (!tenant.wa_number) return showToast('Nomor WA belum diatur', 'warning');
-    let phone = tenant.wa_number.replace(/[^0-9]/g, '');
-    if (phone.startsWith('0')) phone = '62' + phone.slice(1);
-    else if (phone.startsWith('8')) phone = '62' + phone;
-    else if (phone.startsWith('620')) phone = '62' + phone.slice(3);
-    if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
-    const msg = `Halo Owner ${tenant.name}, ini Admin NexaFlow.`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  // === RESET PIN ===
-  const openPinModal = (tenant) => {
-    setPinModal({ open: true, tenant, pin: '', loading: false });
-  };
+  const openPinModal = (tenant) => setPinModal({ open: true, tenant, pin: '', loading: false });
 
   const savePin = async (e) => {
     e.preventDefault();
-    if (!/^\d{4,8}$/.test(pinModal.pin)) {
-      return showToast('PIN harus 4–8 digit angka', 'error');
-    }
+    if (!/^\d{4,8}$/.test(pinModal.pin)) return showToast('PIN harus 4–8 digit angka', 'error');
     setPinModal(prev => ({ ...prev, loading: true }));
     const { error } = await supabase.from('tenants').update({ kitchen_pin: pinModal.pin }).eq('id', pinModal.tenant.id);
     setPinModal(prev => ({ ...prev, loading: false }));
     if (error) return showToast('Gagal simpan PIN: ' + error.message, 'error');
-    showToast('Kitchen PIN berhasil diubah', 'success');
-    setPinModal({ open: false, tenant: null, pin: '', loading: false });
-    fetchTenants();
+    showToast('Kitchen PIN berhasil diubah', 'success'); setPinModal({ open: false, tenant: null, pin: '', loading: false }); fetchTenants();
   };
+
+  // === WHATSAPP INTEGRATION (TAGIHAN & MARKETING) ===
+  const openWaTenant = (tenant) => {
+    if (!tenant.wa_number) return showToast('Nomor WA belum diatur', 'warning');
+    const phone = formatPhone(tenant.wa_number);
+    if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
+    
+    const price = getPrice(tenant);
+    const msg = `Halo Owner *${tenant.name}*,\n\nIni tagihan sewa sistem NexaFlow Kasir Anda sebesar *Rp ${price.toLocaleString('id-ID')}*.\n\nSilakan lakukan pembayaran melalui link QRIS berikut:\n${QRIS_LINK}\n\nJika sudah transfer, silakan kirim bukti transfernya ke chat ini. Terima kasih! 🙏`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const openWaMarketer = (marketer, statsData) => {
+    if (!marketer.wa_number) return showToast('Nomor WA marketing belum diatur', 'warning');
+    const phone = formatPhone(marketer.wa_number);
+    if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
+
+    const msg = `Halo *${marketer.name}*,\n\nBerikut rincian komisi (bagi hasil) Anda saat ini:\n\nTotal Kafe Direferensikan: *${statsData.count} Kafe*\nTotal Estimasi Komisi: *Rp ${statsData.commission.toLocaleString('id-ID')}*\n\nBerikut adalah daftar kafe yang Anda rekomendasikan:\n${statsData.tenantList || '- Belum ada'}\n\nTerima kasih atas kerja kerasnya! 🚀`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  // === MARKETING CRUD ===
+  const saveMarketer = async (e) => {
+    e.preventDefault();
+    setMarketerModal(prev => ({ ...prev, loading: true }));
+    const payload = { name: marketerModal.name.trim(), wa_number: marketerModal.wa.trim() };
+    
+    // Cek apakah nama sudah ada
+    const existing = marketers.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
+    if (existing) {
+      setMarketerModal(prev => ({ ...prev, loading: false }));
+      return showToast('Nama marketing sudah ada', 'error');
+    }
+
+    const { error } = await supabase.from('marketers').insert([payload]);
+    setMarketerModal(prev => ({ ...prev, loading: false }));
+    if (error) return showToast('Gagal tambah marketing: ' + error.message, 'error');
+    
+    showToast('Marketing berhasil ditambahkan', 'success');
+    setMarketerModal({ open: false, name: '', wa: '', loading: false });
+    fetchMarketers();
+  };
+
+  const requestDeleteMarketer = (marketer) => {
+    setConfirmModal({
+      open: true, title: 'Hapus Marketing',
+      message: `Marketing "${marketer.name}" akan dihapus. Data kafe yang direferensikan tidak akan terhapus, namun tidak akan terhitung lagi di komisi marketing ini.`,
+      requireInput: '', inputValue: '', danger: true, loading: false,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        const { error } = await supabase.from('marketers').delete().eq('id', marketer.id);
+        if (error) { setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus: ' + error.message, 'error'); }
+        setConfirmModal(EMPTY_CONFIRM); showToast('Marketing dihapus', 'success'); fetchMarketers();
+      },
+    });
+  };
+
+  // === DATA PROCESSING: MARKETING STATS ===
+  const marketersWithStats = useMemo(() => {
+    return marketers.map(m => {
+      const myTenants = tenants.filter(t => (t.referral_name || '').toLowerCase() === m.name.toLowerCase());
+      let commission = 0;
+      let revenue = 0;
+      const tenantList = [];
+
+      myTenants.forEach(t => {
+        const daysLeft = calculateDaysLeft(t.subscription_end_date);
+        if (daysLeft > 0 && t.is_active !== false) {
+          const ratio = Math.min(daysLeft, 30) / 30;
+          revenue += Math.round(getPrice(t) * ratio);
+          commission += Math.round(getCommission(t) * ratio);
+        }
+        tenantList.push(`${t.name} (${daysLeft} Hari)`);
+      });
+
+      return {
+        ...m,
+        count: myTenants.length,
+        revenue,
+        commission,
+        tenantList: tenantList.join('\n'),
+        rawTenants: myTenants
+      };
+    });
+  }, [marketers, tenants, now]);
 
   // === FILTER + SORT ===
   const filteredTenants = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return tenants.filter(t => {
-      const matchSearch = !q
-        || (t.name || '').toLowerCase().includes(q)
-        || (t.referral_name || '').toLowerCase().includes(q)
-        || (t.wa_number || '').toLowerCase().includes(q);
-
+      const matchSearch = !q || (t.name || '').toLowerCase().includes(q) || (t.referral_name || '').toLowerCase().includes(q) || (t.wa_number || '').toLowerCase().includes(q);
       const daysLeft = calculateDaysLeft(t.subscription_end_date);
       let matchStatus = true;
       if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true && t.is_active !== false;
       else if (filterStatus === 'expired') matchStatus = hasEndDate(t) && daysLeft <= 0 && t.is_active !== false;
       else if (filterStatus === 'suspended') matchStatus = t.is_active === false;
       else if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 7 && t.is_active !== false;
-
       return matchSearch && matchStatus;
     });
   }, [tenants, searchQuery, filterStatus, onlineUsers, now]);
@@ -471,26 +438,17 @@ export default function AdminDashboard() {
   const bgMain = theme === 'dark' ? 'bg-[#050b14]' : 'bg-[#f0f4f8]';
   const textMain = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textSub = theme === 'dark' ? 'text-slate-400' : 'text-slate-600';
-
-  const cardClass = theme === 'dark'
-    ? 'bg-[#0a192f] border-2 border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]'
-    : 'bg-white border-2 border-slate-900 shadow-[4px_4px_0px_0px_#000000]';
-
+  const cardClass = theme === 'dark' ? 'bg-[#0a192f] border-2 border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-2 border-slate-900 shadow-[4px_4px_0px_0px_#000000]';
   const btnBase = 'border-2 font-black uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-2';
   const btnDark = 'bg-slate-800 text-white border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-700';
   const btnLight = 'bg-white text-slate-900 border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-100';
-
   const inputCls = `w-full border-2 rounded-lg px-3 py-2 text-sm font-bold outline-none ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'}`;
-
   const modalShell = `border-2 rounded-xl w-full overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`;
   const modalHeader = `p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`;
-
   const sortLabels = { newest: 'Terbaru', name: 'Nama A-Z', daysLeft: 'Sisa Hari', revenue: 'Omset Tertinggi' };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${bgMain} ${textMain}`}>
-
-      {/* HEADER */}
       <header className={`border-b-2 ${theme === 'dark' ? 'border-slate-800 bg-[#0a192f]' : 'border-slate-900 bg-white'} sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div>
@@ -510,287 +468,232 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-
-        {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}><Icons.Store /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Klien</p>
-            <h3 className="text-4xl font-black">{stats.total}</h3>
-          </div>
-
-          <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
-            <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>
-              {stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span>
-            </h3>
-          </div>
-
-          <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
-            <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
-          </div>
-
-          <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
-            <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        
+        {/* TABS MENU */}
+        <div className={`flex p-1.5 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'} w-full sm:w-max`}>
+          <button onClick={() => setActiveTab('tenants')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition-all ${activeTab === 'tenants' ? (theme === 'dark' ? 'bg-cyan-500 text-black shadow-[2px_2px_0px_0px_#000]' : 'bg-cyan-600 text-white shadow-[2px_2px_0px_0px_#000]') : textSub}`}>
+            <Icons.Store /> Data Kafe ({stats.total})
+          </button>
+          <button onClick={() => setActiveTab('marketers')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition-all ${activeTab === 'marketers' ? (theme === 'dark' ? 'bg-cyan-500 text-black shadow-[2px_2px_0px_0px_#000]' : 'bg-cyan-600 text-white shadow-[2px_2px_0px_0px_#000]') : textSub}`}>
+            <Icons.Users /> Tim Marketing ({marketers.length})
+          </button>
         </div>
 
-        {/* SEARCH + SORT + FILTER */}
-        <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
-          <div className="relative flex-1 min-w-0">
-            <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSub}`}><Icons.Search /></span>
-            <input
-              type="text"
-              placeholder="Cari nama / referral / WA..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className={`w-full bg-transparent border-none outline-none pl-10 pr-4 py-2 text-sm font-bold ${theme === 'dark' ? 'text-white placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`}
-            />
+        {/* STATS (Hanya tampil di tab tenant) */}
+        {activeTab === 'tenants' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-bottom-4">
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}><Icons.Store /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Klien</p>
+              <h3 className="text-4xl font-black">{stats.total}</h3>
+            </div>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
+              <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span></h3>
+            </div>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
+              <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
+            </div>
+            <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
+              <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
+            </div>
           </div>
+        )}
 
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }}
-              className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-3 py-2 rounded-lg text-[10px] w-full lg:w-auto`}
-            >
-              <Icons.Sort /> {sortLabels[sortBy]}
-            </button>
-            {showSortMenu && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}
-              >
-                {Object.entries(sortLabels).map(([k, v]) => (
-                  <button
-                    key={k}
-                    onClick={() => { setSortBy(k); setShowSortMenu(false); }}
-                    className={`block w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${sortBy === k ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}
-                  >
-                    {v}
-                  </button>
+        {/* ================= TAB TENANTS ================= */}
+        {activeTab === 'tenants' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            {/* Search + Filter */}
+            <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
+              <div className="relative flex-1 min-w-0">
+                <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSub}`}><Icons.Search /></span>
+                <input type="text" placeholder="Cari kafe / referral / WA..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={`w-full bg-transparent border-none outline-none pl-10 pr-4 py-2 text-sm font-bold ${theme === 'dark' ? 'text-white placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`} />
+              </div>
+              <div className="relative">
+                <button onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-3 py-2 rounded-lg text-[10px] w-full lg:w-auto`}>
+                  <Icons.Sort /> {sortLabels[sortBy]}
+                </button>
+                {showSortMenu && (
+                  <div onClick={(e) => e.stopPropagation()} className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}>
+                    {Object.entries(sortLabels).map(([k, v]) => (
+                      <button key={k} onClick={() => { setSortBy(k); setShowSortMenu(false); }} className={`block w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${sortBy === k ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}>{v}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className={`flex p-1 rounded-lg border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-100 border-slate-300'} overflow-x-auto`}>
+                {['all', 'online', 'expired', 'suspended', 'warning'].map(f => (
+                  <button key={f} onClick={() => setFilterStatus(f)} className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${filterStatus === f ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}>{f === 'all' ? 'Semua' : f === 'suspended' ? 'Suspend' : f}</button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className={`flex p-1 rounded-lg border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-100 border-slate-300'} overflow-x-auto`}>
-            {[
-              { id: 'all', label: 'Semua' },
-              { id: 'online', label: 'Online' },
-              { id: 'expired', label: 'Expired' },
-              { id: 'suspended', label: 'Suspend' },
-              { id: 'warning', label: 'Warning' },
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilterStatus(f.id)}
-                className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${filterStatus === f.id ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Desktop Table */}
+            <div className={`hidden lg:block rounded-xl border-2 overflow-hidden ${theme === 'dark' ? 'border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className={`text-[10px] font-black uppercase tracking-widest border-b-2 ${theme === 'dark' ? 'bg-[#050b14] text-cyan-400 border-slate-700' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
+                    <th className="p-4">Nama Kafe</th><th className="p-4">Status</th><th className="p-4">Sisa Waktu</th><th className="p-4">Finansial</th><th className="p-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
+                  {sortedTenants.map((tenant) => {
+                    const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
+                    const isOnline = onlineUsers[tenant.id];
+                    const isSuspended = tenant.is_active === false;
+                    const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
+                    const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
+                    const busy = !!actionLoading[tenant.id];
+                    return (
+                      <tr key={tenant.id} className={`transition-colors ${isSuspended ? 'opacity-50 grayscale' : (theme === 'dark' ? 'hover:bg-[#0d2137]' : 'hover:bg-slate-50')}`}>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} /> : <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>{(tenant.name || '?').charAt(0)}</div>}
+                            <div>
+                              <p className="font-black text-base">{tenant.name}</p>
+                              <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} hover:text-cyan-400 flex items-center gap-1`}>ID: {tenant.id.slice(0, 8)}... <Icons.Copy /></button>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border-2 ${isSuspended ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700') : isOnline ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700') : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${!isSuspended && isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
+                            {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>{isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}</span>
+                            <p className={`text-[9px] font-bold uppercase tracking-wider ${textSub}`}>{isSuspended ? 'Disuspend' : hasEndDate(tenant) ? formatDateID(tenant.subscription_end_date) : 'Belum diatur'}</p>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col gap-0.5">
+                            <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</p>
+                            <p className={`text-[9px] font-bold ${textSub}`}>Ref: <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>{tenant.referral_name || '-'}</span></p>
+                            <p className={`text-[9px] font-bold ${textSub}`}>Komisi: <span className={theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></p>
+                          </div>
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Detail Tenant"><Icons.Eye /></button>
+                            <button onClick={() => openWaTenant(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-600 border-emerald-600 hover:bg-emerald-200'} p-2 rounded-lg`} title="Kirim Tagihan & QRIS via WA"><Icons.WhatsApp /></button>
+                            <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Statistik"><Icons.BarChart /></button>
+                            <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 border-cyan-700 hover:bg-cyan-200'} p-2 rounded-lg`} title="Finansial"><Icons.Settings /></button>
+                            <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} px-3 py-2 rounded-lg text-[10px] disabled:opacity-50`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
+                            <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] hover:bg-blue-500 px-3 py-2 rounded-lg text-[10px]`}><Icons.Plus /> Extend</button>
+                            <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-600 border-rose-600 hover:bg-rose-200'} p-2 rounded-lg disabled:opacity-50`} title="Hapus"><Icons.Trash /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        {/* DESKTOP TABLE */}
-        <div className={`hidden lg:block rounded-xl border-2 overflow-hidden ${theme === 'dark' ? 'border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className={`text-[10px] font-black uppercase tracking-widest border-b-2 ${theme === 'dark' ? 'bg-[#050b14] text-cyan-400 border-slate-700' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
-                <th className="p-4">Nama Kafe</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Sisa Waktu</th>
-                <th className="p-4">Finansial</th>
-                <th className="p-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
-              {sortedTenants.length === 0 ? (
-                <tr><td colSpan="5" className={`p-8 text-center font-black text-lg ${textSub}`}>Tidak ada data.</td></tr>
-              ) : sortedTenants.map((tenant) => {
+            {/* Mobile Cards */}
+            <div className="lg:hidden space-y-5">
+              {sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
                 const isOnline = onlineUsers[tenant.id];
                 const isSuspended = tenant.is_active === false;
                 const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
                 const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
                 const busy = !!actionLoading[tenant.id];
-
                 return (
-                  <tr key={tenant.id} className={`transition-colors ${isSuspended ? 'opacity-50 grayscale' : (theme === 'dark' ? 'hover:bg-[#0d2137]' : 'hover:bg-slate-50')}`}>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        {tenant.logo_url ? (
-                          <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
-                        ) : (
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
-                            {(tenant.name || '?').charAt(0)}
-                          </div>
-                        )}
+                  <div key={tenant.id} className={`${cardClass} rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden ${isSuspended ? 'opacity-60 grayscale' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2.5">
+                        {tenant.logo_url ? <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} /> : <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>{(tenant.name || '?').charAt(0)}</div>}
                         <div>
-                          <p className="font-black text-base">{tenant.name}</p>
-                          <button
-                            onClick={() => copyToClipboard(tenant.id, 'ID Tenant')}
-                            className={`text-[9px] font-bold font-mono ${textSub} hover:text-cyan-400 flex items-center gap-1`}
-                            title="Klik untuk copy ID"
-                          >
-                            ID: {tenant.id.slice(0, 8)}... <Icons.Copy />
-                          </button>
+                          <h3 className="font-black text-base leading-tight">{tenant.name}</h3>
+                          <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} flex items-center gap-1`}>ID: {tenant.id.slice(0, 8)}... <Icons.Copy /></button>
                         </div>
                       </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border-2 ${
-                        isSuspended
-                          ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700')
-                          : isOnline
-                            ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
-                            : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${!isSuspended && isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
-                        {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
-                          {isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}
-                        </span>
-                        <p className={`text-[9px] font-bold uppercase tracking-wider ${textSub}`}>
-                          {isSuspended ? 'Disuspend' : hasEndDate(tenant) ? formatDateID(tenant.subscription_end_date) : 'Belum diatur'}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                          Rp {getPrice(tenant).toLocaleString('id-ID')}
-                        </p>
-                        <p className={`text-[9px] font-bold ${textSub}`}>
-                          Ref: <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>{tenant.referral_name || '-'}</span>
-                        </p>
-                        <p className={`text-[9px] font-bold ${textSub}`}>
-                          Komisi: <span className={theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span>
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Detail Tenant"><Icons.Eye /></button>
-                        <button onClick={() => openWa(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-600 border-emerald-600 hover:bg-emerald-200'} p-2 rounded-lg`} title="Chat WA"><Icons.WhatsApp /></button>
-                        <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Statistik"><Icons.BarChart /></button>
-                        <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 border-cyan-700 hover:bg-cyan-200'} p-2 rounded-lg`} title="Finansial"><Icons.Settings /></button>
-                        <button
-                          disabled={busy}
-                          onClick={() => requestToggleStatus(tenant)}
-                          className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} px-3 py-2 rounded-lg text-[10px] disabled:opacity-50`}
-                        >
-                          {isSuspended ? 'Aktifkan' : 'Suspend'}
-                        </button>
-                        <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] hover:bg-blue-500 px-3 py-2 rounded-lg text-[10px]`}>
-                          <Icons.Plus /> Extend
-                        </button>
-                        <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-600 border-rose-600 hover:bg-rose-200'} p-2 rounded-lg disabled:opacity-50`} title="Hapus"><Icons.Trash /></button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* MOBILE CARDS */}
-        <div className="lg:hidden space-y-5">
-          {sortedTenants.length === 0 ? (
-            <div className={`${cardClass} rounded-xl p-6 text-center font-black text-lg ${textSub}`}>Tidak ada data.</div>
-          ) : sortedTenants.map((tenant) => {
-            const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-            const isOnline = onlineUsers[tenant.id];
-            const isSuspended = tenant.is_active === false;
-            const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
-            const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
-            const busy = !!actionLoading[tenant.id];
-
-            return (
-              <div key={tenant.id} className={`${cardClass} rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden ${isSuspended ? 'opacity-60 grayscale' : ''}`}>
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2.5">
-                    {tenant.logo_url ? (
-                      <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
-                    ) : (
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
-                        {(tenant.name || '?').charAt(0)}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-black text-base leading-tight">{tenant.name}</h3>
-                      <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} flex items-center gap-1`}>
-                        ID: {tenant.id.slice(0, 8)}... <Icons.Copy />
-                      </button>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border-2 ${isSuspended ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700') : isOnline ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700') : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')}`}>{isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}</span>
+                    </div>
+                    <div className={`rounded-lg p-2.5 border-2 flex flex-col gap-1.5 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Sisa Waktu</p><span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>{isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Harga Sewa</p><span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Referral</p><span className={`text-xs font-black ${textMain}`}>{tenant.referral_name || '-'}</span></div>
+                      <div className="flex justify-between items-center"><p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p><span className={`text-xs font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                      <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] col-span-2 py-2.5 rounded-lg text-xs`}><Icons.Plus /> Perpanjang</button>
+                      <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail</button>
+                      <button onClick={() => openWaTenant(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Tagih WA</button>
+                      <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Settings /> Finansial</button>
+                      <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.BarChart /> Statistik</button>
+                      <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} py-2 rounded-lg text-[10px] disabled:opacity-50`}>{isSuspended ? 'Aktifkan' : 'Suspend'}</button>
+                      <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px] disabled:opacity-50`}><Icons.Trash /> Hapus</button>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border-2 ${
-                    isSuspended
-                      ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700')
-                      : isOnline
-                        ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
-                        : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
-                  }`}>
-                    {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
-                  </span>
-                </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-                <div className={`rounded-lg p-2.5 border-2 flex flex-col gap-1.5 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                  <div className="flex justify-between items-center">
-                    <p className={`text-[10px] font-bold uppercase ${textSub}`}>Sisa Waktu</p>
-                    <span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-violet-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
-                      {isSuspended ? 'BEKU' : hasEndDate(tenant) ? `${daysLeft} HARI` : '—'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className={`text-[10px] font-bold uppercase ${textSub}`}>Harga Sewa</p>
-                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(tenant).toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className={`text-[10px] font-bold uppercase ${textSub}`}>Referral</p>
-                    <span className={`text-xs font-black ${textMain}`}>{tenant.referral_name || '-'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p>
-                    <span className={`text-xs font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {getCommission(tenant).toLocaleString('id-ID')}</span>
-                  </div>
-                </div>
+        {/* ================= TAB MARKETERS ================= */}
+        {activeTab === 'marketers' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-black uppercase tracking-wider">Tim Marketing & Bagi Hasil</h2>
+              <button onClick={() => setMarketerModal({ open: true, name: '', wa: '', loading: false })} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 px-4 py-2 rounded-lg text-xs`}>
+                <Icons.UserPlus /> Tambah Marketing
+              </button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-1.5 mt-1">
-                  <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] col-span-2 py-2.5 rounded-lg text-xs`}>
-                    <Icons.Plus /> Perpanjang
-                  </button>
-                  <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail</button>
-                  <button onClick={() => openWa(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> WA</button>
-                  <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Settings /> Finansial</button>
-                  <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.BarChart /> Statistik</button>
-                  <button
-                    disabled={busy}
-                    onClick={() => requestToggleStatus(tenant)}
-                    className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} py-2 rounded-lg text-[10px] disabled:opacity-50`}
-                  >
-                    {isSuspended ? 'Aktifkan' : 'Suspend'}
-                  </button>
-                  <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px] disabled:opacity-50`}><Icons.Trash /> Hapus</button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {marketersWithStats.length === 0 ? (
+                <div className={`col-span-full p-8 text-center rounded-xl border-2 border-dashed ${theme === 'dark' ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-400'}`}>Belum ada data marketing. Silakan tambah.</div>
+              ) : marketersWithStats.map(m => (
+                <div key={m.id} className={`${cardClass} rounded-xl p-5 flex flex-col relative overflow-hidden`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-black text-lg text-cyan-500">{m.name}</h3>
+                      <p className={`text-xs font-bold ${textSub}`}>{m.wa_number || 'Tanpa WA'}</p>
+                    </div>
+                    <button onClick={() => requestDeleteMarketer(m)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500' : 'bg-rose-100 text-rose-600 border-rose-600'} p-2 rounded-lg`} title="Hapus Marketing"><Icons.Trash /></button>
+                  </div>
+                  
+                  <div className={`rounded-lg p-3 border-2 flex flex-col gap-2 mb-4 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                    <div className="flex justify-between items-center">
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Kafe Direferensi</p>
+                      <span className={`text-sm font-black ${textMain}`}>{m.count} Kafe</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Total Omset Klien</p>
+                      <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {m.revenue.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi (Prorated)</p>
+                      <span className={`text-sm font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {m.commission.toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-auto">
+                    <button onClick={() => setMarketerDetailModal({ open: true, marketer: m })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail Kafe</button>
+                    <button onClick={() => openWaMarketer(m, { count: m.count, commission: m.commission, tenantList: m.tenantList })} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> Kirim Rincian</button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </main>
 
-      {/* === MODAL EXTEND === */}
+      {/* === MODALS === */}
+
+      {/* Modal Extend */}
       {extendModal.open && extendModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -802,12 +705,7 @@ export default function AdminDashboard() {
               <p className={`text-xs font-bold text-center ${textSub}`}>Pilih durasi untuk <span className={textMain}>{extendModal.tenant.name}</span>:</p>
               <div className="grid grid-cols-2 gap-2">
                 {[7, 30, 90, 365].map(days => (
-                  <button
-                    key={days}
-                    disabled={extendModal.loading}
-                    onClick={() => submitExtend(days)}
-                    className={`py-3 rounded-lg flex flex-col items-center justify-center transition-all border-2 disabled:opacity-50 ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 hover:border-cyan-500 hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]' : 'bg-slate-50 border-slate-300 hover:border-cyan-600 hover:bg-white shadow-[2px_2px_0px_0px_#000]'}`}
-                  >
+                  <button key={days} disabled={extendModal.loading} onClick={() => submitExtend(days)} className={`py-3 rounded-lg flex flex-col items-center justify-center transition-all border-2 disabled:opacity-50 ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 hover:border-cyan-500 hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]' : 'bg-slate-50 border-slate-300 hover:border-cyan-600 hover:bg-white shadow-[2px_2px_0px_0px_#000]'}`}>
                     <span className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{days}</span>
                     <span className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Hari</span>
                   </button>
@@ -818,7 +716,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* === MODAL FINANSIAL === */}
+      {/* Modal Finansial */}
       {financeModal.open && financeModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -828,27 +726,16 @@ export default function AdminDashboard() {
             </div>
             <form onSubmit={saveFinance} className="p-5 space-y-3">
               <h4 className={`font-black text-center text-base ${textMain}`}>{financeModal.tenant.name}</h4>
-              <div>
-                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Harga Sewa / Bulan (Rp)</label>
-                <input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label>
-                <input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label>
-                <input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} />
-              </div>
-              <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>
-                {financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}
-              </button>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Harga Sewa / Bulan (Rp)</label><input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label><input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label><input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* === MODAL STATISTIK === */}
+      {/* Modal Statistik */}
       {statsModal.open && statsModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -864,22 +751,10 @@ export default function AdminDashboard() {
                 <p className="text-center text-sm font-black text-rose-500">Gagal memuat statistik. Coba lagi.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Menu</p>
-                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{statsModal.data?.menus ?? '-'}</p>
-                  </div>
-                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Order</p>
-                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{statsModal.data?.orders ?? '-'}</p>
-                  </div>
-                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Order 30 Hari</p>
-                    <p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{statsModal.data?.recentCount ?? '-'}</p>
-                  </div>
-                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Omzet 30 Hari</p>
-                    <p className={`text-lg font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p>
-                  </div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Menu</p><p className={`text-3xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{statsModal.data?.menus ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Order</p><p className={`text-3xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{statsModal.data?.orders ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Order 30 Hari</p><p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{statsModal.data?.recentCount ?? '-'}</p></div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}><p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Omzet 30 Hari</p><p className={`text-lg font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p></div>
                 </div>
               )}
             </div>
@@ -887,7 +762,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* === MODAL DETAIL TENANT === */}
+      {/* Modal Detail Tenant */}
       {detailModal.open && detailModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
@@ -898,46 +773,23 @@ export default function AdminDashboard() {
             <div className="p-5 space-y-2 max-h-[70vh] overflow-y-auto">
               <h4 className={`text-lg font-black mb-3 ${textMain}`}>{detailModal.tenant.name}</h4>
               {[
-                ['Tenant ID', detailModal.tenant.id, true],
-                ['No. WhatsApp', detailModal.tenant.wa_number || '—', false],
-                ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false],
-                ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false],
-                ['QRIS', detailModal.tenant.qris_string || '—', true],
-                ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false],
-                ['Banner URL', detailModal.tenant.banner_url || '—', true],
-                ['Logo URL', detailModal.tenant.logo_url || '—', true],
-                ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
+                ['Tenant ID', detailModal.tenant.id, true], ['No. WhatsApp', detailModal.tenant.wa_number || '—', false], ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false], ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false], ['QRIS', detailModal.tenant.qris_string || '—', true], ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false], ['Banner URL', detailModal.tenant.banner_url || '—', true], ['Logo URL', detailModal.tenant.logo_url || '—', true], ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
               ].map(([label, value, copyable]) => (
                 <div key={label} className={`rounded-lg p-2 border-2 flex justify-between items-start gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>{label}</p>
-                    <p className={`text-xs font-bold break-all ${textMain}`}>{value}</p>
-                  </div>
-                  {copyable && value !== '—' && (
-                    <button onClick={() => copyToClipboard(value, label)} className={`p-1.5 border-2 rounded ${theme === 'dark' ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}>
-                      <Icons.Copy />
-                    </button>
-                  )}
+                  <div className="min-w-0 flex-1"><p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>{label}</p><p className={`text-xs font-bold break-all ${textMain}`}>{value}</p></div>
+                  {copyable && value !== '—' && (<button onClick={() => copyToClipboard(value, label)} className={`p-1.5 border-2 rounded ${theme === 'dark' ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.Copy /></button>)}
                 </div>
               ))}
-
               <div className={`rounded-lg p-3 border-2 flex justify-between items-center gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                <div>
-                  <p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Kitchen PIN</p>
-                  <p className={`text-xs font-bold ${textMain}`}>
-                    {detailModal.tenant.kitchen_pin ? '••••••' : 'Belum diset'}
-                  </p>
-                </div>
-                <button onClick={() => openPinModal(detailModal.tenant)} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] px-3 py-1.5 rounded text-[10px]`}>
-                  <Icons.Key /> Reset PIN
-                </button>
+                <div><p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Kitchen PIN</p><p className={`text-xs font-bold ${textMain}`}>{detailModal.tenant.kitchen_pin ? '••••••' : 'Belum diset'}</p></div>
+                <button onClick={() => openPinModal(detailModal.tenant)} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] px-3 py-1.5 rounded text-[10px]`}><Icons.Key /> Reset PIN</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* === MODAL RESET PIN === */}
+      {/* Modal Reset PIN */}
       {pinModal.open && pinModal.tenant && (
         <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -947,26 +799,64 @@ export default function AdminDashboard() {
             </div>
             <form onSubmit={savePin} className="p-5 space-y-3">
               <p className={`text-xs font-bold text-center ${textSub}`}>PIN baru untuk <span className={textMain}>{pinModal.tenant.name}</span></p>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="\d*"
-                maxLength={8}
-                required
-                value={pinModal.pin}
-                onChange={e => setPinModal({ ...pinModal, pin: e.target.value.replace(/\D/g, '') })}
-                placeholder="4–8 digit angka"
-                className={`${inputCls} text-center text-2xl tracking-widest`}
-              />
-              <button type="submit" disabled={pinModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 rounded-lg text-sm disabled:opacity-50`}>
-                {pinModal.loading ? 'Menyimpan...' : 'Simpan PIN Baru'}
-              </button>
+              <input type="text" inputMode="numeric" pattern="\d*" maxLength={8} required value={pinModal.pin} onChange={e => setPinModal({ ...pinModal, pin: e.target.value.replace(/\D/g, '') })} placeholder="4–8 digit angka" className={`${inputCls} text-center text-2xl tracking-widest`} />
+              <button type="submit" disabled={pinModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 rounded-lg text-sm disabled:opacity-50`}>{pinModal.loading ? 'Menyimpan...' : 'Simpan PIN Baru'}</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* === MODAL KONFIRMASI === */}
+      {/* Modal Tambah Marketing */}
+      {marketerModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.UserPlus /> Tambah Marketing</h3>
+              <button onClick={() => setMarketerModal({ open: false, name: '', wa: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+            </div>
+            <form onSubmit={saveMarketer} className="p-5 space-y-3">
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Marketing</label><input type="text" required placeholder="Cth: Budi Santoso" value={marketerModal.name} onChange={e => setMarketerModal({ ...marketerModal, name: e.target.value })} className={inputCls} /></div>
+              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor WhatsApp</label><input type="text" required placeholder="Cth: 08123456789" value={marketerModal.wa} onChange={e => setMarketerModal({ ...marketerModal, wa: e.target.value })} className={inputCls} /></div>
+              <button type="submit" disabled={marketerModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{marketerModal.loading ? 'Menyimpan...' : 'Simpan Marketing'}</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail Marketing (Daftar Kafe) */}
+      {marketerDetailModal.open && marketerDetailModal.marketer && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-md`}>
+            <div className={modalHeader}>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Users /> Kafe Rekomendasi {marketerDetailModal.marketer.name}</h3>
+              <button onClick={() => setMarketerDetailModal({ open: false, marketer: null })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+            </div>
+            <div className="p-5 max-h-[70vh] overflow-y-auto space-y-2">
+              {marketerDetailModal.marketer.rawTenants.length === 0 ? (
+                <p className={`text-center text-sm font-bold ${textSub}`}>Belum ada kafe yang direferensikan.</p>
+              ) : (
+                marketerDetailModal.marketer.rawTenants.map(t => {
+                  const daysLeft = calculateDaysLeft(t.subscription_end_date);
+                  return (
+                    <div key={t.id} className={`rounded-lg p-3 border-2 flex justify-between items-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                      <div>
+                        <p className={`font-black text-sm ${textMain}`}>{t.name}</p>
+                        <p className={`text-[10px] font-bold ${textSub}`}>{t.is_active === false ? 'Suspended' : `${daysLeft} Hari Lagi`}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {getPrice(t).toLocaleString('id-ID')}</p>
+                        <p className={`text-[10px] font-bold ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi: Rp {getCommission(t).toLocaleString('id-ID')}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi */}
       {confirmModal.open && (
         <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -979,25 +869,12 @@ export default function AdminDashboard() {
               {confirmModal.requireInput && (
                 <>
                   <p className={`text-[10px] font-black uppercase ${textSub}`}>Ketik <span className={confirmModal.danger ? 'text-rose-500' : 'text-cyan-500'}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>
-                  <input
-                    type="text"
-                    value={confirmModal.inputValue}
-                    onChange={e => setConfirmModal(prev => ({ ...prev, inputValue: e.target.value }))}
-                    className={inputCls}
-                    autoFocus
-                    disabled={confirmModal.loading}
-                  />
+                  <input type="text" value={confirmModal.inputValue} onChange={e => setConfirmModal(prev => ({ ...prev, inputValue: e.target.value }))} className={inputCls} autoFocus disabled={confirmModal.loading} />
                 </>
               )}
               <div className="flex gap-2 pt-2">
                 <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} flex-1 py-2 rounded-lg text-xs disabled:opacity-50`}>Batal</button>
-                <button
-                  disabled={confirmModal.loading || (confirmModal.requireInput && confirmModal.inputValue !== confirmModal.requireInput)}
-                  onClick={async () => { if (confirmModal.onConfirm) await confirmModal.onConfirm(); }}
-                  className={`${btnBase} flex-1 py-2 rounded-lg text-xs disabled:opacity-50 ${confirmModal.danger ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b] hover:bg-emerald-600'}`}
-                >
-                  {confirmModal.loading ? 'Proses...' : confirmModal.danger ? 'Ya, Lanjut' : 'Ya, Aktifkan'}
-                </button>
+                <button disabled={confirmModal.loading || (confirmModal.requireInput && confirmModal.inputValue !== confirmModal.requireInput)} onClick={async () => { if (confirmModal.onConfirm) await confirmModal.onConfirm(); }} className={`${btnBase} flex-1 py-2 rounded-lg text-xs disabled:opacity-50 ${confirmModal.danger ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b] hover:bg-emerald-600'}`}>{confirmModal.loading ? 'Proses...' : confirmModal.danger ? 'Ya, Lanjut' : 'Ya, Aktifkan'}</button>
               </div>
             </div>
           </div>
@@ -1007,13 +884,8 @@ export default function AdminDashboard() {
       {/* TOASTS */}
       <div className="fixed bottom-6 right-6 z-[100] space-y-2 w-[calc(100%-3rem)] sm:w-80 pointer-events-none">
         {toasts.map(t => {
-          const isErr = t.type === 'error';
-          const isWarn = t.type === 'warning';
-          const c = isErr
-            ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]'
-            : isWarn
-              ? 'bg-violet-400 text-black border-violet-700 shadow-[2px_2px_0px_0px_#4c1d95]'
-              : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
+          const isErr = t.type === 'error'; const isWarn = t.type === 'warning';
+          const c = isErr ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]' : isWarn ? 'bg-violet-400 text-black border-violet-700 shadow-[2px_2px_0px_0px_#4c1d95]' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
           return (
             <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-3 py-2 border-2 rounded-lg animate-in slide-in-from-right-8 ${c}`}>
               <span className="text-lg">{isErr ? '❌' : isWarn ? '⚠️' : <Icons.Check />}</span>
