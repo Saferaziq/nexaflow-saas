@@ -58,6 +58,7 @@ const parseQRIS = (qris) => {
     while (i < qris.length) {
       const tag = qris.substr(i, 2);
       const len = parseInt(qris.substr(i+2, 2), 10);
+      if (isNaN(len)) break;
       const value = qris.substr(i+4, len);
       if (tag === '59') merchantName = value;
       if (tag === '62') {
@@ -65,6 +66,7 @@ const parseQRIS = (qris) => {
          while (j < value.length) {
            const subTag = value.substr(j, 2);
            const subLen = parseInt(value.substr(j+2, 2), 10);
+           if (isNaN(subLen)) break;
            const subValue = value.substr(j+4, subLen);
            if (subTag === '01') nmid = subValue;
            if (subTag === '07') terminalId = subValue;
@@ -72,9 +74,79 @@ const parseQRIS = (qris) => {
          }
       }
       i += 4 + len;
+      if (tag === '63') break;
     }
   } catch(e) {}
   return { merchantName, nmid, terminalId };
+};
+
+// === HELPER BARU: CRC16-CCITT (standar EMVCo QRIS) ===
+const crc16CCITT = (data) => {
+  let crc = 0xFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc ^= data.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+};
+
+// === HELPER BARU: Injeksi nominal ke string QRIS statis → jadi QRIS dinamis ===
+const injectNominalQRIS = (staticQRIS, amount) => {
+  if (!staticQRIS || !amount || amount <= 0) return staticQRIS;
+  try {
+    // 1. Parse semua tag EMVCo
+    const tags = [];
+    let i = 0;
+    while (i < staticQRIS.length) {
+      const tag = staticQRIS.substr(i, 2);
+      const len = parseInt(staticQRIS.substr(i + 2, 2), 10);
+      if (isNaN(len) || i + 4 + len > staticQRIS.length) break;
+      const val = staticQRIS.substr(i + 4, len);
+      tags.push({ tag, val });
+      i += 4 + len;
+      if (tag === '63') break;
+    }
+
+    if (tags.length === 0) return staticQRIS;
+
+    // 2. Hapus tag 54 (amount lama) & tag 63 (CRC lama)
+    const cleanTags = tags.filter(t => t.tag !== '54' && t.tag !== '63');
+
+    // 3. Ubah tag 01 (Point of Initiation) jadi '12' = dinamis
+    const tag01 = cleanTags.find(t => t.tag === '01');
+    if (tag01) tag01.val = '12';
+
+    // 4. Siapkan tag 54 (nominal)
+    const amountStr = String(Math.round(Number(amount)));
+    const tag54 = { tag: '54', val: amountStr };
+
+    // 5. Sisipkan setelah tag 53 (currency), atau sebelum tag 58 (country)
+    let insertIdx = cleanTags.findIndex(t => t.tag === '53');
+    if (insertIdx >= 0) {
+      insertIdx += 1;
+    } else {
+      insertIdx = cleanTags.findIndex(t => t.tag === '58');
+      if (insertIdx < 0) insertIdx = cleanTags.length;
+    }
+    cleanTags.splice(insertIdx, 0, tag54);
+
+    // 6. Rebuild string
+    let result = '';
+    for (const t of cleanTags) {
+      result += t.tag + String(t.val.length).padStart(2, '0') + t.val;
+    }
+
+    // 7. Tambah placeholder CRC "6304"
+    result += '6304';
+
+    // 8. Hitung & append CRC16
+    return result + crc16CCITT(result);
+  } catch (e) {
+    console.warn('injectNominalQRIS gagal, pakai string asli:', e);
+    return staticQRIS;
+  }
 };
 
 export default function AdminDashboard() {
@@ -376,10 +448,14 @@ export default function AdminDashboard() {
     fetchSettings();
   };
 
-  const generateQRISImage = async (qrisString, tenantName) => {
+  // === generateQRISImage: sekarang terima param amount, injeksi nominal otomatis ===
+  const generateQRISImage = async (qrisString, tenantName, amount) => {
     return new Promise(async (resolve, reject) => {
       try {
-        const parsed = parseQRIS(qrisString);
+        // Injeksi nominal ke QRIS (kalau amount valid) → jadi QRIS dinamis
+        const dynamicQRIS = amount && amount > 0 ? injectNominalQRIS(qrisString, amount) : qrisString;
+
+        const parsed = parseQRIS(dynamicQRIS);
         const merchantName = parsed.merchantName !== 'MERCHANT NAME' ? parsed.merchantName : tenantName;
         
         const canvas = document.createElement('canvas');
@@ -436,7 +512,8 @@ export default function AdminDashboard() {
         ctx.font = '28px Arial';
         ctx.fillText(parsed.terminalId, 400, 335);
 
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrisString)}&margin=0`;
+        // QR code dari string DINAMIS (sudah berisi nominal)
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(dynamicQRIS)}&margin=0`;
         const qrImg = new Image();
         qrImg.crossOrigin = 'Anonymous';
         qrImg.src = qrApiUrl;
@@ -520,8 +597,9 @@ export default function AdminDashboard() {
     if (appSettings.qris_string) {
       showToast('Menyiapkan gambar QRIS...', 'info');
       try {
-        const qrisImageUrl = await generateQRISImage(appSettings.qris_string, tenant.name);
-        msg += `*1. QRIS (Scan Gambar)*\nSilakan scan gambar QRIS berikut:\n${qrisImageUrl}\n\n`;
+        // Kirim price sebagai amount → QRIS dinamis ter-inject nominal
+        const qrisImageUrl = await generateQRISImage(appSettings.qris_string, tenant.name, price);
+        msg += `*1. QRIS (Scan Gambar)*\nSilakan scan gambar QRIS berikut (nominal otomatis Rp ${price.toLocaleString('id-ID')}):\n${qrisImageUrl}\n\n`;
       } catch (err) {
         showToast('Gagal membuat gambar QRIS, menggunakan teks.', 'warning');
         msg += `*1. QRIS (Copy Teks)*\nSilakan copy-paste teks QRIS di bawah ini ke M-Banking:\n${appSettings.qris_string}\n\n`;
@@ -972,7 +1050,7 @@ export default function AdminDashboard() {
               <div>
                 <label className={`block text-xs font-medium mb-1.5 ${textSub}`}>String QRIS (teks panjang)</label>
                 <textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} />
-                <p className={`text-[11px] mt-1 ${textMuted}`}>Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai standar ASPI saat menagih via WA.</p>
+                <p className={`text-[11px] mt-1 ${textMuted}`}>Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai standar ASPI saat menagih via WA, sekaligus meng-inject nominal tagihan ke dalam QR.</p>
               </div>
               <div className={`border-t my-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}></div>
               <div><label className={`block text-xs font-medium mb-1.5 ${textSub}`}>Nama Bank</label><input type="text" placeholder="Cth: Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
