@@ -275,9 +275,10 @@ function OrderContent() {
     };
   }, [audioUnlocked, cafe.notify_order_ready]);
 
+  // 🔥 Update: Toast tampil lebih lama (4 detik)
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 1800);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const addToCart = (menu) => {
@@ -465,7 +466,13 @@ function OrderContent() {
     setShowQrisModal(false);
     setActiveTab('status');
     fetchMyOrders(newIds);
-    showToast('Pesanan terkirim! 🎉');
+    
+    // 🔥 Update: Toast Notification yang lebih jelas
+    if (cafe.is_pay_first) {
+      showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir ⏳');
+    } else {
+      showToast('Pesanan terkirim! 🎉');
+    }
   };
 
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-slate-800">QR Code tidak valid.</div>;
@@ -486,6 +493,7 @@ function OrderContent() {
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
   const hasReadyOrder = myOrders.some(o => o.status === 'ready');
+  const hasWaitingOrder = myOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
@@ -703,6 +711,18 @@ function OrderContent() {
 
         {activeTab === 'status' && (
           <div className="space-y-4 mt-2">
+            
+            {/* 🔥 BANNER NOTIFIKASI MENUNGGU KONFIRMASI */}
+            {hasWaitingOrder && (
+              <div className="bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl flex items-start gap-3 shadow-md shadow-amber-500/10 animate-pulse mb-2">
+                <span className="text-2xl mt-0.5">⏳</span>
+                <div>
+                  <p className="font-black text-amber-900 text-sm">Menunggu Konfirmasi Kasir</p>
+                  <p className="text-xs font-bold text-amber-700 mt-1">Kasir sedang memverifikasi pembayaran Anda. Pesanan akan segera diproses setelah dikonfirmasi.</p>
+                </div>
+              </div>
+            )}
+
             {myOrders.length === 0 ? (
               <div className="bg-white rounded-3xl p-10 text-center shadow-sm border-2 border-slate-300">
                 <div className="text-6xl mb-4 opacity-50">📋</div>
