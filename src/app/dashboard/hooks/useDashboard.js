@@ -18,7 +18,7 @@ export function useDashboard() {
   const [settings, setSettings] = useState({ 
     name: '', wa: '', address: '', logo_url: '', qris_string: '', 
     banner_url: '', tax_percentage: 11, notify_order_ready: true,
-    is_pay_first: true // Default aktif
+    is_pay_first: true
   });
   const [isOpen, setIsOpen] = useState(true);
   const [todayStr, setTodayStr] = useState('');
@@ -46,6 +46,13 @@ export function useDashboard() {
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const hasPendingOrderRef = useRef(false);
+  
+  // 🔥 OPTIMASI: Refs untuk optimistic update & debounce
+  const ordersRef = useRef([]);
+  ordersRef.current = orders;
+  const menusRef = useRef([]);
+  menusRef.current = menus;
+  const realtimeDebounceRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -114,10 +121,19 @@ export function useDashboard() {
     }
   };
 
+  // 🔥 OPTIMASI: Filter query 120 hari + status aktif (dari 5000 row ke ~500 row)
   const fetchOrders = async (tId) => {
-    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+    if (!tId) return;
+    const cutoff = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tId)
+      .or(`status.in.(pending,cooking,ready),created_at.gte.${cutoff}`)
+      .order('created_at', { ascending: false });
+    
     if (data) {
-      // Cek pesanan baru (hanya yang pending/paid)
       const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status) && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status)).map(o => o.id));
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
@@ -244,8 +260,18 @@ export function useDashboard() {
 
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
+        // 🔥 OPTIMASI: Realtime dengan debounce (INSERT instan, UPDATE/DELETE debounce 600ms)
         channel = supabase.channel('realtime-orders-' + Date.now())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+              // INSERT (customer baru pesan): instan untuk bunyi & toast
+              fetchOrders(tId);
+              return;
+            }
+            // UPDATE/DELETE: debounce 600ms untuk mencegah spam
+            if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+            realtimeDebounceRef.current = setTimeout(() => fetchOrders(tId), 600);
+          })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
@@ -262,10 +288,11 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
+        // 🔥 OPTIMASI: Polling 10s → 30s (Realtime sudah handle mostly)
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
           fetchTenantStatus(tId);
-        }, 10000);
+        }, 30000);
       }
     };
 
@@ -273,6 +300,7 @@ export function useDashboard() {
     return () => {
       isMounted = false;
       if (pollingInterval) clearInterval(pollingInterval);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (channel) supabase.removeChannel(channel);
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
@@ -286,7 +314,6 @@ export function useDashboard() {
     showToast(newStatus ? 'Kafe sekarang BUKA ✅' : 'Kafe sekarang TUTUP 🔒', newStatus ? 'success' : 'warning');
   };
 
-  // === FUNGSI BARU: TOGGLE PAY FIRST ===
   const handleTogglePayFirst = async () => {
     if (!tenantId) return;
     const newStatus = !settings.is_pay_first;
@@ -296,21 +323,32 @@ export function useDashboard() {
     showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF ✅' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF 🔒', newStatus ? 'success' : 'warning');
   };
 
-  // === FUNGSI BARU: KONFIRMASI PEMBAYARAN (CASH / QRIS) ===
+  // 🔥 OPTIMASI: Optimistic update (langsung berubah, tanpa refetch)
   const handleConfirmPayment = (orderId) => {
     askConfirm('Konfirmasi Pembayaran', 'Pastikan uang sudah diterima (Cash) atau mutasi sudah masuk (QRIS). Lanjutkan?', async () => {
+      const prevOrder = ordersRef.current.find(o => o.id === orderId);
+      if (!prevOrder) return;
+      
+      // Optimistic: update state lokal dulu
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, payment_status: 'PAID', paid_at: new Date().toISOString() } : o
+      ));
+
       const { error } = await supabase.from('orders').update({
         payment_status: 'PAID',
         paid_at: new Date().toISOString(),
       }).eq('id', orderId);
 
       if (error) {
+        // Rollback
+        setOrders(prev => prev.map(o => 
+          o.id === orderId ? { ...o, payment_status: prevOrder.payment_status, paid_at: prevOrder.paid_at } : o
+        ));
         showToast('Gagal konfirmasi: ' + error.message, 'error');
         return;
       }
       
       showToast('Pembayaran dikonfirmasi. Pesanan diteruskan ke dapur!', 'success');
-      fetchOrders(tenantId);
     }, false);
   };
 
@@ -474,29 +512,69 @@ export function useDashboard() {
     setUploading(false);
   };
 
+  // 🔥 OPTIMASI: Optimistic update untuk status pesanan
   const handleUpdateOrderStatus = async (id, status) => {
+    const prevOrder = ordersRef.current.find(o => o.id === id);
+    if (!prevOrder) return;
+    const prevStatus = prevOrder.status;
+    const prevPaymentStatus = prevOrder.payment_status;
+
+    // Optimistic
+    setOrders(prev => prev.map(o => 
+      o.id === id ? { ...o, status, ...(status === 'completed' ? { payment_status: 'paid' } : {}) } : o
+    ));
+
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
-    await supabase.from('orders').update(u).eq('id', id);
-    fetchOrders(tenantId);
+    const { error } = await supabase.from('orders').update(u).eq('id', id);
+    
+    if (error) {
+      // Rollback
+      setOrders(prev => prev.map(o => 
+        o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus } : {}) } : o
+      ));
+      showToast('Gagal update status: ' + error.message, 'error');
+    }
   };
 
+  // 🔥 OPTIMASI: Optimistic update untuk cancel order
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
-    const currentOrder = orders.find(o => o.id === id);
+    const currentOrder = ordersRef.current.find(o => o.id === id);
+    if (!currentOrder) return;
+    const prevStatus = currentOrder.status;
+    const prevPaymentStatus = currentOrder.payment_status;
 
-    if (currentOrder && currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
+    // Optimistic
+    setOrders(prev => prev.map(o => 
+      o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED' } : o
+    ));
+
+    // Kembalikan stok di background
+    if (currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
-        const menu = menus.find(m => m.id === item.id) || menus.find(m => m.name === item.name);
+        const menu = menusRef.current.find(m => m.id === item.id) || menusRef.current.find(m => m.name === item.name);
         if (menu) {
           const newStock = Number(menu.stock || 0) + Number(item.qty || 0);
-          await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);
+          supabase.from('menus').update({ stock: newStock }).eq('id', menu.id).then(({ error }) => {
+            if (error) console.error('Stock restore error:', error);
+          });
         }
       }
-      await fetchMenus(tenantId);
+      // Fire-and-forget fetch menus
+      fetchMenus(tenantId);
     }
 
-    await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
-    fetchOrders(tenantId);
+    const { error } = await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
+    
+    if (error) {
+      // Rollback
+      setOrders(prev => prev.map(o => 
+        o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus } : o
+      ));
+      showToast('Gagal batalkan: ' + error.message, 'error');
+      return;
+    }
+    
     showToast('Pesanan ditolak dan dibatalkan', 'warning');
   }, true);
 
@@ -512,19 +590,39 @@ export function useDashboard() {
     showToast('Meja dihapus', 'success');
   }, true);
 
+  // 🔥 OPTIMASI: Optimistic update untuk toggle menu status
   const toggleMenuStatus = async (menu) => {
     const ns = menu.status === 'available' ? 'soldout' : 'available';
+    const prevMenus = menusRef.current;
+    
+    // Optimistic
+    setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, status: ns } : m));
+    
     const { error } = await supabase.from('menus').update({ status: ns }).eq('id', menu.id);
-    if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
-    fetchMenus(tenantId);
+    
+    if (error) {
+      setMenus(prevMenus);
+      showToast('Gagal ubah status: ' + error.message, 'error');
+      return;
+    }
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
+  // 🔥 OPTIMASI: Optimistic update untuk stock
   const handleUpdateStock = async (menuId, currentStock, change) => {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
+    const prevMenus = menusRef.current;
+    
+    // Optimistic
+    setMenus(prev => prev.map(m => m.id === menuId ? { ...m, stock: newStock } : m));
+    
     const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
-    if (error) { showToast('Gagal update stok: ' + error.message, 'error'); return; }
-    await fetchMenus(tenantId);
+    
+    if (error) {
+      setMenus(prevMenus);
+      showToast('Gagal update stok: ' + error.message, 'error');
+      return;
+    }
     showToast(change > 0 ? 'Stok ditambah' : 'Stok dikurangi', 'success');
   };
 
@@ -543,6 +641,7 @@ export function useDashboard() {
     showToast('Pengaturan disimpan', 'success');
   };
 
+  // 🔥 OPTIMASI: Optimistic update untuk save menu
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     const payload = {
@@ -555,10 +654,27 @@ export function useDashboard() {
       image_url: currentMenu.image_url,
       stock: parseInt(currentMenu.stock, 10) || 0,
     };
-    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id);
-    else await supabase.from('menus').insert([payload]);
+    
+    if (isEdit) {
+      const prevMenus = menusRef.current;
+      setMenus(prev => prev.map(m => m.id === currentMenu.id ? { ...m, ...payload } : m));
+      
+      const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+      if (error) {
+        setMenus(prevMenus);
+        showToast('Gagal simpan menu: ' + error.message, 'error');
+        return;
+      }
+    } else {
+      const { data, error } = await supabase.from('menus').insert([payload]).select().single();
+      if (error) {
+        showToast('Gagal simpan menu: ' + error.message, 'error');
+        return;
+      }
+      setMenus(prev => [data, ...prev]);
+    }
+    
     resetFn({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0 });
-    fetchMenus(tenantId);
     showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
   };
 
@@ -660,9 +776,7 @@ export function useDashboard() {
     }
   };
 
-  // === UPDATE FILTER ANTREAN UNTUK MENDUKUNG PAY FIRST ===
   const displayOrders = orders.filter(o => {
-    // Jika fitur Pay First aktif, pastikan 'active' hanya menampilkan yang sudah PAID
     const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
     
     if (queueFilter === "unpaid") {
@@ -674,7 +788,7 @@ export function useDashboard() {
     if (queueFilter === "completed") {
       return o.status === "completed";
     }
-    return true; // "all"
+    return true;
   });
 
   return {

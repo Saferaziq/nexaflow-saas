@@ -91,9 +91,12 @@ export default function KitchenClient({ tenantId }) {
   const wakeLockRef = useRef(null);
   const undoTimerRef = useRef(null);
   const cancelBannerTimerRef = useRef(null);
+  const isPayFirstRef = useRef(false);
   
-  // Ref untuk melacak status Pay First tanpa memicu re-render pada closure fetchOrders
-  const isPayFirstRef = useRef(false); 
+  // 🔥 OPTIMASI: Refs untuk optimistic update & debounce
+  const ordersRef = useRef([]);
+  ordersRef.current = orders;
+  const realtimeDebounceRef = useRef(null);
 
   useEffect(() => {
     const update = () => setNowTick(Date.now());
@@ -113,6 +116,7 @@ export default function KitchenClient({ tenantId }) {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       if (cancelBannerTimerRef.current) clearTimeout(cancelBannerTimerRef.current);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (wakeLockRef.current) { try { wakeLockRef.current.release(); } catch {} }
     };
   }, []);
@@ -142,10 +146,25 @@ export default function KitchenClient({ tenantId }) {
   useEffect(() => {
     if (authMode !== 'ready') return;
     requestWakeLock();
-    const onVisibility = () => { if (document.visibilityState === 'visible') requestWakeLock(); };
+    const onVisibility = () => { 
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        // 🔥 OPTIMASI: Force refresh saat tab aktif kembali (dari sleep/lock)
+        fetchOrders();
+      }
+    };
     document.addEventListener('visibilitychange', onVisibility);
     return () => { document.removeEventListener('visibilitychange', onVisibility); releaseWakeLock(); };
   }, [authMode]);
+
+  // 🔥 OPTIMASI: Polling 30s sebagai fallback (sebelumnya tidak ada)
+  useEffect(() => {
+    if (authMode !== 'ready' || !tenantId) return;
+    const poll = setInterval(() => {
+      fetchOrders();
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [authMode, tenantId]);
 
   const playBeep = (force = false) => {
     if (!force && !soundEnabledRef.current) return;
@@ -212,11 +231,19 @@ export default function KitchenClient({ tenantId }) {
     if (newVal) playBeep(true);
   };
 
+  // 🔥 OPTIMASI: Filter query (status aktif semua waktu + 7 hari terakhir untuk cancel detection)
   const fetchOrders = async () => {
     if (!tenantId) return;
-    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true });
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .or(`status.in.(pending,cooking),created_at.gte.${cutoff}`)
+      .order('created_at', { ascending: true });
+    
     if (data) {
-      // Logika Filter: Hanya tampilkan yang PAID jika Pay First aktif
       const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
       
       const activeIds = new Set(data.filter(o => 
@@ -266,13 +293,21 @@ export default function KitchenClient({ tenantId }) {
     
     if (channelRef.current) supabase.removeChannel(channelRef.current);
     channelRef.current = supabase.channel('kitchen-' + tenantId + '-' + Date.now())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => fetchOrders())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+        // 🔥 OPTIMASI: INSERT instan (bunyi), UPDATE/DELETE debounce
+        if (payload.eventType === 'INSERT') {
+          fetchOrders();
+          return;
+        }
+        if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+        realtimeDebounceRef.current = setTimeout(() => fetchOrders(), 600);
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
         if (payload.new.is_pay_first !== undefined) {
           const pf = payload.new.is_pay_first !== false;
           setIsPayFirst(pf);
           isPayFirstRef.current = pf;
-          fetchOrders(); // Refresh antrean jika setting diubah dari dashboard
+          fetchOrders();
         }
       })
       .subscribe(status => {
@@ -347,15 +382,32 @@ export default function KitchenClient({ tenantId }) {
     setVerifying(false);
   };
 
+  // 🔥 OPTIMASI: Optimistic update markCooking
   const markCooking = async (orderId) => {
-    await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
-    fetchOrders();
+    const prevOrder = ordersRef.current.find(o => o.id === orderId);
+    if (!prevOrder) return;
+    
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cooking' } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
+    if (error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: prevOrder.status } : o));
+      alert('Gagal update: ' + error.message);
+    }
   };
 
+  // 🔥 OPTIMASI: Optimistic update markReady
   const markReady = async (order) => {
     const previousStatus = order.status;
-    await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
-    fetchOrders();
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'ready' } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
+    if (error) {
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: previousStatus } : o));
+      alert('Gagal update: ' + error.message);
+      return;
+    }
+    
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoToast({ orderId: order.id, tableNumber: order.table_number, previousStatus });
     undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
@@ -364,8 +416,13 @@ export default function KitchenClient({ tenantId }) {
   const undoMarkReady = async () => {
     if (!undoToast) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    await supabase.from('orders').update({ status: undoToast.previousStatus }).eq('id', undoToast.orderId);
-    fetchOrders();
+    
+    setOrders(prev => prev.map(o => o.id === undoToast.orderId ? { ...o, status: undoToast.previousStatus } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: undoToast.previousStatus }).eq('id', undoToast.orderId);
+    if (error) {
+      alert('Gagal undo: ' + error.message);
+    }
     setUndoToast(null);
   };
 
@@ -385,7 +442,6 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  // === FUNGSI PRINT ORDERAN DAPUR ===
   const handlePrintOrder = (order) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -446,7 +502,6 @@ export default function KitchenClient({ tenantId }) {
     printWindow.document.close();
   };
 
-  // Filter Pesanan Berdasarkan Status & Settingan Pay First
   const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
   
   const pendingOrders = orders
