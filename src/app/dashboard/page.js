@@ -11,6 +11,8 @@ import TabContent from './components/TabContent';
 import MenuModal from './components/MenuModal';
 import KitchenModal from './components/KitchenModal';
 
+const WA_ADMIN = '6281389744957';
+
 function DashboardContent() {
   const d = useDashboard();
   const [activeTab, setActiveTab] = useState('queue');
@@ -25,9 +27,7 @@ function DashboardContent() {
   const handleOpenAddMenu = () => setMenuModal({ open: true, mode: 'add', data: null });
   const handleOpenEditMenu = (menu) => setMenuModal({ open: true, mode: 'edit', data: menu });
 
-  // 🔥 PERBAIKAN ERROR PREVENTDEFAULT DI SINI
   const handleAddTable = (e) => {
-    // Cek jika 'e' adalah event form (bukan string), baru jalankan preventDefault
     if (e && typeof e.preventDefault === 'function') {
       e.preventDefault();
     }
@@ -48,6 +48,52 @@ function DashboardContent() {
   };
   
   const activeOrdersCount = todayOrders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).length;
+
+  // 🔥 SUSPEND OVERLAY — Blokir total, hanya tombol Hubungi Admin & Logout yang bisa diklik
+  if (d.isSuspended) {
+    const waMessage = `Halo Admin NexaFlow, akun kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) sedang disuspend. Mohon bantu aktifkan kembali. Terima kasih.`;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500 animate-in zoom-in-95 duration-300">
+          <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300">
+            <span className="text-5xl">🔒</span>
+          </div>
+          
+          <h1 className="text-3xl font-black text-slate-900 mb-2">Akun Disuspend</h1>
+          <p className="text-sm font-semibold text-slate-600 mb-1">Kafe: <span className="font-black text-slate-900">{d.cafeName || '-'}</span></p>
+          <p className="text-xs font-semibold text-slate-500 mb-6">{d.userEmail || '-'}</p>
+          
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 mb-6 text-left">
+            <p className="text-sm font-bold text-rose-900 leading-relaxed">
+              Akun kafe Anda telah <strong>dinonaktifkan oleh Admin NexaFlow</strong>. 
+              Silakan hubungi admin untuk informasi lebih lanjut dan mengaktifkan kembali akun Anda.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href={`https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform border-2 border-emerald-700"
+            >
+              💬 Hubungi Admin
+            </a>
+            <button
+              onClick={d.handleLogout}
+              className="w-full flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-3 rounded-2xl text-sm active:scale-95 transition-transform border-2 border-slate-300"
+            >
+              🚪 Logout
+            </button>
+          </div>
+
+          <p className="text-[10px] font-bold text-slate-400 mt-6">
+            NexaFlow SaaS · Sistem dalam mode terbatas
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (d.isExpired) {
     return (

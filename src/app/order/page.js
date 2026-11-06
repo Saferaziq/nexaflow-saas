@@ -59,7 +59,7 @@ function OrderContent() {
   const tenantId = searchParams.get('tenant');
   const tableNumber = searchParams.get('table');
 
-  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true, is_open: true, is_pay_first: false, qris_string: '' });
+  const [cafe, setCafe] = useState({ name: 'Kafe', logo_url: '', banner_url: '', wa_number: '', tax_percentage: 0, notify_order_ready: true, is_open: true, is_active: true, is_pay_first: false, qris_string: '' });
   const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,9 +109,14 @@ function OrderContent() {
   };
 
   const fetchCafeStatus = async () => {
-    const { data } = await supabase.from('tenants').select('is_open, is_pay_first').eq('id', tenantId).single();
+    const { data } = await supabase.from('tenants').select('is_open, is_pay_first, is_active').eq('id', tenantId).single();
     if (data) {
-      setCafe(prev => ({ ...prev, is_open: data.is_open !== false, is_pay_first: data.is_pay_first !== false }));
+      setCafe(prev => ({ 
+        ...prev, 
+        is_open: data.is_open !== false, 
+        is_pay_first: data.is_pay_first !== false,
+        is_active: data.is_active !== false
+      }));
     }
   };
 
@@ -124,7 +129,6 @@ function OrderContent() {
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
     myOrderIdsRef.current = existingIds;
 
-    // 🔥 OPTIMASI: Paralel fetch cafe + menu (hemat ~500ms), setLoading(false) SEBELUM fetchMyOrders
     const fetchData = async () => {
       const [cafeRes, menuRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('id', tenantId).single(),
@@ -151,10 +155,8 @@ function OrderContent() {
       const savedName = localStorage.getItem('nexaflow_customer_name');
       if (savedName) setCustomerName(savedName);
 
-      // 🔥 Set loading false SEBELUM fetchMyOrders (menu langsung muncul)
       setLoading(false);
 
-      // 🔥 Fire-and-forget: fetchMyOrders di background
       if (existingIds.length > 0) fetchMyOrders(existingIds);
     };
     fetchData();
@@ -361,7 +363,6 @@ function OrderContent() {
     }
   };
 
-  // 🔥 OPTIMASI FINAL: Slim payload, no redundant fetch
   const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -373,12 +374,18 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // Paralel: tenant check + stock check
     const menuIds = cart.map(i => i.id);
     const [tenantRes, menuRes] = await Promise.all([
-      supabase.from('tenants').select('is_open').eq('id', tenantId).single(),
+      supabase.from('tenants').select('is_open, is_active').eq('id', tenantId).single(),
       supabase.from('menus').select('id, name, stock, status').in('id', menuIds)
     ]);
+
+    if (tenantRes.data && tenantRes.data.is_active === false) {
+      showToast('Maaf, kafe sedang tidak aktif.');
+      setCafe(prev => ({ ...prev, is_active: false }));
+      setIsSubmitting(false);
+      return;
+    }
 
     if (tenantRes.data && tenantRes.data.is_open === false) {
       showToast('Maaf, kafe baru saja tutup.');
@@ -426,7 +433,6 @@ function OrderContent() {
       finalPaymentStatus = 'unpaid';
     }
 
-    // 🔥 OPTIMASI: Slim payload (hanya 5 field per item, bukan 10+)
     const slimItems = cart.map(i => ({
       id: i.id,
       name: i.name,
@@ -457,7 +463,6 @@ function OrderContent() {
       return; 
     }
 
-    // RPC background (tidak di-await)
     supabase.rpc('decrement_menu_stock', {
       p_tenant_id: tenantId,
       p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
@@ -470,7 +475,6 @@ function OrderContent() {
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
 
-    // Optimistic update
     setMyOrders(prev => [data, ...prev]);
     
     setCart([]); 
@@ -480,9 +484,6 @@ function OrderContent() {
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
-    
-    // 🔥 TIDAK ADA fetchMyOrders / fetchAllMenus di sini
-    // Realtime sudah handle update orders & menus otomatis
     
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir ⏳');
@@ -514,7 +515,30 @@ function OrderContent() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
       
-      {cafe.is_open === false && (
+      {/* 🔥 OVERLAY SUSPEND — Prioritas tertinggi, blokir total */}
+      {cafe.is_active === false && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="text-center max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl border-4 border-rose-500 animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300">
+              <span className="text-5xl">🔒</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-3">Kafe Tidak Aktif</h2>
+            <p className="text-sm font-bold text-slate-600 mb-6 leading-relaxed">
+              Mohon maaf, <strong>{cafe.name}</strong> sedang <strong>tidak melayani pesanan</strong> saat ini. Silakan hubungi kasir untuk informasi lebih lanjut.
+            </p>
+            {cafe.wa_number && (
+              <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full gap-2 text-sm font-black text-white bg-emerald-500 px-6 py-4 rounded-2xl border-2 border-emerald-700 shadow-lg transition-all hover:bg-emerald-600 active:scale-95">
+                💬 Hubungi Kasir
+              </a>
+            )}
+            <p className="text-[10px] font-bold text-slate-400 mt-6">
+              Powered by NexaFlow
+            </p>
+          </div>
+        </div>
+      )}
+
+      {cafe.is_open === false && cafe.is_active !== false && (
         <div className="fixed inset-0 z-[999] bg-white/95 backdrop-blur-md flex items-center justify-center p-6">
           <div className="text-center max-w-md w-full animate-in zoom-in-95 duration-300">
             <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-100 shadow-lg shadow-rose-100">

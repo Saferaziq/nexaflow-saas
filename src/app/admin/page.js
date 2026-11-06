@@ -108,7 +108,6 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState({});
   const router = useRouter();
   
-  // 🔥 Tambahan untuk Audio Notifikasi
   const audioCtxRef = useRef(null);
 
   useEffect(() => {
@@ -129,7 +128,6 @@ export default function AdminDashboard() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   }, []);
 
-  // 🔥 Fungsi Bunyi Beep saat ada pendaftar
   const playBeep = () => {
     if (!audioCtxRef.current) return;
     try {
@@ -149,7 +147,6 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    // Unlock Audio Context saat pertama kali klik di halaman admin
     const unlockAudio = () => {
       if (!audioCtxRef.current) {
         try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { }
@@ -272,13 +269,12 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 🔥 REALTIME: Deteksi Pendaftar Baru
   useEffect(() => {
     const sub = supabase.channel('admin-changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tenants' }, (payload) => {
         showToast(`🎉 Pendaftar Baru: ${payload.new.name}`, 'success');
-        playBeep(); // Bunyikan suara
-        fetchTenants(); // Refresh data
+        playBeep();
+        fetchTenants();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants' }, fetchTenants)
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tenants' }, fetchTenants)
@@ -363,25 +359,69 @@ export default function AdminDashboard() {
     showToast('Data finansial disimpan', 'success'); setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' }); fetchTenants();
   };
 
+  // 🔥 UPDATE: Pesan peringatan lebih detail
   const requestDelete = (tenant) => {
     setConfirmModal({
-      open: true, title: 'Hapus Permanen',
-      message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
+      open: true, title: 'Hapus Permanen Semua Data',
+      message: `⚠️ Semua data "${tenant.name}" akan DIHAPUS TOTAL:\n\n• Pesanan & riwayat transaksi\n• Menu & gambar menu\n• Meja & QR code\n• Tagihan (invoices)\n• File logo & banner\n• Akun tenant\n• Akun login (email)\n\nSetelah dihapus, email pemilik bisa didaftarkan ulang. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
       requireInput: tenant.name, inputValue: '', danger: true, loading: false,
       onConfirm: () => performDelete(tenant),
     });
   };
 
+  // 🔥 UPDATE: Cascade delete 7 lapis
   const performDelete = async (tenant) => {
-    setConfirmModal(prev => ({ ...prev, loading: true })); setTenantLoading(tenant.id, 'delete');
-    const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
-    if (orderErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus orders: ' + orderErr.message, 'error'); }
-    const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
-    if (menuErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus menus: ' + menuErr.message, 'error'); }
-    const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
-    setTenantLoading(tenant.id, null);
-    if (tenantErr) { setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus tenant: ' + tenantErr.message, 'error'); }
-    setConfirmModal(EMPTY_CONFIRM); showToast(`Kafe ${tenant.name} berhasil dihapus total.`, 'success'); fetchTenants();
+    setConfirmModal(prev => ({ ...prev, loading: true }));
+    setTenantLoading(tenant.id, 'delete');
+
+    try {
+      // 1. Ambil user_id sebelum data dihapus
+      const { data: userRows } = await supabase.from('users').select('id').eq('tenant_id', tenant.id);
+      const userIds = (userRows || []).map(u => u.id);
+
+      // 2. Hapus orders
+      const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
+      if (orderErr) throw new Error('Gagal hapus pesanan: ' + orderErr.message);
+
+      // 3. Hapus menus
+      const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
+      if (menuErr) throw new Error('Gagal hapus menu: ' + menuErr.message);
+
+      // 4. Hapus tables
+      const { error: tableErr } = await supabase.from('tables').delete().eq('tenant_id', tenant.id);
+      if (tableErr && !tableErr.message.includes('does not exist')) {
+        throw new Error('Gagal hapus meja: ' + tableErr.message);
+      }
+
+      // 5. Hapus invoices (kalau tabel ada)
+      const { error: invoiceErr } = await supabase.from('invoices').delete().eq('tenant_id', tenant.id);
+      if (invoiceErr && !invoiceErr.message.includes('does not exist')) {
+        throw new Error('Gagal hapus tagihan: ' + invoiceErr.message);
+      }
+
+      // 6. Hapus file storage via RPC
+      const { error: fileErr } = await supabase.rpc('admin_delete_tenant_files', { p_tenant_id: tenant.id });
+      if (fileErr) console.warn('Gagal hapus file storage:', fileErr.message);
+
+      // 7. Hapus tenant (baris utama)
+      const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
+      if (tenantErr) throw new Error('Gagal hapus tenant: ' + tenantErr.message);
+
+      // 8. Hapus akun auth (email/password) via RPC — setelah tenant hilang
+      for (const uid of userIds) {
+        const { error: authErr } = await supabase.rpc('admin_delete_auth_user', { p_user_id: uid });
+        if (authErr) console.warn('Gagal hapus akun auth:', authErr.message);
+      }
+
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(EMPTY_CONFIRM);
+      showToast(`✅ ${tenant.name} dihapus total. Email sudah bisa didaftarkan ulang.`, 'success');
+      fetchTenants();
+    } catch (err) {
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+      showToast(err.message, 'error');
+    }
   };
 
   const copyToClipboard = async (text, label = 'ID') => {
@@ -1174,7 +1214,7 @@ export default function AdminDashboard() {
               <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
-              <p className={`text-xs font-bold ${textSub}`}>{confirmModal.message}</p>
+              <p className={`text-xs font-bold whitespace-pre-line ${textSub}`}>{confirmModal.message}</p>
               {confirmModal.requireInput && (
                 <>
                   <p className={`text-[10px] font-black uppercase ${textSub}`}>Ketik <span className={confirmModal.danger ? 'text-rose-500' : 'text-cyan-500'}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>

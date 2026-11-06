@@ -24,6 +24,7 @@ export function useDashboard() {
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false); // 🔥 State Baru
   const [theme, setTheme] = useState('light');
   const [nowTick, setNowTick] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
@@ -148,10 +149,11 @@ export function useDashboard() {
   };
 
   const fetchTenantStatus = async (tId) => {
-    const { data } = await supabase.from('tenants').select('is_open, is_pay_first').eq('id', tId).single();
+    const { data } = await supabase.from('tenants').select('is_open, is_pay_first, is_active').eq('id', tId).single();
     if (data) {
       if (data.is_open !== undefined) setIsOpen(data.is_open !== false);
       if (data.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: data.is_pay_first }));
+      if (data.is_active !== undefined) setIsSuspended(data.is_active === false);
     }
   };
 
@@ -236,6 +238,12 @@ export function useDashboard() {
         if (new Date(userData.tenants.subscription_end_date) < now) setIsExpired(true);
       }
 
+      // 🔥 CEK SUSPEND DI SINI
+      if (userData.tenants.is_active === false) {
+        setIsSuspended(true);
+        return; // Berhenti di sini, jangan load data lagi
+      }
+
       if (userData && userData.tenants && isMounted) {
         const tId = userData.tenant_id;
         setTenantId(tId);
@@ -271,6 +279,8 @@ export function useDashboard() {
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
+            // 🔥 REALTIME CEK SUSPEND
+            if (payload.new.is_active !== undefined) setIsSuspended(payload.new.is_active === false);
           })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
@@ -348,7 +358,6 @@ export function useDashboard() {
     return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
   };
 
-  // 🔥 UPDATE: Tambah mode weekly + hitung QRIS/Cash + statusCount
   const getReportData = () => {
     let start = '', end = '', label = '';
 
@@ -478,7 +487,6 @@ export function useDashboard() {
     showToast('Laporan CSV berhasil diunduh', 'success');
   };
 
-  // 🔥 UPDATE: Panggil printReport (bukan printDailyReport)
   const handlePrintReport = async () => {
     try {
       const printModule = await import('../helpers/print');
@@ -828,7 +836,7 @@ export function useDashboard() {
   });
 
   return {
-    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen,
+    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, isSuspended,
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
