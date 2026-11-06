@@ -15,7 +15,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/supabase-js": "2.45.4",
+    "core-js": "^3.38.1",
     "dotenv": "^18.0.9",
     "next": "16.4.2",
     "react": "19.3.0",

@@ -1,3 +1,4 @@
+import '../polyfills';
 import './globals.css';
 import RegisterSW from '@/components/RegisterSW';
 
