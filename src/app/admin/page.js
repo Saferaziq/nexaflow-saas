@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -8,7 +8,6 @@ const Icons = {
   Store: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   Activity: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
   Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-  Alert: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   Copy: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
@@ -21,33 +20,47 @@ const Icons = {
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
   Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+  Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  Key: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>,
+  Sort: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>,
 };
 
-const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com'; 
+const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com';
+
+const EMPTY_CONFIRM = { open: false, title: '', message: '', requireInput: '', inputValue: '', danger: true, loading: false, onConfirm: null };
 
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
-  const [now, setNow] = useState(null); 
+  const [now, setNow] = useState(null);
   const [toasts, setToasts] = useState([]);
-  
   const [theme, setTheme] = useState('dark');
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  
-  // Modal States
+  const [sortBy, setSortBy] = useState('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Modal states
   const [extendModal, setExtendModal] = useState({ open: false, tenant: null, loading: false });
   const [statsModal, setStatsModal] = useState({ open: false, tenant: null, data: null, loading: false });
   const [financeModal, setFinanceModal] = useState({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
-  
+  const [confirmModal, setConfirmModal] = useState(EMPTY_CONFIRM);
+  const [detailModal, setDetailModal] = useState({ open: false, tenant: null });
+  const [pinModal, setPinModal] = useState({ open: false, tenant: null, pin: '', loading: false });
+  const [actionLoading, setActionLoading] = useState({});
+
   const router = useRouter();
 
+  // Theme init + auto-detect OS
   useEffect(() => {
-    const savedTheme = localStorage.getItem('nexaflow_admin_theme') || 'dark';
-    setTheme(savedTheme);
+    const saved = localStorage.getItem('nexaflow_admin_theme');
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved);
+    } else if (typeof window !== 'undefined' && window.matchMedia) {
+      setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -56,41 +69,65 @@ export default function AdminDashboard() {
     localStorage.setItem('nexaflow_admin_theme', newTheme);
   };
 
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  };
+  }, []);
 
+  // Clock ticker
   useEffect(() => {
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 60000); 
+    const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
+  // ESC to close all modals
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== 'Escape') return;
+      setExtendModal({ open: false, tenant: null, loading: false });
+      setStatsModal({ open: false, tenant: null, data: null, loading: false });
+      setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
+      setConfirmModal(EMPTY_CONFIRM);
+      setDetailModal({ open: false, tenant: null });
+      setPinModal({ open: false, tenant: null, pin: '', loading: false });
+      setShowSortMenu(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Auth + initial fetch
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const currentEmail = session?.user?.email ? session.user.email.trim().toLowerCase() : '';
-      
       if (currentEmail !== ADMIN_EMAIL.toLowerCase()) {
-        alert(`Akses Ditolak!`);
-        return router.push('/login');
+        showToast('Akses ditolak! Admin only.', 'error');
+        setTimeout(() => router.push('/login'), 800);
+        return;
       }
-
       await fetchTenants();
       setLoading(false);
     };
     checkAuthAndFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const fetchTenants = async () => {
-    const { data } = await supabase.from('tenants').select('*').order('created_at', { ascending: false });
-    if (data) {
-      setTenants(data);
-      calculateStats(data, onlineUsers);
+    const { data, error } = await supabase.from('tenants').select('*').order('created_at', { ascending: false });
+    if (error) {
+      showToast('Gagal memuat data: ' + error.message, 'error');
+      return;
     }
+    if (data) setTenants(data);
   };
+
+  // Recalc stats whenever data changes
+  useEffect(() => {
+    calculateStats(tenants, onlineUsers);
+  }, [tenants, onlineUsers]);
 
   const calculateStats = (tenantData, onlineData) => {
     let onlineCount = 0;
@@ -103,38 +140,50 @@ export default function AdminDashboard() {
       if (onlineData[t.id]) onlineCount++;
       if (t.subscription_end_date) {
         const daysLeft = Math.max(0, Math.ceil((new Date(t.subscription_end_date).getTime() - currentTime) / (1000 * 60 * 60 * 24)));
-        if (daysLeft <= 3) warningCount++;
-        
+        if (daysLeft <= 7) warningCount++;
+
         if (daysLeft > 0 && t.is_active !== false) {
-          totalRevenue += (Number(t.rental_price) || 150000);
-          totalCommission += (Number(t.sales_commission) || 0);
+          // Prorated: harga bulanan × (sisa hari / 30), maksimal 1 bulan penuh
+          const ratio = Math.min(daysLeft, 30) / 30;
+          totalRevenue += Math.round((Number(t.rental_price) || 150000) * ratio);
+          totalCommission += Math.round((Number(t.sales_commission) || 0) * ratio);
         }
       }
     });
 
-    setStats({ 
-      total: tenantData.length, 
-      online: onlineCount, 
+    setStats({
+      total: tenantData.length,
+      online: onlineCount,
       warning: warningCount,
       revenue: totalRevenue,
-      commission: totalCommission
+      commission: totalCommission,
     });
   };
 
+  // Presence online
   useEffect(() => {
     const channel = supabase.channel('online-rooms', { config: { presence: { key: 'user_id' } } });
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const onlineMap = {};
       Object.keys(state).forEach((key) => {
-        state[key].forEach((presence) => { onlineMap[presence.tenant_id] = true; });
+        state[key].forEach((presence) => { if (presence.tenant_id) onlineMap[presence.tenant_id] = true; });
       });
       setOnlineUsers(onlineMap);
-      calculateStats(tenants, onlineMap);
     });
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [tenants]);
+  }, []);
+
+  // Realtime tenant changes
+  useEffect(() => {
+    const sub = supabase
+      .channel('admin-tenants-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, () => { fetchTenants(); })
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
 
@@ -143,54 +192,97 @@ export default function AdminDashboard() {
     return Math.max(0, Math.ceil((new Date(endDate).getTime() - now) / (1000 * 60 * 60 * 24)));
   };
 
+  const setTenantLoading = (id, val) => {
+    setActionLoading(prev => {
+      const next = { ...prev };
+      if (!val) delete next[id];
+      else next[id] = val;
+      return next;
+    });
+  };
+
+  // === EXTEND ===
   const submitExtend = async (days) => {
     const { tenant } = extendModal;
+    if (!tenant) return;
     setExtendModal(prev => ({ ...prev, loading: true }));
 
     const currentEnd = new Date(tenant.subscription_end_date || Date.now()).getTime();
-    const baseDate = Math.max(Date.now(), currentEnd); 
+    const baseDate = Math.max(Date.now(), currentEnd);
     const newEndDate = new Date(baseDate + (days * 24 * 60 * 60 * 1000)).toISOString();
 
-    const { error } = await supabase.from('tenants').update({ 
-      subscription_end_date: newEndDate, 
-      is_active: true 
+    const { error } = await supabase.from('tenants').update({
+      subscription_end_date: newEndDate,
+      is_active: true,
     }).eq('id', tenant.id);
-    
+
     setExtendModal({ open: false, tenant: null, loading: false });
-    if (error) {
-      showToast('Gagal: ' + error.message, 'error');
-    } else {
+    if (error) showToast('Gagal: ' + error.message, 'error');
+    else {
       showToast(`✅ ${tenant.name} diperpanjang ${days} Hari!`, 'success');
       fetchTenants();
     }
   };
 
-  const toggleStatus = async (tenant) => {
-    const newStatus = !(tenant.is_active !== false);
-    if (!confirm(`${newStatus ? 'Suspend' : 'Aktifkan'} akun ${tenant.name}?`)) return;
-    
-    const { error } = await supabase.from('tenants').update({ is_active: newStatus }).eq('id', tenant.id);
-    if (error) return showToast('Gagal: ' + error.message, 'error');
-    
-    showToast(`Akun ${tenant.name} ${newStatus ? 'diaktifkan' : 'disuspend'}`, 'success');
-    fetchTenants();
+  // === TOGGLE STATUS via Confirm Modal ===
+  const requestToggleStatus = (tenant) => {
+    const currentlyActive = tenant.is_active !== false;
+    const newStatus = !currentlyActive;
+    setConfirmModal({
+      open: true,
+      title: newStatus ? 'Suspend Akun' : 'Aktifkan Akun',
+      message: `Akun "${tenant.name}" akan ${newStatus ? 'disuspend. Tenant TIDAK BISA login sampai diaktifkan kembali.' : 'diaktifkan kembali dan bisa login normal.'}`,
+      requireInput: '',
+      inputValue: '',
+      danger: newStatus,
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        setTenantLoading(tenant.id, 'toggle');
+        const { error } = await supabase.from('tenants').update({ is_active: newStatus }).eq('id', tenant.id);
+        setTenantLoading(tenant.id, null);
+        if (error) {
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+          return showToast('Gagal: ' + error.message, 'error');
+        }
+        setConfirmModal(EMPTY_CONFIRM);
+        showToast(`Akun ${tenant.name} ${newStatus ? 'disuspend' : 'diaktifkan'}`, 'success');
+        fetchTenants();
+      },
+    });
   };
 
+  // === STATS ===
   const openStats = async (tenant) => {
     setStatsModal({ open: true, tenant, data: null, loading: true });
-    
-    const [menusRes, ordersRes] = await Promise.all([
-      supabase.from('menus').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
-      supabase.from('orders').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id)
-    ]);
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const [menusRes, ordersAllRes, recentOrdersRes] = await Promise.all([
+        supabase.from('menus').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+        supabase.from('orders').select('subtotal, tax_amount, created_at').eq('tenant_id', tenant.id).gte('created_at', thirtyDaysAgo),
+      ]);
 
-    setStatsModal(prev => ({
-      ...prev,
-      loading: false,
-      data: { menus: menusRes.count || 0, orders: ordersRes.count || 0 }
-    }));
+      const recentOrders = recentOrdersRes.data || [];
+      const revenue30 = recentOrders.reduce((sum, o) => sum + (Number(o.subtotal) || 0) + (Number(o.tax_amount) || 0), 0);
+
+      setStatsModal(prev => ({
+        ...prev,
+        loading: false,
+        data: {
+          menus: menusRes.count || 0,
+          orders: ordersAllRes.count || 0,
+          recentCount: recentOrders.length,
+          revenue30,
+          error: false,
+        },
+      }));
+    } catch (err) {
+      setStatsModal(prev => ({ ...prev, loading: false, data: { error: true } }));
+    }
   };
 
+  // === FINANCE ===
   const openFinance = (tenant) => {
     setFinanceModal({
       open: true,
@@ -198,55 +290,85 @@ export default function AdminDashboard() {
       loading: false,
       price: tenant.rental_price || 150000,
       referral: tenant.referral_name || '',
-      commission: tenant.sales_commission || 0
+      commission: tenant.sales_commission || 0,
     });
   };
 
   const saveFinance = async (e) => {
     e.preventDefault();
     setFinanceModal(prev => ({ ...prev, loading: true }));
-    
-    // Pastikan data dikirim sebagai angka
+
     const payload = {
       rental_price: Number(financeModal.price) || 0,
       referral_name: financeModal.referral.trim(),
-      sales_commission: Number(financeModal.commission) || 0
+      sales_commission: Number(financeModal.commission) || 0,
     };
 
     const { error } = await supabase.from('tenants').update(payload).eq('id', financeModal.tenant.id);
-
     setFinanceModal(prev => ({ ...prev, loading: false }));
+
     if (error) {
-      console.error("Supabase Error:", error);
+      console.error('Supabase Error:', error);
       return showToast('Gagal simpan: ' + error.message, 'error');
     }
-    
     showToast('Data finansial disimpan', 'success');
     setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' });
     fetchTenants();
   };
 
-  const handleDelete = async (tenant) => {
-    const confirmText = prompt(`PERINGATAN KERAS!\n\nSemua menu, pesanan, dan akun dari "${tenant.name}" akan dihapus permanen.\n\nKetik nama kafe (${tenant.name}) untuk konfirmasi:`);
-    
-    if (confirmText !== tenant.name) {
-      return showToast('Konfirmasi gagal. Nama tidak cocok.', 'error');
-    }
-
-    setTenants(prev => prev.filter(t => t.id !== tenant.id));
-
-    const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
-    if (error) {
-      showToast('Gagal hapus: ' + error.message, 'error');
-      fetchTenants();
-    } else {
-      showToast(`Kafe ${tenant.name} berhasil dihapus.`, 'success');
-    }
+  // === DELETE (with cascade) ===
+  const requestDelete = (tenant) => {
+    setConfirmModal({
+      open: true,
+      title: 'Hapus Permanen',
+      message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
+      requireInput: tenant.name,
+      inputValue: '',
+      danger: true,
+      loading: false,
+      onConfirm: () => performDelete(tenant),
+    });
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showToast('ID disalin', 'success');
+  const performDelete = async (tenant) => {
+    setConfirmModal(prev => ({ ...prev, loading: true }));
+    setTenantLoading(tenant.id, 'delete');
+
+    // 1) delete orders
+    const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
+    if (orderErr) {
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+      return showToast('Gagal hapus orders: ' + orderErr.message, 'error');
+    }
+    // 2) delete menus
+    const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
+    if (menuErr) {
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+      return showToast('Gagal hapus menus: ' + menuErr.message, 'error');
+    }
+    // 3) delete tenant
+    const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
+    setTenantLoading(tenant.id, null);
+    if (tenantErr) {
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+      return showToast('Gagal hapus tenant: ' + tenantErr.message, 'error');
+    }
+
+    setConfirmModal(EMPTY_CONFIRM);
+    showToast(`Kafe ${tenant.name} berhasil dihapus total.`, 'success');
+    fetchTenants();
+  };
+
+  // === COPY / WA ===
+  const copyToClipboard = async (text, label = 'ID') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`${label} disalin`, 'success');
+    } catch {
+      showToast('Gagal menyalin', 'error');
+    }
   };
 
   const openWa = (tenant) => {
@@ -256,22 +378,57 @@ export default function AdminDashboard() {
     else if (phone.startsWith('8')) phone = '62' + phone;
     else if (phone.startsWith('620')) phone = '62' + phone.slice(3);
     if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
-
     const msg = `Halo Owner ${tenant.name}, ini Admin NexaFlow.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const filteredTenants = tenants.filter(t => {
-    const matchSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const daysLeft = calculateDaysLeft(t.subscription_end_date);
-    
-    let matchStatus = true;
-    if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true;
-    if (filterStatus === 'expired') matchStatus = daysLeft === 0 || t.is_active === false;
-    if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 3;
+  // === RESET PIN ===
+  const openPinModal = (tenant) => {
+    setPinModal({ open: true, tenant, pin: '', loading: false });
+  };
 
-    return matchSearch && matchStatus;
-  });
+  const savePin = async (e) => {
+    e.preventDefault();
+    if (!/^\d{4,8}$/.test(pinModal.pin)) {
+      return showToast('PIN harus 4–8 digit angka', 'error');
+    }
+    setPinModal(prev => ({ ...prev, loading: true }));
+    const { error } = await supabase.from('tenants').update({ kitchen_pin: pinModal.pin }).eq('id', pinModal.tenant.id);
+    setPinModal(prev => ({ ...prev, loading: false }));
+    if (error) return showToast('Gagal simpan PIN: ' + error.message, 'error');
+    showToast('Kitchen PIN berhasil diubah', 'success');
+    setPinModal({ open: false, tenant: null, pin: '', loading: false });
+    fetchTenants();
+  };
+
+  // === FILTER + SORT ===
+  const filteredTenants = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return tenants.filter(t => {
+      const matchSearch = !q
+        || (t.name || '').toLowerCase().includes(q)
+        || (t.referral_name || '').toLowerCase().includes(q)
+        || (t.wa_number || '').toLowerCase().includes(q);
+
+      const daysLeft = calculateDaysLeft(t.subscription_end_date);
+      let matchStatus = true;
+      if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true && t.is_active !== false;
+      else if (filterStatus === 'expired') matchStatus = daysLeft === 0 && t.is_active !== false;
+      else if (filterStatus === 'suspended') matchStatus = t.is_active === false;
+      else if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 7 && t.is_active !== false;
+
+      return matchSearch && matchStatus;
+    });
+  }, [tenants, searchQuery, filterStatus, onlineUsers, now]);
+
+  const sortedTenants = useMemo(() => {
+    const arr = [...filteredTenants];
+    if (sortBy === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    else if (sortBy === 'daysLeft') arr.sort((a, b) => calculateDaysLeft(a.subscription_end_date) - calculateDaysLeft(b.subscription_end_date));
+    else if (sortBy === 'revenue') arr.sort((a, b) => (Number(b.rental_price) || 0) - (Number(a.rental_price) || 0));
+    else arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return arr;
+  }, [filteredTenants, sortBy, now]);
 
   if (loading || !now) {
     return (
@@ -282,35 +439,40 @@ export default function AdminDashboard() {
     );
   }
 
-  // --- UI CLASSES (LEBIH TIPIS & ELEGAN) ---
+  // === UI CLASSES ===
   const bgMain = theme === 'dark' ? 'bg-[#050b14]' : 'bg-[#f0f4f8]';
   const textMain = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textSub = theme === 'dark' ? 'text-slate-400' : 'text-slate-600';
-  
-  // Border 2px, Shadow 4px
-  const cardClass = theme === 'dark' 
-    ? 'bg-[#0a192f] border-2 border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' 
+
+  const cardClass = theme === 'dark'
+    ? 'bg-[#0a192f] border-2 border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]'
     : 'bg-white border-2 border-slate-900 shadow-[4px_4px_0px_0px_#000000]';
-    
+
   const btnBase = 'border-2 font-black uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-2';
   const btnDark = 'bg-slate-800 text-white border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-700';
   const btnLight = 'bg-white text-slate-900 border-slate-900 shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-slate-100';
 
+  const inputCls = `w-full border-2 rounded-lg px-3 py-2 text-sm font-bold outline-none ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'}`;
+
+  const modalShell = `border-2 rounded-xl w-full overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`;
+  const modalHeader = `p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`;
+
+  const sortLabels = { newest: 'Terbaru', name: 'Nama A-Z', daysLeft: 'Sisa Hari', revenue: 'Omset Tertinggi' };
+
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${bgMain} ${textMain}`}>
-      
+
       {/* HEADER */}
       <header className={`border-b-2 ${theme === 'dark' ? 'border-slate-800 bg-[#0a192f]' : 'border-slate-900 bg-white'} sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div>
-            <h1 className={`text-2xl font-black tracking-tighter uppercase flex items-center gap-3`}>
-              <span className={`p-2 border-2 rounded-lg ${theme === 'dark' ? 'border-cyan-400 text-cyan-400 bg-cyan-400/10' : 'border-cyan-600 text-cyan-600 bg-cyan-50'}`}><Icons.Shield /></span> 
+            <h1 className="text-2xl font-black tracking-tighter uppercase flex items-center gap-3">
+              <span className={`p-2 border-2 rounded-lg ${theme === 'dark' ? 'border-cyan-400 text-cyan-400 bg-cyan-400/10' : 'border-cyan-600 text-cyan-600 bg-cyan-50'}`}><Icons.Shield /></span>
               Control Center
             </h1>
           </div>
-          
           <div className="flex gap-2 w-full sm:w-auto">
-            <button onClick={toggleTheme} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`}>
+            <button onClick={toggleTheme} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Toggle Tema">
               {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
             </button>
             <button onClick={handleLogout} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600 flex-1 sm:flex-none px-4 py-2 rounded-lg`}>
@@ -321,57 +483,84 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        
-        {/* STATS CARDS */}
+
+        {/* STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}><Icons.Store /></div>
             <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Klien</p>
             <h3 className="text-4xl font-black">{stats.total}</h3>
           </div>
-          
+
           <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
             <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
-            <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span></h3>
+            <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>
+              {stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span>
+            </h3>
           </div>
 
           <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Total Omset / Bln</p>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
             <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
           </div>
 
           <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}><Icons.BarChart /></div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}>Bagi Hasil Sales</p>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}>Komisi Sales (Prorated)</p>
             <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-amber-400' : 'text-amber-500'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
           </div>
         </div>
 
-        {/* SEARCH & FILTER */}
-        <div className={`flex flex-col lg:flex-row gap-4 justify-between items-center p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
-          <div className="relative w-full lg:w-96">
+        {/* SEARCH + SORT + FILTER */}
+        <div className={`flex flex-col lg:flex-row gap-3 justify-between items-stretch p-3 rounded-xl border-2 ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[4px_4px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[4px_4px_0px_0px_#000]'}`}>
+          <div className="relative flex-1 min-w-0">
             <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSub}`}><Icons.Search /></span>
-            <input 
-              type="text" 
-              placeholder="Cari nama kafe..." 
+            <input
+              type="text"
+              placeholder="Cari nama / referral / WA..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className={`w-full bg-transparent border-none outline-none pl-10 pr-4 py-2 text-sm font-bold ${theme === 'dark' ? 'text-white placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`}
             />
           </div>
-          <div className={`flex p-1 rounded-lg border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-100 border-slate-300'} w-full lg:w-auto overflow-x-auto`}>
+
+          {/* Sort dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSortMenu(v => !v)}
+              className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-3 py-2 rounded-lg text-[10px] w-full lg:w-auto`}
+            >
+              <Icons.Sort /> {sortLabels[sortBy]}
+            </button>
+            {showSortMenu && (
+              <div className={`absolute right-0 top-full mt-1 z-50 rounded-lg border-2 overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700' : 'bg-white border-slate-900'}`}>
+                {Object.entries(sortLabels).map(([k, v]) => (
+                  <button
+                    key={k}
+                    onClick={() => { setSortBy(k); setShowSortMenu(false); }}
+                    className={`block w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${sortBy === k ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className={`flex p-1 rounded-lg border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-100 border-slate-300'} overflow-x-auto`}>
             {[
               { id: 'all', label: 'Semua' },
               { id: 'online', label: 'Online' },
-              { id: 'expired', label: 'Non-Aktif' },
-              { id: 'warning', label: 'Warning' }
+              { id: 'expired', label: 'Expired' },
+              { id: 'suspended', label: 'Suspend' },
+              { id: 'warning', label: 'Warning' },
             ].map(f => (
-              <button 
-                key={f.id} 
+              <button
+                key={f.id}
                 onClick={() => setFilterStatus(f.id)}
-                className={`flex-1 lg:flex-none px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${filterStatus === f.id ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}
+                className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${filterStatus === f.id ? (theme === 'dark' ? 'bg-cyan-500 text-black' : 'bg-cyan-600 text-white') : `${textSub} hover:${textMain}`}`}
               >
                 {f.label}
               </button>
@@ -379,7 +568,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* --- TAMPILAN DESKTOP (TABEL) --- */}
+        {/* DESKTOP TABLE */}
         <div className={`hidden lg:block rounded-xl border-2 overflow-hidden ${theme === 'dark' ? 'border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
           <table className="w-full text-left border-collapse">
             <thead>
@@ -388,24 +577,26 @@ export default function AdminDashboard() {
                 <th className="p-4">Status</th>
                 <th className="p-4">Sisa Waktu</th>
                 <th className="p-4">Finansial</th>
-                <th className="p-4 text-right">Aksi Cepat</th>
+                <th className="p-4 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
-              {filteredTenants.length === 0 ? (
+              {sortedTenants.length === 0 ? (
                 <tr><td colSpan="5" className={`p-8 text-center font-black text-lg ${textSub}`}>Tidak ada data.</td></tr>
-              ) : filteredTenants.map((tenant) => {
+              ) : sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
                 const isOnline = onlineUsers[tenant.id];
-                const isExpired = daysLeft <= 0 || tenant.is_active === false;
-                const isWarning = daysLeft > 0 && daysLeft <= 3 && tenant.is_active !== false;
-                
+                const isExpired = daysLeft <= 0 && tenant.is_active !== false;
+                const isSuspended = tenant.is_active === false;
+                const isWarning = daysLeft > 0 && daysLeft <= 7 && !isSuspended;
+                const busy = !!actionLoading[tenant.id];
+
                 return (
-                  <tr key={tenant.id} className={`transition-colors ${tenant.is_active === false ? 'opacity-50 grayscale' : (theme === 'dark' ? 'hover:bg-[#0d2137]' : 'hover:bg-slate-50')}`}>
+                  <tr key={tenant.id} className={`transition-colors ${isSuspended ? 'opacity-50 grayscale' : (theme === 'dark' ? 'hover:bg-[#0d2137]' : 'hover:bg-slate-50')}`}>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {tenant.logo_url ? (
-                          <img src={tenant.logo_url} className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
+                          <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
                         ) : (
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
                             {tenant.name.charAt(0)}
@@ -413,29 +604,35 @@ export default function AdminDashboard() {
                         )}
                         <div>
                           <p className="font-black text-base">{tenant.name}</p>
-                          <p className={`text-[9px] font-bold font-mono ${textSub}`}>ID: {tenant.id.slice(0, 8)}...</p>
+                          <button
+                            onClick={() => copyToClipboard(tenant.id, 'ID Tenant')}
+                            className={`text-[9px] font-bold font-mono ${textSub} hover:text-cyan-400 flex items-center gap-1`}
+                            title="Klik untuk copy ID"
+                          >
+                            ID: {tenant.id.slice(0, 8)}... <Icons.Copy />
+                          </button>
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border-2 ${
-                        isOnline && tenant.is_active !== false 
-                          ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
-                          : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
+                        isSuspended
+                          ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700')
+                          : isOnline
+                            ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
+                            : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${isOnline && tenant.is_active !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
-                        {tenant.is_active === false ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
+                        <span className={`w-1.5 h-1.5 rounded-full ${!isSuspended && isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></span>
+                        {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col gap-0.5">
-                        <span className={`text-xl font-black ${
-                          isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')
-                        }`}>
-                          {tenant.is_active === false ? 'BEKU' : `${daysLeft} HARI`}
+                        <span className={`text-xl font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
+                          {isSuspended ? 'BEKU' : `${daysLeft} HARI`}
                         </span>
                         <p className={`text-[9px] font-bold uppercase tracking-wider ${textSub}`}>
-                          {tenant.is_active === false ? 'Disuspend' : `${new Date(tenant.subscription_end_date).toLocaleDateString('id-ID')}`}
+                          {isSuspended ? 'Disuspend' : new Date(tenant.subscription_end_date).toLocaleDateString('id-ID')}
                         </p>
                       </div>
                     </td>
@@ -453,22 +650,22 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button onClick={() => handleDelete(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-600 border-rose-600 hover:bg-rose-200'} p-2 rounded-lg`} title="Hapus Permanen"><Icons.Trash /></button>
-                        
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Detail Tenant"><Icons.Eye /></button>
                         <button onClick={() => openWa(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-600 border-emerald-600 hover:bg-emerald-200'} p-2 rounded-lg`} title="Chat WA"><Icons.WhatsApp /></button>
-                        
-                        <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Lihat Statistik"><Icons.BarChart /></button>
-
-                        <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 border-cyan-700 hover:bg-cyan-200'} p-2 rounded-lg`} title="Atur Finansial"><Icons.Settings /></button>
-
-                        <button onClick={() => toggleStatus(tenant)} className={`${btnBase} ${tenant.is_active === false ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} px-3 py-2 rounded-lg text-[10px]`}>
-                          {tenant.is_active === false ? 'Aktifkan' : 'Suspend'}
+                        <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-white/10 text-white border-white hover:bg-white/20' : 'bg-slate-200 text-slate-900 border-slate-900 hover:bg-slate-300'} p-2 rounded-lg`} title="Statistik"><Icons.BarChart /></button>
+                        <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 border-cyan-700 hover:bg-cyan-200'} p-2 rounded-lg`} title="Finansial"><Icons.Settings /></button>
+                        <button
+                          disabled={busy}
+                          onClick={() => requestToggleStatus(tenant)}
+                          className={`${btnBase} ${isSuspended ? (theme === 'dark' ? 'bg-emerald-500 text-black border-emerald-600' : 'bg-emerald-500 text-white border-emerald-700') : (theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-400')} px-3 py-2 rounded-lg text-[10px] disabled:opacity-50`}
+                        >
+                          {isSuspended ? 'Aktifkan' : 'Suspend'}
                         </button>
-
                         <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] hover:bg-blue-500 px-3 py-2 rounded-lg text-[10px]`}>
                           <Icons.Plus /> Extend
                         </button>
+                        <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-600 border-rose-600 hover:bg-rose-200'} p-2 rounded-lg disabled:opacity-50`} title="Hapus"><Icons.Trash /></button>
                       </div>
                     </td>
                   </tr>
@@ -478,23 +675,24 @@ export default function AdminDashboard() {
           </table>
         </div>
 
-        {/* --- TAMPILAN MOBILE/TABLET (CARDS) --- */}
+        {/* MOBILE CARDS */}
         <div className="lg:hidden space-y-5">
-          {filteredTenants.length === 0 ? (
+          {sortedTenants.length === 0 ? (
             <div className={`${cardClass} rounded-xl p-6 text-center font-black text-lg ${textSub}`}>Tidak ada data.</div>
-          ) : filteredTenants.map((tenant) => {
+          ) : sortedTenants.map((tenant) => {
             const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
             const isOnline = onlineUsers[tenant.id];
-            const isExpired = daysLeft <= 0 || tenant.is_active === false;
-            const isWarning = daysLeft > 0 && daysLeft <= 3 && tenant.is_active !== false;
+            const isExpired = daysLeft <= 0 && tenant.is_active !== false;
+            const isSuspended = tenant.is_active === false;
+            const isWarning = daysLeft > 0 && daysLeft <= 7 && !isSuspended;
+            const busy = !!actionLoading[tenant.id];
 
             return (
-              <div key={tenant.id} className={`${cardClass} rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden ${tenant.is_active === false ? 'opacity-60 grayscale' : ''}`}>
-                
+              <div key={tenant.id} className={`${cardClass} rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden ${isSuspended ? 'opacity-60 grayscale' : ''}`}>
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2.5">
                     {tenant.logo_url ? (
-                      <img src={tenant.logo_url} className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
+                      <img src={tenant.logo_url} alt="" className={`w-10 h-10 rounded-lg object-cover border-2 ${theme === 'dark' ? 'border-slate-600' : 'border-slate-900'}`} />
                     ) : (
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black border-2 ${theme === 'dark' ? 'bg-slate-800 text-cyan-400 border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'}`}>
                         {tenant.name.charAt(0)}
@@ -502,15 +700,19 @@ export default function AdminDashboard() {
                     )}
                     <div>
                       <h3 className="font-black text-base leading-tight">{tenant.name}</h3>
-                      <p className={`text-[9px] font-bold font-mono ${textSub}`}>ID: {tenant.id.slice(0, 8)}...</p>
+                      <button onClick={() => copyToClipboard(tenant.id, 'ID Tenant')} className={`text-[9px] font-bold font-mono ${textSub} flex items-center gap-1`}>
+                        ID: {tenant.id.slice(0, 8)}... <Icons.Copy />
+                      </button>
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border-2 ${
-                    isOnline && tenant.is_active !== false 
-                      ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
-                      : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
+                    isSuspended
+                      ? (theme === 'dark' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-rose-100 border-rose-600 text-rose-700')
+                      : isOnline
+                        ? (theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-emerald-100 border-emerald-600 text-emerald-700')
+                        : (theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-slate-100 border-slate-400 text-slate-600')
                   }`}>
-                    {tenant.is_active === false ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
+                    {isSuspended ? 'Suspended' : isOnline ? 'Online' : 'Offline'}
                   </span>
                 </div>
 
@@ -518,7 +720,7 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-center">
                     <p className={`text-[10px] font-bold uppercase ${textSub}`}>Sisa Waktu</p>
                     <span className={`text-lg font-black ${isExpired ? 'text-rose-500' : isWarning ? 'text-amber-500' : (theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600')}`}>
-                      {tenant.is_active === false ? 'BEKU' : `${daysLeft} HARI`}
+                      {isSuspended ? 'BEKU' : `${daysLeft} HARI`}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -539,38 +741,38 @@ export default function AdminDashboard() {
                   <button onClick={() => setExtendModal({ open: true, tenant, loading: false })} className={`${btnBase} bg-blue-600 text-white border-blue-900 shadow-[2px_2px_0px_0px_#1e3a8a] col-span-2 py-2.5 rounded-lg text-xs`}>
                     <Icons.Plus /> Perpanjang
                   </button>
+                  <button onClick={() => setDetailModal({ open: true, tenant })} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.Eye /> Detail</button>
+                  <button onClick={() => openWa(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'bg-emerald-100 text-emerald-700 border-emerald-700'} py-2 rounded-lg text-[10px]`}><Icons.WhatsApp /> WA</button>
                   <button onClick={() => openFinance(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-cyan-100 text-cyan-700 border-cyan-700'} py-2 rounded-lg text-[10px]`}><Icons.Settings /> Finansial</button>
                   <button onClick={() => openStats(tenant)} className={`${btnBase} ${theme === 'dark' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-200 text-slate-900 border-slate-900'} py-2 rounded-lg text-[10px]`}><Icons.BarChart /> Statistik</button>
-                  <button onClick={() => toggleStatus(tenant)} className={`${btnBase} ${tenant.is_active === false ? 'bg-emerald-500 text-black border-emerald-700' : 'bg-amber-500 text-black border-amber-700'} py-2 rounded-lg text-[10px]`}>
-                    {tenant.is_active === false ? 'Aktifkan' : 'Suspend'}
+                  <button disabled={busy} onClick={() => requestToggleStatus(tenant)} className={`${btnBase} ${isSuspended ? 'bg-emerald-500 text-black border-emerald-700' : 'bg-amber-500 text-black border-amber-700'} py-2 rounded-lg text-[10px] disabled:opacity-50`}>
+                    {isSuspended ? 'Aktifkan' : 'Suspend'}
                   </button>
-                  <button onClick={() => handleDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px]`}><Icons.Trash /> Hapus</button>
+                  <button disabled={busy} onClick={() => requestDelete(tenant)} className={`${btnBase} bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] py-2 rounded-lg text-[10px] disabled:opacity-50`}><Icons.Trash /> Hapus</button>
                 </div>
               </div>
             );
           })}
         </div>
-
       </main>
 
-      {/* --- MODAL PERPANJANG KUSTOM --- */}
-      {extendModal.open && (
+      {/* === MODAL EXTEND === */}
+      {extendModal.open && extendModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className={`border-2 rounded-xl w-full max-w-sm overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
-            <div className={`p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`}>
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider">Perpanjang Waktu</h3>
               <button onClick={() => setExtendModal({ open: false, tenant: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
               <p className={`text-xs font-bold text-center ${textSub}`}>Pilih durasi untuk <span className={textMain}>{extendModal.tenant.name}</span>:</p>
-              
               <div className="grid grid-cols-2 gap-2">
                 {[7, 30, 90, 365].map(days => (
-                  <button 
-                    key={days} 
+                  <button
+                    key={days}
                     disabled={extendModal.loading}
                     onClick={() => submitExtend(days)}
-                    className={`py-3 rounded-lg flex flex-col items-center justify-center transition-all border-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 hover:border-cyan-500 hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]' : 'bg-slate-50 border-slate-300 hover:border-cyan-600 hover:bg-white shadow-[2px_2px_0px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                    className={`py-3 rounded-lg flex flex-col items-center justify-center transition-all border-2 disabled:opacity-50 ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 hover:border-cyan-500 hover:bg-slate-800 shadow-[2px_2px_0px_0px_#000]' : 'bg-slate-50 border-slate-300 hover:border-cyan-600 hover:bg-white shadow-[2px_2px_0px_0px_#000]'}`}
                   >
                     <span className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{days}</span>
                     <span className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Hari</span>
@@ -582,33 +784,29 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* --- MODAL FINANSIAL --- */}
-      {financeModal.open && (
+      {/* === MODAL FINANSIAL === */}
+      {financeModal.open && financeModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className={`border-2 rounded-xl w-full max-w-sm overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
-            <div className={`p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`}>
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider">Data Finansial</h3>
               <button onClick={() => setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveFinance} className="p-5 space-y-3">
               <h4 className={`font-black text-center text-base ${textMain}`}>{financeModal.tenant.name}</h4>
-              
               <div>
                 <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Harga Sewa / Bulan (Rp)</label>
-                <input type="number" required value={financeModal.price} onChange={e => setFinanceModal({...financeModal, price: e.target.value})} className={`w-full border-2 rounded-lg px-3 py-2 text-sm font-bold ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'} outline-none`} />
+                <input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} />
               </div>
-
               <div>
                 <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label>
-                <input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({...financeModal, referral: e.target.value})} className={`w-full border-2 rounded-lg px-3 py-2 text-sm font-bold ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'} outline-none`} />
+                <input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} />
               </div>
-
               <div>
                 <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label>
-                <input type="number" value={financeModal.commission} onChange={e => setFinanceModal({...financeModal, commission: e.target.value})} className={`w-full border-2 rounded-lg px-3 py-2 text-sm font-bold ${theme === 'dark' ? 'bg-[#050b14] border-slate-600 text-white focus:border-cyan-400' : 'bg-slate-50 border-slate-400 text-slate-900 focus:border-cyan-600'} outline-none`} />
+                <input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} />
               </div>
-
-              <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm`}>
+              <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>
                 {financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}
               </button>
             </form>
@@ -616,31 +814,157 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* --- MODAL STATISTIK KLIEN --- */}
-      {statsModal.open && (
+      {/* === MODAL STATISTIK === */}
+      {statsModal.open && statsModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className={`border-2 rounded-xl w-full max-w-sm overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`}>
-            <div className={`p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`}>
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.BarChart /> Statistik</h3>
               <button onClick={() => setStatsModal({ open: false, tenant: null, data: null, loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5">
               <h4 className={`text-lg font-black mb-5 text-center uppercase ${textMain}`}>{statsModal.tenant.name}</h4>
-              
               {statsModal.loading ? (
                 <div className="flex justify-center py-6"><div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${theme === 'dark' ? 'border-cyan-400' : 'border-cyan-600'}`}></div></div>
+              ) : statsModal.data?.error ? (
+                <p className="text-center text-sm font-black text-rose-500">Gagal memuat statistik. Coba lagi.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                     <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Menu</p>
-                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{statsModal.data?.menus}</p>
+                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{statsModal.data?.menus ?? '-'}</p>
                   </div>
                   <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Pesanan</p>
-                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{statsModal.data?.orders}</p>
+                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Total Order</p>
+                    <p className={`text-3xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{statsModal.data?.orders ?? '-'}</p>
+                  </div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Order 30 Hari</p>
+                    <p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{statsModal.data?.recentCount ?? '-'}</p>
+                  </div>
+                  <div className={`border-2 rounded-lg p-3 text-center ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${textSub}`}>Omzet 30 Hari</p>
+                    <p className={`text-lg font-black ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`}>Rp {(statsModal.data?.revenue30 || 0).toLocaleString('id-ID')}</p>
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === MODAL DETAIL TENANT === */}
+      {detailModal.open && detailModal.tenant && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-md`}>
+            <div className={modalHeader}>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Eye /> Detail Tenant</h3>
+              <button onClick={() => setDetailModal({ open: false, tenant: null })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+            </div>
+            <div className="p-5 space-y-2 max-h-[70vh] overflow-y-auto">
+              <h4 className={`text-lg font-black mb-3 ${textMain}`}>{detailModal.tenant.name}</h4>
+              {[
+                ['Tenant ID', detailModal.tenant.id, true],
+                ['No. WhatsApp', detailModal.tenant.wa_number || '—', false],
+                ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false],
+                ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false],
+                ['QRIS', detailModal.tenant.qris_string || '—', true],
+                ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false],
+                ['Banner URL', detailModal.tenant.banner_url || '—', true],
+                ['Logo URL', detailModal.tenant.logo_url || '—', true],
+                ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
+              ].map(([label, value, copyable]) => (
+                <div key={label} className={`rounded-lg p-2 border-2 flex justify-between items-start gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>{label}</p>
+                    <p className={`text-xs font-bold break-all ${textMain}`}>{value}</p>
+                  </div>
+                  {copyable && value !== '—' && (
+                    <button onClick={() => copyToClipboard(value, label)} className={`p-1.5 border-2 rounded ${theme === 'dark' ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}>
+                      <Icons.Copy />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <div className={`rounded-lg p-3 border-2 flex justify-between items-center gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>Kitchen PIN</p>
+                  <p className={`text-xs font-bold ${textMain}`}>
+                    {detailModal.tenant.kitchen_pin ? '••••••' : 'Belum diset'}
+                  </p>
+                </div>
+                <button onClick={() => openPinModal(detailModal.tenant)} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] px-3 py-1.5 rounded text-[10px]`}>
+                  <Icons.Key /> Reset PIN
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === MODAL RESET PIN === */}
+      {pinModal.open && pinModal.tenant && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
+              <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Key /> Reset PIN Dapur</h3>
+              <button onClick={() => setPinModal({ open: false, tenant: null, pin: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+            </div>
+            <form onSubmit={savePin} className="p-5 space-y-3">
+              <p className={`text-xs font-bold text-center ${textSub}`}>PIN baru untuk <span className={textMain}>{pinModal.tenant.name}</span></p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
+                maxLength={8}
+                required
+                value={pinModal.pin}
+                onChange={e => setPinModal({ ...pinModal, pin: e.target.value.replace(/\D/g, '') })}
+                placeholder="4–8 digit angka"
+                className={`${inputCls} text-center text-2xl tracking-widest`}
+              />
+              <button type="submit" disabled={pinModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 rounded-lg text-sm disabled:opacity-50`}>
+                {pinModal.loading ? 'Menyimpan...' : 'Simpan PIN Baru'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* === MODAL KONFIRMASI (ganti confirm/prompt) === */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
+          <div className={`${modalShell} max-w-sm`}>
+            <div className={modalHeader}>
+              <h3 className={`font-black text-base uppercase tracking-wider ${confirmModal.danger ? 'text-rose-500' : ''}`}>{confirmModal.title}</h3>
+              <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className={`text-xs font-bold ${textSub}`}>{confirmModal.message}</p>
+              {confirmModal.requireInput && (
+                <>
+                  <p className={`text-[10px] font-black uppercase ${textSub}`}>Ketik <span className={confirmModal.danger ? 'text-rose-500' : 'text-cyan-500'}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>
+                  <input
+                    type="text"
+                    value={confirmModal.inputValue}
+                    onChange={e => setConfirmModal(prev => ({ ...prev, inputValue: e.target.value }))}
+                    className={inputCls}
+                    autoFocus
+                    disabled={confirmModal.loading}
+                  />
+                </>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} flex-1 py-2 rounded-lg text-xs disabled:opacity-50`}>Batal</button>
+                <button
+                  disabled={confirmModal.loading || (confirmModal.requireInput && confirmModal.inputValue !== confirmModal.requireInput)}
+                  onClick={async () => { if (confirmModal.onConfirm) await confirmModal.onConfirm(); }}
+                  className={`${btnBase} flex-1 py-2 rounded-lg text-xs disabled:opacity-50 ${confirmModal.danger ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337] hover:bg-rose-600' : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b] hover:bg-emerald-600'}`}
+                >
+                  {confirmModal.loading ? 'Proses...' : confirmModal.danger ? 'Ya, Lanjut' : 'Ya, Aktifkan'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -651,12 +975,11 @@ export default function AdminDashboard() {
         {toasts.map(t => {
           const isErr = t.type === 'error';
           const isWarn = t.type === 'warning';
-          const c = isErr 
-            ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]' 
-            : isWarn 
-            ? 'bg-amber-400 text-black border-amber-700 shadow-[2px_2px_0px_0px_#78350f]' 
-            : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
-          
+          const c = isErr
+            ? 'bg-rose-500 text-white border-rose-900 shadow-[2px_2px_0px_0px_#881337]'
+            : isWarn
+              ? 'bg-amber-400 text-black border-amber-700 shadow-[2px_2px_0px_0px_#78350f]'
+              : 'bg-emerald-500 text-white border-emerald-900 shadow-[2px_2px_0px_0px_#064e3b]';
           return (
             <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-3 py-2 border-2 rounded-lg animate-in slide-in-from-right-8 ${c}`}>
               <span className="text-lg">{isErr ? '❌' : isWarn ? '⚠️' : <Icons.Check />}</span>
