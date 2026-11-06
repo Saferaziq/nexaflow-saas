@@ -51,7 +51,7 @@ const formatPhone = (num) => {
 export default function AdminDashboard() {
   const [tenants, setTenants] = useState([]);
   const [marketers, setMarketers] = useState([]);
-  const [appSettings, setAppSettings] = useState({ qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
+  const [appSettings, setAppSettings] = useState({ qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   
   const [marketerModal, setMarketerModal] = useState({ open: false, name: '', wa: '', loading: false });
   const [marketerDetailModal, setMarketerDetailModal] = useState({ open: false, marketer: null });
-  const [settingsModal, setSettingsModal] = useState({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
+  const [settingsModal, setSettingsModal] = useState({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   
   const [actionLoading, setActionLoading] = useState({});
   const router = useRouter();
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
       setPinModal({ open: false, tenant: null, pin: '', loading: false });
       setMarketerModal({ open: false, name: '', wa: '', loading: false });
       setMarketerDetailModal({ open: false, marketer: null });
-      setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
+      setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
       setShowSortMenu(false);
     };
     window.addEventListener('keydown', handler);
@@ -157,9 +157,13 @@ export default function AdminDashboard() {
 
   const fetchSettings = async () => {
     const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
+    if (error) {
+      console.error('Fetch settings error:', error);
+      showToast('Gagal memuat pengaturan: ' + error.message, 'error');
+      return;
+    }
     if (data) {
       setAppSettings({ 
-        qris_link: data.qris_link || '', 
         qris_string: data.qris_string || '',
         bank_name: data.bank_name || '',
         bank_account: data.bank_account || '',
@@ -326,21 +330,81 @@ export default function AdminDashboard() {
   const saveSettings = async (e) => {
     e.preventDefault();
     setSettingsModal(prev => ({ ...prev, loading: true }));
-    const { error } = await supabase.from('app_settings').update({
-      qris_link: settingsModal.qris_link.trim(),
+    const { data, error } = await supabase.from('app_settings').update({
       qris_string: settingsModal.qris_string.trim(),
       bank_name: settingsModal.bank_name.trim(),
       bank_account: settingsModal.bank_account.trim(),
       bank_holder: settingsModal.bank_holder.trim()
-    }).eq('id', 1);
+    }).eq('id', 1).select();
+    
     setSettingsModal(prev => ({ ...prev, loading: false }));
+    
     if (error) return showToast('Gagal simpan pengaturan: ' + error.message, 'error');
+    if (!data || data.length === 0) return showToast('Gagal simpan: Baris ID=1 tidak ada di tabel app_settings. Cek Database.', 'error');
+    
     showToast('Pengaturan berhasil disimpan', 'success');
-    setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
+    setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
     fetchSettings();
   };
 
-  const openWaTenant = (tenant) => {
+  const generateQRISImage = async (qrisString, tenantName) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#0ea5e9';
+        ctx.lineWidth = 20;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 40px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('SCAN UNTUK BAYAR', 300, 100);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 30px Arial';
+        ctx.fillText(tenantName.toUpperCase(), 300, 150);
+
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrisString)}&margin=10`;
+        const qrImg = new Image();
+        qrImg.crossOrigin = 'Anonymous';
+        qrImg.src = qrApiUrl;
+
+        await new Promise((res, rej) => {
+          qrImg.onload = () => {
+            ctx.drawImage(qrImg, 100, 220, 400, 400);
+            res();
+          };
+          qrImg.onerror = rej;
+        });
+
+        ctx.fillStyle = '#0ea5e9';
+        ctx.font = 'bold 30px Arial';
+        ctx.fillText('Powered by NexaFlow', 300, 700);
+
+        canvas.toBlob(async (blob) => {
+          try {
+            const fileName = `qris-${tenantName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.png`;
+            const { error: upErr } = await supabase.storage.from('cafe-logos').upload(fileName, blob, { cacheControl: '3600', upsert: false });
+            if (upErr) throw upErr;
+            const { data: urlData } = supabase.storage.from('cafe-logos').getPublicUrl(fileName);
+            resolve(urlData.publicUrl);
+          } catch (err) {
+            reject(err);
+          }
+        }, 'image/png');
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  const openWaTenant = async (tenant) => {
     if (!tenant.wa_number) return showToast('Nomor WA belum diatur', 'warning');
     const phone = formatPhone(tenant.wa_number);
     if (phone.length < 10) return showToast('Format nomor WA tidak valid', 'error');
@@ -349,15 +413,27 @@ export default function AdminDashboard() {
     let msg = `Selamat pagi/siang/sore Bapak/Ibu Pengelola *${tenant.name}*,\n\nKami dari Admin NexaFlow Kasir ingin menginformasikan terkait perpanjangan layanan sistem kasir Anda.\n\n🧾 *Rincian Tagihan:*\n- Layanan: Perpanjangan Sistem NexaFlow\n- Nominal: *Rp ${price.toLocaleString('id-ID')}*\n\n`;
     
     msg += `💳 *Metode Pembayaran:*\n`;
-    if (appSettings.qris_link || appSettings.qris_string) {
-      msg += `*1. QRIS (Scan Gambar)*\n`;
-      if (appSettings.qris_link) msg += `${appSettings.qris_link}\n`;
-      if (appSettings.qris_string) msg += `\n(Atau scan teks QRIS di bawah ini jika Anda menggunakan aplikasi M-Banking)\n${appSettings.qris_string}\n\n`;
+    
+    if (appSettings.qris_string) {
+      showToast('Menyiapkan gambar QRIS...', 'info');
+      try {
+        const qrisImageUrl = await generateQRISImage(appSettings.qris_string, tenant.name);
+        msg += `*1. QRIS (Scan Gambar)*\nSilakan scan gambar QRIS berikut:\n${qrisImageUrl}\n\n`;
+      } catch (err) {
+        showToast('Gagal membuat gambar QRIS, menggunakan teks.', 'warning');
+        msg += `*1. QRIS (Copy Teks)*\nSilakan copy-paste teks QRIS di bawah ini ke M-Banking:\n${appSettings.qris_string}\n\n`;
+      }
     }
-    if (appSettings.bank_name && appSettings.bank_account) {
-      msg += `*2. Transfer Bank*\nBank: ${appSettings.bank_name}\nNo. Rek: ${appSettings.bank_account}\nA/N: ${appSettings.bank_holder || '-'}\n\n`;
+
+    if (appSettings.bank_name || appSettings.bank_account) {
+      msg += `*2. Transfer Bank*\n`;
+      if (appSettings.bank_name) msg += `Bank: ${appSettings.bank_name}\n`;
+      if (appSettings.bank_account) msg += `No. Rek: ${appSettings.bank_account}\n`;
+      if (appSettings.bank_holder) msg += `A/N: ${appSettings.bank_holder}\n`;
+      msg += `\n`;
     }
-    if (!appSettings.qris_link && !appSettings.qris_string && !appSettings.bank_name) {
+    
+    if (!appSettings.qris_string && !appSettings.bank_name && !appSettings.bank_account) {
       msg += `(Silakan hubungi Admin untuk info rekening/QRIS)\n\n`;
     }
     
@@ -524,7 +600,7 @@ export default function AdminDashboard() {
             </h1>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <button onClick={() => setSettingsModal({ open: true, loading: false, qris_link: appSettings.qris_link, qris_string: appSettings.qris_string, bank_name: appSettings.bank_name, bank_account: appSettings.bank_account, bank_holder: appSettings.bank_holder })} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Pengaturan Sistem">
+            <button onClick={() => setSettingsModal({ open: true, loading: false, qris_string: appSettings.qris_string, bank_name: appSettings.bank_name, bank_account: appSettings.bank_account, bank_holder: appSettings.bank_holder })} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Pengaturan Sistem">
               <Icons.Settings />
             </button>
             <button onClick={toggleTheme} className={`${btnBase} ${theme === 'dark' ? btnDark : btnLight} px-4 py-2 rounded-lg`} title="Toggle Tema">
@@ -760,11 +836,14 @@ export default function AdminDashboard() {
           <div className={`${modalShell} max-w-md`}>
             <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.Settings /> Pengaturan Sistem</h3>
-              <button onClick={() => setSettingsModal({ open: false, loading: false, qris_link: '', qris_string: '', bank_name: '', bank_account: '', bank_holder: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+              <button onClick={() => setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveSettings} className="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
-              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Link Gambar QRIS</label><input type="text" placeholder="https://..." value={settingsModal.qris_link} onChange={e => setSettingsModal({ ...settingsModal, qris_link: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>String QRIS (Teks Panjang)</label><textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} /></div>
+              <div>
+                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>String QRIS (Teks Panjang)</label>
+                <textarea placeholder="000201010212..." rows={3} value={settingsModal.qris_string} onChange={e => setSettingsModal({ ...settingsModal, qris_string: e.target.value })} className={inputCls} />
+                <p className={`text-[9px] text-slate-500 mt-1`}>*Sistem akan otomatis mengubah teks ini menjadi gambar QRIS berbingkai saat menagih via WA.</p>
+              </div>
               <div className="border-t-2 border-slate-300 dark:border-slate-700 my-2 pt-2"></div>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Bank (Cth: Mandiri)</label><input type="text" placeholder="Mandiri" value={settingsModal.bank_name} onChange={e => setSettingsModal({ ...settingsModal, bank_name: e.target.value })} className={inputCls} /></div>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor Rekening</label><input type="text" placeholder="123-456-789" value={settingsModal.bank_account} onChange={e => setSettingsModal({ ...settingsModal, bank_account: e.target.value })} className={inputCls} /></div>
