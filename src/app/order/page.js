@@ -177,7 +177,6 @@ function OrderContent() {
       })
       .subscribe();
 
-    // 🔥 POLLING DIPERCEPAT: 15s -> 3s
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
@@ -639,7 +638,7 @@ function OrderContent() {
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
                     
-                    {/* 🔥 GAMBAR: Hanya ditambahkan onClick & cursor-pointer */}
+                    {/* GAMBAR ASLI (Hanya ditambah onClick & cursor-pointer) */}
                     <div onClick={() => setSelectedMenu(menu)} className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200 cursor-pointer">
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
                       {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
@@ -655,8 +654,8 @@ function OrderContent() {
                       )}
                     </div>
 
+                    {/* TEKS ASLI (Hanya ditambah onClick & cursor-pointer) */}
                     <div className="p-3 flex-1 flex flex-col justify-between">
-                      {/* 🔥 TEKS: Hanya ditambahkan onClick & cursor-pointer */}
                       <div onClick={() => setSelectedMenu(menu)} className="cursor-pointer">
                         <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
                         <p className="text-[10px] text-slate-600 font-semibold line-clamp-2 mt-1 leading-snug min-h-[2em]">{menu.description || 'Menu andalan kami'}</p>
