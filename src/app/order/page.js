@@ -174,12 +174,13 @@ function OrderContent() {
       })
       .subscribe();
 
+    // 🔥 POLLING DIPERCEPAT: 15s -> 3s
     pollRef.current = setInterval(() => {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
       }
       fetchCafeStatus(); 
-    }, 15000);
+    }, 3000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -515,7 +516,6 @@ function OrderContent() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32">
       
-      {/* 🔥 OVERLAY SUSPEND — Prioritas tertinggi, blokir total */}
       {cafe.is_active === false && (
         <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-6">
           <div className="text-center max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl border-4 border-rose-500 animate-in zoom-in-95 duration-300">

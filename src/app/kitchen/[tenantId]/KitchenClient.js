@@ -158,11 +158,12 @@ export default function KitchenClient({ tenantId }) {
     return () => { document.removeEventListener('visibilitychange', onVisibility); releaseWakeLock(); };
   }, [authMode]);
 
+  // 🔥 POLLING DIPERCEPAT: 30s -> 5s
   useEffect(() => {
     if (authMode !== 'ready' || !tenantId) return;
     const poll = setInterval(() => {
       fetchOrders();
-    }, 30000);
+    }, 5000);
     return () => clearInterval(poll);
   }, [authMode, tenantId]);
 

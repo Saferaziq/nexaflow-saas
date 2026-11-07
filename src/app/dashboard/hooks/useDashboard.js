@@ -24,7 +24,7 @@ export function useDashboard() {
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
-  const [isSuspended, setIsSuspended] = useState(false); // 🔥 State Baru
+  const [isSuspended, setIsSuspended] = useState(false);
   const [theme, setTheme] = useState('light');
   const [nowTick, setNowTick] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
@@ -238,10 +238,9 @@ export function useDashboard() {
         if (new Date(userData.tenants.subscription_end_date) < now) setIsExpired(true);
       }
 
-      // 🔥 CEK SUSPEND DI SINI
       if (userData.tenants.is_active === false) {
         setIsSuspended(true);
-        return; // Berhenti di sini, jangan load data lagi
+        return;
       }
 
       if (userData && userData.tenants && isMounted) {
@@ -279,7 +278,6 @@ export function useDashboard() {
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
-            // 🔥 REALTIME CEK SUSPEND
             if (payload.new.is_active !== undefined) setIsSuspended(payload.new.is_active === false);
           })
           .subscribe((s) => {
@@ -293,10 +291,11 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
+        // 🔥 POLLING DIPERCEPAT: 30s -> 5s
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
           fetchTenantStatus(tId);
-        }, 30000);
+        }, 5000);
       }
     };
 
