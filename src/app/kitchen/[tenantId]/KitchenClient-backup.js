@@ -2,6 +2,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
+const WA_ADMIN = '6281389744957';
+
 // FUNGSI EKSTRAKSI WARNA DARI BANNER
 const extractDominantColor = (imgUrl) => {
   try {
@@ -72,6 +74,7 @@ export default function KitchenClient({ tenantId }) {
   const [tenant, setTenant] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isPayFirst, setIsPayFirst] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [nowTick, setNowTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -91,9 +94,11 @@ export default function KitchenClient({ tenantId }) {
   const wakeLockRef = useRef(null);
   const undoTimerRef = useRef(null);
   const cancelBannerTimerRef = useRef(null);
+  const isPayFirstRef = useRef(false);
   
-  // Ref untuk melacak status Pay First tanpa memicu re-render pada closure fetchOrders
-  const isPayFirstRef = useRef(false); 
+  const ordersRef = useRef([]);
+  ordersRef.current = orders;
+  const realtimeDebounceRef = useRef(null);
 
   useEffect(() => {
     const update = () => setNowTick(Date.now());
@@ -113,6 +118,7 @@ export default function KitchenClient({ tenantId }) {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       if (cancelBannerTimerRef.current) clearTimeout(cancelBannerTimerRef.current);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (wakeLockRef.current) { try { wakeLockRef.current.release(); } catch {} }
     };
   }, []);
@@ -142,10 +148,24 @@ export default function KitchenClient({ tenantId }) {
   useEffect(() => {
     if (authMode !== 'ready') return;
     requestWakeLock();
-    const onVisibility = () => { if (document.visibilityState === 'visible') requestWakeLock(); };
+    const onVisibility = () => { 
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        fetchOrders();
+      }
+    };
     document.addEventListener('visibilitychange', onVisibility);
     return () => { document.removeEventListener('visibilitychange', onVisibility); releaseWakeLock(); };
   }, [authMode]);
+
+  // 🔥 POLLING DIPERCEPAT: 30s -> 5s
+  useEffect(() => {
+    if (authMode !== 'ready' || !tenantId) return;
+    const poll = setInterval(() => {
+      fetchOrders();
+    }, 5000);
+    return () => clearInterval(poll);
+  }, [authMode, tenantId]);
 
   const playBeep = (force = false) => {
     if (!force && !soundEnabledRef.current) return;
@@ -214,14 +234,21 @@ export default function KitchenClient({ tenantId }) {
 
   const fetchOrders = async () => {
     if (!tenantId) return;
-    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true });
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .or(`status.in.(pending,cooking),created_at.gte.${cutoff}`)
+      .order('created_at', { ascending: true });
+    
     if (data) {
-      // Logika Filter: Hanya tampilkan yang PAID jika Pay First aktif
-      const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+      const isPaidCheck = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
       
       const activeIds = new Set(data.filter(o => 
         ['pending', 'cooking'].includes(o.status) && 
-        (!isPayFirstRef.current || isPaid(o))
+        (!isPayFirstRef.current || isPaidCheck(o))
       ).map(o => o.id));
       
       const prevIds = prevOrderIdsRef.current;
@@ -251,8 +278,15 @@ export default function KitchenClient({ tenantId }) {
 
   const loadData = async () => {
     try {
-      const { data: tenantData } = await supabase.from('tenants').select('name, logo_url, banner_url, is_pay_first').eq('id', tenantId).single();
+      const { data: tenantData } = await supabase.from('tenants').select('name, logo_url, banner_url, is_pay_first, is_active').eq('id', tenantId).single();
       if (tenantData) {
+        // 🔥 CEK SUSPEND DULU
+        if (tenantData.is_active === false) {
+          setIsSuspended(true);
+          setTenant(tenantData);
+          return;
+        }
+
         setTenant(tenantData);
         const payFirstStatus = tenantData.is_pay_first !== false;
         setIsPayFirst(payFirstStatus);
@@ -266,13 +300,24 @@ export default function KitchenClient({ tenantId }) {
     
     if (channelRef.current) supabase.removeChannel(channelRef.current);
     channelRef.current = supabase.channel('kitchen-' + tenantId + '-' + Date.now())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => fetchOrders())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          fetchOrders();
+          return;
+        }
+        if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+        realtimeDebounceRef.current = setTimeout(() => fetchOrders(), 600);
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
         if (payload.new.is_pay_first !== undefined) {
           const pf = payload.new.is_pay_first !== false;
           setIsPayFirst(pf);
           isPayFirstRef.current = pf;
-          fetchOrders(); // Refresh antrean jika setting diubah dari dashboard
+          fetchOrders();
+        }
+        // 🔥 REALTIME SUSPEND DETECTION
+        if (payload.new.is_active !== undefined) {
+          setIsSuspended(payload.new.is_active === false);
         }
       })
       .subscribe(status => {
@@ -284,6 +329,14 @@ export default function KitchenClient({ tenantId }) {
 
   const verifyPin = async (pin) => {
     if (!tenantId || !pin) return false;
+    try {
+      // 🔥 CEK SUSPEND DULU SEBELUM VERIFY PIN
+      const { data: tenantData } = await supabase.from('tenants').select('is_active').eq('id', tenantId).single();
+      if (tenantData && tenantData.is_active === false) {
+        return 'SUSPENDED';
+      }
+    } catch {}
+
     try {
       const { data, error } = await supabase.rpc('verify_kitchen_pin', { p_tenant: tenantId, p_pin: pin });
       if (!error) return data === true;
@@ -311,7 +364,12 @@ export default function KitchenClient({ tenantId }) {
       const urlPin = urlParams.get('pin');
       if (urlPin) {
         const ok = await verifyPin(urlPin);
-        if (ok) {
+        if (ok === 'SUSPENDED') {
+          setIsSuspended(true);
+          setAuthMode('suspended');
+          return;
+        }
+        if (ok === true) {
           localStorage.setItem('kds_pin_' + tenantId, urlPin);
           window.history.replaceState({}, '', '/kitchen/' + tenantId);
           await loadData();
@@ -322,7 +380,12 @@ export default function KitchenClient({ tenantId }) {
       const savedPin = localStorage.getItem('kds_pin_' + tenantId);
       if (savedPin) {
         const ok = await verifyPin(savedPin);
-        if (ok) { await loadData(); setAuthMode('ready'); return; }
+        if (ok === 'SUSPENDED') {
+          setIsSuspended(true);
+          setAuthMode('suspended');
+          return;
+        }
+        if (ok === true) { await loadData(); setAuthMode('ready'); return; }
         localStorage.removeItem('kds_pin_' + tenantId);
       }
       setAuthMode('pin');
@@ -335,7 +398,12 @@ export default function KitchenClient({ tenantId }) {
     setVerifying(true);
     setPinError('');
     const ok = await verifyPin(pinInput);
-    if (ok) {
+    if (ok === 'SUSPENDED') {
+      setAuthMode('suspended');
+      setVerifying(false);
+      return;
+    }
+    if (ok === true) {
       localStorage.setItem('kds_pin_' + tenantId, pinInput);
       initAudio();
       await loadData();
@@ -348,14 +416,29 @@ export default function KitchenClient({ tenantId }) {
   };
 
   const markCooking = async (orderId) => {
-    await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
-    fetchOrders();
+    const prevOrder = ordersRef.current.find(o => o.id === orderId);
+    if (!prevOrder) return;
+    
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cooking' } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
+    if (error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: prevOrder.status } : o));
+      alert('Gagal update: ' + error.message);
+    }
   };
 
   const markReady = async (order) => {
     const previousStatus = order.status;
-    await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
-    fetchOrders();
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'ready' } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
+    if (error) {
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: previousStatus } : o));
+      alert('Gagal update: ' + error.message);
+      return;
+    }
+    
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoToast({ orderId: order.id, tableNumber: order.table_number, previousStatus });
     undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
@@ -364,8 +447,13 @@ export default function KitchenClient({ tenantId }) {
   const undoMarkReady = async () => {
     if (!undoToast) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    await supabase.from('orders').update({ status: undoToast.previousStatus }).eq('id', undoToast.orderId);
-    fetchOrders();
+    
+    setOrders(prev => prev.map(o => o.id === undoToast.orderId ? { ...o, status: undoToast.previousStatus } : o));
+    
+    const { error } = await supabase.from('orders').update({ status: undoToast.previousStatus }).eq('id', undoToast.orderId);
+    if (error) {
+      alert('Gagal undo: ' + error.message);
+    }
     setUndoToast(null);
   };
 
@@ -385,7 +473,6 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  // === FUNGSI PRINT ORDERAN DAPUR ===
   const handlePrintOrder = (order) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -446,7 +533,6 @@ export default function KitchenClient({ tenantId }) {
     printWindow.document.close();
   };
 
-  // Filter Pesanan Berdasarkan Status & Settingan Pay First
   const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
   
   const pendingOrders = orders
@@ -469,6 +555,58 @@ export default function KitchenClient({ tenantId }) {
   };
 
   const clock = nowTick ? new Date(nowTick).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+
+  // 🔥 SUSPEND OVERLAY — Blokir total
+  if (isSuspended || authMode === 'suspended') {
+    const waMessage = `Halo Admin NexaFlow, akun kafe dengan ID ${tenantId} sedang disuspend. Mohon bantu aktifkan kembali untuk layar dapur. Terima kasih.`;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500">
+          <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300">
+            <span className="text-5xl">🔒</span>
+          </div>
+          
+          <h1 className="text-3xl font-black text-slate-900 mb-2">Layar Dapur Dinonaktifkan</h1>
+          {tenant?.name && (
+            <p className="text-sm font-semibold text-slate-600 mb-4">Kafe: <span className="font-black text-slate-900">{tenant.name}</span></p>
+          )}
+          
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 mb-6 text-left">
+            <p className="text-sm font-bold text-rose-900 leading-relaxed">
+              Akun kafe sedang <strong>dinonaktifkan oleh Admin NexaFlow</strong>. 
+              Layar dapur tidak bisa digunakan sampai akun diaktifkan kembali. Silakan hubungi admin.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href={`https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform border-2 border-emerald-700"
+            >
+              💬 Hubungi Admin
+            </a>
+            <button
+              onClick={() => {
+                localStorage.removeItem('kds_pin_' + tenantId);
+                releaseWakeLock();
+                setAuthMode('pin');
+                setIsSuspended(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-3 rounded-2xl text-sm active:scale-95 transition-transform border-2 border-slate-300"
+            >
+              🚪 Keluar
+            </button>
+          </div>
+
+          <p className="text-[10px] font-bold text-slate-400 mt-6">
+            NexaFlow SaaS · Kitchen Display dalam mode terbatas
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (authMode === 'loading') {
     return (
