@@ -638,9 +638,9 @@ function OrderContent() {
                 const isLow = stock.isLow;
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
-                    {/* 🔥 GAMBAR & TEKS BISA DIKLIK UNTUK BUKA POPUP */}
-                    <div onClick={() => setSelectedMenu(menu)} className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200 cursor-pointer group">
-                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
+                    {/* 🔥 TAMPILAN GAMBAR 100% ASLI, HANYA DITAMBAH onClick */}
+                    <div onClick={() => setSelectedMenu(menu)} className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200 cursor-pointer">
+                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
                       {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
                       {isLow && !isOut && (
                         <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
@@ -655,7 +655,7 @@ function OrderContent() {
                     </div>
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div onClick={() => setSelectedMenu(menu)} className="cursor-pointer">
-                        <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1 group-hover:text-[var(--primary-color)] transition-colors">{menu.name}</h3>
+                        <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
                         <p className="text-[10px] text-slate-600 font-semibold line-clamp-2 mt-1 leading-snug min-h-[2em]">{menu.description || 'Menu andalan kami'}</p>
                       </div>
                       <div className="mt-2 flex flex-col gap-2">
@@ -927,7 +927,6 @@ function OrderContent() {
               className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-0 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden border-t-4 sm:border-4 border-slate-800 flex flex-col max-h-[90vh]" 
               onClick={e => e.stopPropagation()}
             >
-              {/* Gambar */}
               <div className="relative w-full h-64 sm:h-72 bg-slate-100 flex-shrink-0">
                 {selectedMenu.image_url ? (
                   <img src={selectedMenu.image_url} alt={selectedMenu.name} className="w-full h-full object-cover" />
@@ -947,7 +946,6 @@ function OrderContent() {
                 )}
               </div>
 
-              {/* Konten Teks */}
               <div className="p-5 flex-1 overflow-y-auto flex flex-col">
                 <h2 className="text-2xl font-black text-slate-900 leading-tight mb-2">{selectedMenu.name}</h2>
                 <p className="text-xl font-black text-[var(--primary-color)] mb-4">Rp {Number(selectedMenu.price).toLocaleString('id-ID')}</p>
@@ -960,7 +958,6 @@ function OrderContent() {
                 </div>
               </div>
 
-              {/* Tombol Aksi */}
               <div className="p-4 bg-slate-50 border-t-2 border-slate-200">
                 {selectedStock.isOut ? (
                   <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-3.5 rounded-xl text-sm border-2 border-slate-300 cursor-not-allowed">Habis</button>
