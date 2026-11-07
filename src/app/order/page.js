@@ -69,6 +69,9 @@ function OrderContent() {
   const [myOrders, setMyOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
+  
+  // 🔥 STATE UNTUK POPUP MENU
+  const [selectedMenu, setSelectedMenu] = useState(null);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -635,8 +638,9 @@ function OrderContent() {
                 const isLow = stock.isLow;
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
-                    <div className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200">
-                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
+                    {/* 🔥 GAMBAR & TEKS BISA DIKLIK UNTUK BUKA POPUP */}
+                    <div onClick={() => setSelectedMenu(menu)} className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200 cursor-pointer group">
+                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
                       {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
                       {isLow && !isOut && (
                         <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
@@ -650,8 +654,8 @@ function OrderContent() {
                       )}
                     </div>
                     <div className="p-3 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
+                      <div onClick={() => setSelectedMenu(menu)} className="cursor-pointer">
+                        <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1 group-hover:text-[var(--primary-color)] transition-colors">{menu.name}</h3>
                         <p className="text-[10px] text-slate-600 font-semibold line-clamp-2 mt-1 leading-snug min-h-[2em]">{menu.description || 'Menu andalan kami'}</p>
                       </div>
                       <div className="mt-2 flex flex-col gap-2">
@@ -912,6 +916,70 @@ function OrderContent() {
           </div>
         </div>
       )}
+
+      {/* 🔥 MODAL POPUP DETAIL MENU (BARU) */}
+      {selectedMenu && (() => {
+        const selectedStock = getMenuStock(selectedMenu);
+        const selectedCartItem = cart.find(c => c.id === selectedMenu.id);
+        return (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
+            <div 
+              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-0 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden border-t-4 sm:border-4 border-slate-800 flex flex-col max-h-[90vh]" 
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Gambar */}
+              <div className="relative w-full h-64 sm:h-72 bg-slate-100 flex-shrink-0">
+                {selectedMenu.image_url ? (
+                  <img src={selectedMenu.image_url} alt={selectedMenu.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-6xl">🍽️</div>
+                )}
+                <button 
+                  onClick={() => setSelectedMenu(null)} 
+                  className="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center backdrop-blur-md border-2 border-white/30 transition-all active:scale-90"
+                >
+                  <span className="text-xl font-black leading-none mb-1">&times;</span>
+                </button>
+                {selectedStock.isLow && (
+                  <div className="absolute bottom-3 left-3 bg-amber-400 text-amber-900 text-xs font-black px-3 py-1.5 rounded-lg border-2 border-amber-500 shadow-sm">
+                    Sisa {selectedStock.value} Porsi
+                  </div>
+                )}
+              </div>
+
+              {/* Konten Teks */}
+              <div className="p-5 flex-1 overflow-y-auto flex flex-col">
+                <h2 className="text-2xl font-black text-slate-900 leading-tight mb-2">{selectedMenu.name}</h2>
+                <p className="text-xl font-black text-[var(--primary-color)] mb-4">Rp {Number(selectedMenu.price).toLocaleString('id-ID')}</p>
+                <div className="h-0.5 w-full bg-slate-200 mb-4 rounded-full"></div>
+                <div className="mb-6">
+                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Deskripsi</p>
+                  <p className="text-sm font-semibold text-slate-700 leading-relaxed whitespace-pre-line">
+                    {selectedMenu.description || 'Belum ada deskripsi untuk menu ini.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tombol Aksi */}
+              <div className="p-4 bg-slate-50 border-t-2 border-slate-200">
+                {selectedStock.isOut ? (
+                  <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-3.5 rounded-xl text-sm border-2 border-slate-300 cursor-not-allowed">Habis</button>
+                ) : selectedCartItem ? (
+                  <div className="flex items-center justify-between bg-white rounded-xl p-1.5 border-2 border-slate-300">
+                    <button onClick={() => decCart(selectedMenu.id)} className="w-10 h-10 bg-slate-100 border border-slate-300 rounded-lg shadow-sm font-black text-slate-700 flex items-center justify-center text-lg">-</button>
+                    <span className="font-black text-slate-900 text-lg">{selectedCartItem.qty}</span>
+                    <button onClick={() => addToCart(selectedMenu)} disabled={selectedStock.tracked && selectedCartItem.qty >= selectedStock.value} className="w-10 h-10 bg-[var(--primary-color)] text-white rounded-lg shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)] disabled:opacity-40 disabled:cursor-not-allowed text-lg">+</button>
+                  </div>
+                ) : (
+                  <button onClick={() => addToCart(selectedMenu)} className="w-full bg-[var(--primary-color)] hover:opacity-90 text-white font-black py-3.5 rounded-xl text-sm shadow-md active:scale-95 transition-all border-2 border-[var(--primary-dark)]">
+                    + Tambah ke Keranjang
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
