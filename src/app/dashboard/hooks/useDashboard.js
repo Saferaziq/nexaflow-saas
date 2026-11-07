@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { extractDominantColor } from '../helpers/color';
@@ -367,7 +367,8 @@ export function useDashboard() {
     return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
   };
 
-  const getReportData = () => {
+  // 🔥 OPTIMASI 1: Bungkus getReportData dengan useMemo agar tidak dihitung ulang saat ganti tab
+  const reportData = useMemo(() => {
     let start = '', end = '', label = '';
 
     if (reportMode === 'daily') {
@@ -474,9 +475,7 @@ export function useDashboard() {
     }
 
     return { reportStats, topMenus, chartData, maxChartRev, totalChartRev, label };
-  };
-
-  const reportData = getReportData();
+  }, [orders, reportMode, reportDateStr, reportMonth, reportYear, reportStartDateStr, reportEndDateStr]);
 
   const handleExportCSV = () => {
     const { reportStats, topMenus, label } = reportData;
@@ -860,20 +859,23 @@ export function useDashboard() {
     }
   };
 
-  const displayOrders = orders.filter(o => {
-    const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
-    
-    if (queueFilter === "unpaid") {
-      return ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status) && o.status === 'pending';
-    }
-    if (queueFilter === "active") {
-      return ["pending", "cooking", "ready"].includes(o.status) && (!settings.is_pay_first || isPaid);
-    }
-    if (queueFilter === "completed") {
-      return o.status === "completed";
-    }
-    return true;
-  });
+  // 🔥 OPTIMASI 2: Bungkus displayOrders dengan useMemo
+  const displayOrders = useMemo(() => {
+    return orders.filter(o => {
+      const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+      
+      if (queueFilter === "unpaid") {
+        return ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status) && o.status === 'pending';
+      }
+      if (queueFilter === "active") {
+        return ["pending", "cooking", "ready"].includes(o.status) && (!settings.is_pay_first || isPaid);
+      }
+      if (queueFilter === "completed") {
+        return o.status === "completed";
+      }
+      return true;
+    });
+  }, [orders, queueFilter, settings.is_pay_first]);
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, isSuspended,

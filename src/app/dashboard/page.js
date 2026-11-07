@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useDashboard } from './hooks/useDashboard';
 import Header from './components/Header';
@@ -39,15 +39,18 @@ function DashboardContent() {
     d.handleImageUpload(e, type, setUploading, null);
   };
 
-  const todayOrders = d.orders ? d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()) : [];
-  const stats = {
-    total: todayOrders.length,
-    ready: todayOrders.filter(o => o.status === 'ready').length,
-    cooking: todayOrders.filter(o => o.status === 'cooking').length,
-    revenue: todayOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price || 0), 0)
-  };
-  
-  const activeOrdersCount = todayOrders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).length;
+  // 🔥 OPTIMASI 3: useMemo untuk Stats agar tidak re-render berat saat ganti tab
+  const { stats, activeOrdersCount } = useMemo(() => {
+    const todayOrders = d.orders ? d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()) : [];
+    const s = {
+      total: todayOrders.length,
+      ready: todayOrders.filter(o => o.status === 'ready').length,
+      cooking: todayOrders.filter(o => o.status === 'cooking').length,
+      revenue: todayOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price || 0), 0)
+    };
+    const count = todayOrders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).length;
+    return { stats: s, activeOrdersCount: count };
+  }, [d.orders]);
 
   if (d.isSuspended) {
     const waMessage = `Halo Admin NexaFlow, akun kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) sedang disuspend. Mohon bantu aktifkan kembali. Terima kasih.`;
@@ -159,7 +162,6 @@ function DashboardContent() {
         />
       )}
 
-      {/* 🔥 MODAL KUSTOM TOLAK PESANAN DENGAN INPUT ALASAN */}
       {d.cancelModal?.open && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
           <div className={`w-full max-w-md rounded-xl shadow-2xl border-2 overflow-hidden animate-in zoom-in-95 duration-200 ${d.theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
