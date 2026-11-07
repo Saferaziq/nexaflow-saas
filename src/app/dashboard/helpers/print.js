@@ -2,6 +2,44 @@
 // Kumpulan fungsi cetak: printHTML, laporan harian, bill + QRIS, QR meja, laporan custom, export CSV
 
 export const printHTML = (htmlContent) => {
+  // 🔥 CEK MODE PRINTER DARI LOCALSTORAGE
+  const mode = typeof window !== 'undefined' ? (localStorage.getItem('nexaflow_printer_mode') || 'browser') : 'browser';
+
+  // 🔥 1. ANDROID (RawBT) & IPAD (BR RawPrinter) - SILENT PRINT
+  if (mode === 'rawbt' || mode === 'brraw') {
+    try {
+      // Konversi HTML ke Base64 (mendukung karakter khusus/emoji)
+      const base64Html = window.btoa(unescape(encodeURIComponent(htmlContent)));
+      
+      // Tentukan skema URL berdasarkan aplikasi
+      const scheme = mode === 'rawbt' ? 'rawbt' : 'rawprinter';
+      const url = `${scheme}:data:text/html;base64,${base64Html}`;
+      
+      // Trigger URL menggunakan iframe tersembunyi (tidak merusak halaman)
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 3000);
+      
+      return; // Hentikan eksekusi, jangan tampilkan window.print()
+    } catch (err) {
+      console.error('Gagal mencetak via RawBT/RawPrinter:', err);
+      // Jika gagal, biarkan jatuh ke fallback browser di bawah
+    }
+  }
+
+  // 🔥 2. BROWSER DEFAULT / QZ TRAY (Fallback Standar)
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -20,7 +58,9 @@ export const printHTML = (htmlContent) => {
     setTimeout(() => {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
-      setTimeout(() => { document.body.removeChild(iframe); }, 10000);
+      setTimeout(() => { 
+        if (document.body.contains(iframe)) document.body.removeChild(iframe); 
+      }, 10000);
     }, 500);
   };
 
