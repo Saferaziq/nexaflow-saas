@@ -97,6 +97,42 @@ export default function TabReports({
         </div>
       </div>
 
+      {/* 🔥 DAFTAR PESANAN DITOLAK */}
+      {reportStats?.cancelledCount > 0 && (
+        <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${theme === 'light' ? 'bg-rose-50 border-rose-300' : 'bg-slate-900 border-rose-900'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">❌</span>
+              <h3 className={`font-black text-lg ${theme === 'light' ? 'text-rose-800' : 'text-rose-400'}`}>Pesanan Ditolak</h3>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-black ${theme === 'light' ? 'bg-rose-200 text-rose-800' : 'bg-rose-900/50 text-rose-400'}`}>
+              {reportStats.cancelledCount} Pesanan
+            </span>
+          </div>
+          <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+            {reportStats.cancelledOrders.map((o) => (
+              <div key={o.id} className={`p-4 rounded-xl border-2 flex flex-col gap-2 ${theme === 'light' ? 'bg-white border-rose-200' : 'bg-slate-800 border-rose-900/50'}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className={`text-sm font-black ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Meja {o.table_number} - {o.customer_name || 'Tamu'}</p>
+                    <p className="text-[10px] font-bold text-slate-500">{new Date(o.created_at).toLocaleString('id-ID')}</p>
+                  </div>
+                  <p className={`text-sm font-black ${theme === 'light' ? 'text-rose-600' : 'text-rose-400'}`}>{rp(o.total_price)}</p>
+                </div>
+                <div>
+                  <p className={`text-xs font-semibold mb-1 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Item: {o.items?.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                  </p>
+                  <p className={`text-xs font-bold p-2 rounded-lg inline-block ${theme === 'light' ? 'bg-rose-100 text-rose-800' : 'bg-rose-950 text-rose-300'}`}>
+                    Keterangan: {o.order_note || 'Dibatalkan oleh Kasir'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-black text-lg ${textMainClass}`}>7 Hari Terakhir</h3>
