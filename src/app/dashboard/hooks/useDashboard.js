@@ -34,7 +34,8 @@ export function useDashboard() {
 
   const [menuSearch, setMenuSearch] = useState("");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
-  const [queueFilter, setQueueFilter] = useState("active");
+  // 🔥 DEFAULT FILTER: "Menunggu Bayar" saat buka/refresh
+  const [queueFilter, setQueueFilter] = useState("unpaid");
 
   const [reportMode, setReportMode] = useState('daily');
   const [reportDateStr, setReportDateStr] = useState('');
@@ -133,17 +134,22 @@ export function useDashboard() {
       .order('created_at', { ascending: false });
     
     if (data) {
-      const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status) && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status)).map(o => o.id));
+      // 🔥 BUNYI NOTIFIKASI: Hanya untuk pesanan MENUNGGU BAYAR (WAITING_CASH / WAITING_QRIS)
+      const waitingPaymentIds = new Set(data.filter(o => 
+        o.status === 'pending' && 
+        ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
+      ).map(o => o.id));
+      
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
-        const newOnes = [...activeIds].filter(id => !prevIds.has(id));
+        const newOnes = [...waitingPaymentIds].filter(id => !prevIds.has(id));
         if (newOnes.length > 0) {
           playBeep();
           const first = data.find(o => o.id === newOnes[0]);
-          if (first) showToast(`Pesanan lunas baru! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
+          if (first) showToast(`Pesanan baru menunggu bayar! Meja ${first.table_number} - ${rp(first.total_price)}`, 'info');
         }
       }
-      prevOrderIdsRef.current = activeIds;
+      prevOrderIdsRef.current = waitingPaymentIds;
       setOrders(data);
     }
   };
@@ -158,7 +164,11 @@ export function useDashboard() {
   };
 
   useEffect(() => {
-    hasPendingOrderRef.current = orders.some(o => o.status === 'pending' && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status));
+    // 🔥 REMINDER BEEP: Hanya untuk pesanan yang masih MENUNGGU PEMBAYARAN
+    hasPendingOrderRef.current = orders.some(o => 
+      o.status === 'pending' && 
+      ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
+    );
   }, [orders]);
 
   useEffect(() => {

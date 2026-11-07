@@ -18,12 +18,13 @@ export function useDashboard() {
   const [settings, setSettings] = useState({ 
     name: '', wa: '', address: '', logo_url: '', qris_string: '', 
     banner_url: '', tax_percentage: 11, notify_order_ready: true,
-    is_pay_first: true // Default aktif
+    is_pay_first: true
   });
   const [isOpen, setIsOpen] = useState(true);
   const [todayStr, setTodayStr] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [isExpired, setIsExpired] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
   const [theme, setTheme] = useState('light');
   const [nowTick, setNowTick] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
@@ -46,6 +47,12 @@ export function useDashboard() {
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const hasPendingOrderRef = useRef(false);
+  
+  const ordersRef = useRef([]);
+  ordersRef.current = orders;
+  const menusRef = useRef([]);
+  menusRef.current = menus;
+  const realtimeDebounceRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -115,9 +122,17 @@ export function useDashboard() {
   };
 
   const fetchOrders = async (tId) => {
-    const { data } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+    if (!tId) return;
+    const cutoff = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tId)
+      .or(`status.in.(pending,cooking,ready),created_at.gte.${cutoff}`)
+      .order('created_at', { ascending: false });
+    
     if (data) {
-      // Cek pesanan baru (hanya yang pending/paid)
       const activeIds = new Set(data.filter(o => ['pending', 'cooking', 'ready'].includes(o.status) && (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status)).map(o => o.id));
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
@@ -134,10 +149,11 @@ export function useDashboard() {
   };
 
   const fetchTenantStatus = async (tId) => {
-    const { data } = await supabase.from('tenants').select('is_open, is_pay_first').eq('id', tId).single();
+    const { data } = await supabase.from('tenants').select('is_open, is_pay_first, is_active').eq('id', tId).single();
     if (data) {
       if (data.is_open !== undefined) setIsOpen(data.is_open !== false);
       if (data.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: data.is_pay_first }));
+      if (data.is_active !== undefined) setIsSuspended(data.is_active === false);
     }
   };
 
@@ -222,6 +238,11 @@ export function useDashboard() {
         if (new Date(userData.tenants.subscription_end_date) < now) setIsExpired(true);
       }
 
+      if (userData.tenants.is_active === false) {
+        setIsSuspended(true);
+        return;
+      }
+
       if (userData && userData.tenants && isMounted) {
         const tId = userData.tenant_id;
         setTenantId(tId);
@@ -245,11 +266,19 @@ export function useDashboard() {
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
         channel = supabase.channel('realtime-orders-' + Date.now())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, () => fetchOrders(tId))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+              fetchOrders(tId);
+              return;
+            }
+            if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+            realtimeDebounceRef.current = setTimeout(() => fetchOrders(tId), 600);
+          })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
+            if (payload.new.is_active !== undefined) setIsSuspended(payload.new.is_active === false);
           })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
@@ -262,10 +291,11 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
+        // 🔥 POLLING DIPERCEPAT: 30s -> 5s
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
           fetchTenantStatus(tId);
-        }, 10000);
+        }, 5000);
       }
     };
 
@@ -273,6 +303,7 @@ export function useDashboard() {
     return () => {
       isMounted = false;
       if (pollingInterval) clearInterval(pollingInterval);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (channel) supabase.removeChannel(channel);
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
@@ -286,7 +317,6 @@ export function useDashboard() {
     showToast(newStatus ? 'Kafe sekarang BUKA ✅' : 'Kafe sekarang TUTUP 🔒', newStatus ? 'success' : 'warning');
   };
 
-  // === FUNGSI BARU: TOGGLE PAY FIRST ===
   const handleTogglePayFirst = async () => {
     if (!tenantId) return;
     const newStatus = !settings.is_pay_first;
@@ -296,21 +326,29 @@ export function useDashboard() {
     showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF ✅' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF 🔒', newStatus ? 'success' : 'warning');
   };
 
-  // === FUNGSI BARU: KONFIRMASI PEMBAYARAN (CASH / QRIS) ===
   const handleConfirmPayment = (orderId) => {
     askConfirm('Konfirmasi Pembayaran', 'Pastikan uang sudah diterima (Cash) atau mutasi sudah masuk (QRIS). Lanjutkan?', async () => {
+      const prevOrder = ordersRef.current.find(o => o.id === orderId);
+      if (!prevOrder) return;
+      
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, payment_status: 'PAID', paid_at: new Date().toISOString() } : o
+      ));
+
       const { error } = await supabase.from('orders').update({
         payment_status: 'PAID',
         paid_at: new Date().toISOString(),
       }).eq('id', orderId);
 
       if (error) {
+        setOrders(prev => prev.map(o => 
+          o.id === orderId ? { ...o, payment_status: prevOrder.payment_status, paid_at: prevOrder.paid_at } : o
+        ));
         showToast('Gagal konfirmasi: ' + error.message, 'error');
         return;
       }
       
       showToast('Pembayaran dikonfirmasi. Pesanan diteruskan ke dapur!', 'success');
-      fetchOrders(tenantId);
     }, false);
   };
 
@@ -326,6 +364,13 @@ export function useDashboard() {
       start = reportDateStr;
       end = reportDateStr;
       label = new Date(reportDateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } else if (reportMode === 'weekly') {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 6);
+      start = weekAgo.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      end = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      label = `7 Hari Terakhir (${weekAgo.toLocaleDateString('id-ID')} - ${today.toLocaleDateString('id-ID')})`;
     } else if (reportMode === 'monthly') {
       const lastDay = new Date(reportYear, reportMonth + 1, 0).getDate();
       start = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}-01`;
@@ -345,10 +390,28 @@ export function useDashboard() {
 
     let revenue = 0;
     let totalItems = 0;
+    let revenueQRIS = 0;
+    let revenueCash = 0;
+    let countQRIS = 0;
+    let countCash = 0;
+    const statusCount = { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 };
     const menuMap = new Map();
 
     filtered.forEach(o => {
-      revenue += Number(o.total_price || 0);
+      const amount = Number(o.total_price || 0);
+      revenue += amount;
+
+      const method = String(o.payment_method || 'CASH').toUpperCase();
+      if (method === 'QRIS') {
+        revenueQRIS += amount;
+        countQRIS++;
+      } else {
+        revenueCash += amount;
+        countCash++;
+      }
+
+      if (statusCount.hasOwnProperty(o.status)) statusCount[o.status]++;
+
       if (o.items && Array.isArray(o.items)) {
         o.items.forEach(item => {
           totalItems += Number(item.qty || 0);
@@ -365,7 +428,11 @@ export function useDashboard() {
     const totalOrders = filtered.length;
     const avgOrder = totalOrders > 0 ? revenue / totalOrders : 0;
 
-    const reportStats = { totalOrders, revenue, avgOrder, totalItems };
+    const reportStats = { 
+      totalOrders, revenue, avgOrder, totalItems,
+      revenueQRIS, revenueCash, countQRIS, countCash,
+      statusCount
+    };
 
     const chartData = [];
     let maxChartRev = 0;
@@ -400,6 +467,8 @@ export function useDashboard() {
     csv += `Total Omset,${reportStats.revenue}\n`;
     csv += `Rata-rata/Order,${reportStats.avgOrder}\n`;
     csv += `Item Terjual,${reportStats.totalItems}\n\n`;
+    csv += `Pendapatan QRIS,${reportStats.revenueQRIS} (${reportStats.countQRIS} transaksi)\n`;
+    csv += `Pendapatan Cash,${reportStats.revenueCash} (${reportStats.countCash} transaksi)\n\n`;
     csv += `Menu Terlaris,Qty,Omset\n`;
     topMenus.forEach(([name, data]) => {
       csv += `"${name}",${data.qty},${data.revenue}\n`;
@@ -420,9 +489,16 @@ export function useDashboard() {
   const handlePrintReport = async () => {
     try {
       const printModule = await import('../helpers/print');
-      const printFn = printModule.printDailyReport;
+      const printFn = printModule.printReport;
       if (printFn) {
-        printFn({ orders: orders.filter(o => o.status !== 'cancelled'), settings, userEmail });
+        printFn({ 
+          reportStats: reportData.reportStats, 
+          topMenus: reportData.topMenus, 
+          reportLabel: reportData.label,
+          settings, 
+          userEmail,
+          reportNow: new Date(),
+        });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
@@ -475,28 +551,60 @@ export function useDashboard() {
   };
 
   const handleUpdateOrderStatus = async (id, status) => {
+    const prevOrder = ordersRef.current.find(o => o.id === id);
+    if (!prevOrder) return;
+    const prevStatus = prevOrder.status;
+    const prevPaymentStatus = prevOrder.payment_status;
+
+    setOrders(prev => prev.map(o => 
+      o.id === id ? { ...o, status, ...(status === 'completed' ? { payment_status: 'paid' } : {}) } : o
+    ));
+
     const u = { status };
     if (status === 'completed') u.payment_status = 'paid';
-    await supabase.from('orders').update(u).eq('id', id);
-    fetchOrders(tenantId);
+    const { error } = await supabase.from('orders').update(u).eq('id', id);
+    
+    if (error) {
+      setOrders(prev => prev.map(o => 
+        o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus } : {}) } : o
+      ));
+      showToast('Gagal update status: ' + error.message, 'error');
+    }
   };
 
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
-    const currentOrder = orders.find(o => o.id === id);
+    const currentOrder = ordersRef.current.find(o => o.id === id);
+    if (!currentOrder) return;
+    const prevStatus = currentOrder.status;
+    const prevPaymentStatus = currentOrder.payment_status;
 
-    if (currentOrder && currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
+    setOrders(prev => prev.map(o => 
+      o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED' } : o
+    ));
+
+    if (currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
       for (const item of currentOrder.items) {
-        const menu = menus.find(m => m.id === item.id) || menus.find(m => m.name === item.name);
+        const menu = menusRef.current.find(m => m.id === item.id) || menusRef.current.find(m => m.name === item.name);
         if (menu) {
           const newStock = Number(menu.stock || 0) + Number(item.qty || 0);
-          await supabase.from('menus').update({ stock: newStock }).eq('id', menu.id);
+          supabase.from('menus').update({ stock: newStock }).eq('id', menu.id).then(({ error }) => {
+            if (error) console.error('Stock restore error:', error);
+          });
         }
       }
-      await fetchMenus(tenantId);
+      fetchMenus(tenantId);
     }
 
-    await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
-    fetchOrders(tenantId);
+    const { error } = await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
+    
+    if (error) {
+      setOrders(prev => prev.map(o => 
+        o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus } : o
+      ));
+      showToast('Gagal batalkan: ' + error.message, 'error');
+      return;
+    }
+    
     showToast('Pesanan ditolak dan dibatalkan', 'warning');
   }, true);
 
@@ -514,17 +622,33 @@ export function useDashboard() {
 
   const toggleMenuStatus = async (menu) => {
     const ns = menu.status === 'available' ? 'soldout' : 'available';
+    const prevMenus = menusRef.current;
+    
+    setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, status: ns } : m));
+    
     const { error } = await supabase.from('menus').update({ status: ns }).eq('id', menu.id);
-    if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
-    fetchMenus(tenantId);
+    
+    if (error) {
+      setMenus(prevMenus);
+      showToast('Gagal ubah status: ' + error.message, 'error');
+      return;
+    }
     showToast(ns === 'available' ? 'Menu tersedia' : 'Menu ditandai habis', 'success');
   };
 
   const handleUpdateStock = async (menuId, currentStock, change) => {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
+    const prevMenus = menusRef.current;
+    
+    setMenus(prev => prev.map(m => m.id === menuId ? { ...m, stock: newStock } : m));
+    
     const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
-    if (error) { showToast('Gagal update stok: ' + error.message, 'error'); return; }
-    await fetchMenus(tenantId);
+    
+    if (error) {
+      setMenus(prevMenus);
+      showToast('Gagal update stok: ' + error.message, 'error');
+      return;
+    }
     showToast(change > 0 ? 'Stok ditambah' : 'Stok dikurangi', 'success');
   };
 
@@ -555,10 +679,27 @@ export function useDashboard() {
       image_url: currentMenu.image_url,
       stock: parseInt(currentMenu.stock, 10) || 0,
     };
-    if (isEdit) await supabase.from('menus').update(payload).eq('id', currentMenu.id);
-    else await supabase.from('menus').insert([payload]);
+    
+    if (isEdit) {
+      const prevMenus = menusRef.current;
+      setMenus(prev => prev.map(m => m.id === currentMenu.id ? { ...m, ...payload } : m));
+      
+      const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
+      if (error) {
+        setMenus(prevMenus);
+        showToast('Gagal simpan menu: ' + error.message, 'error');
+        return;
+      }
+    } else {
+      const { data, error } = await supabase.from('menus').insert([payload]).select().single();
+      if (error) {
+        showToast('Gagal simpan menu: ' + error.message, 'error');
+        return;
+      }
+      setMenus(prev => [data, ...prev]);
+    }
+    
     resetFn({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0 });
-    fetchMenus(tenantId);
     showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
   };
 
@@ -616,53 +757,69 @@ export function useDashboard() {
     try {
       showToast('Menyiapkan gambar QR...', 'info');
       const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(orderUrl)}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=30&data=${encodeURIComponent(orderUrl)}`;
+      
       const canvas = document.createElement('canvas');
-      canvas.width = 1000; canvas.height = 1300;
+      canvas.width = 1500; 
+      canvas.height = 1950;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (settings.logo_url) {
         const logoImg = new Image();
-        logoImg.crossOrigin = 'Anonymous'; logoImg.src = settings.logo_url;
+        logoImg.crossOrigin = 'Anonymous'; 
+        logoImg.src = settings.logo_url;
         await new Promise((resolve) => {
-          logoImg.onload = () => { ctx.drawImage(logoImg, 400, 80, 200, 200); resolve(); };
+          logoImg.onload = () => { ctx.drawImage(logoImg, 600, 100, 300, 300); resolve(); };
           logoImg.onerror = resolve;
         });
       }
 
-      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 50px Arial'; ctx.textAlign = 'center';
-      ctx.fillText(settings.name.toUpperCase(), 500, 350);
+      ctx.fillStyle = '#2A1F17'; 
+      ctx.font = 'bold 70px Arial'; 
+      ctx.textAlign = 'center';
+      ctx.fillText(settings.name.toUpperCase(), 750, 520);
 
       const qrImg = new Image();
-      qrImg.crossOrigin = 'Anonymous'; qrImg.src = qrApiUrl;
+      qrImg.crossOrigin = 'Anonymous'; 
+      qrImg.src = qrApiUrl;
       await new Promise((resolve, reject) => {
-        qrImg.onload = () => { ctx.drawImage(qrImg, 150, 400, 700, 700); resolve(); };
+        qrImg.onload = () => { ctx.drawImage(qrImg, 250, 620, 1000, 1000); resolve(); };
         qrImg.onerror = reject;
       });
 
-      ctx.fillStyle = '#2A1F17'; ctx.font = 'bold 70px Arial';
-      ctx.fillText(`MEJA ${table.table_number}`, 500, 1200);
-      ctx.fillStyle = '#5C4B3E'; ctx.font = '30px Arial';
-      ctx.fillText('Scan untuk memesan menu', 500, 1260);
+      ctx.fillStyle = '#2A1F17'; 
+      ctx.font = 'bold 100px Arial';
+      ctx.fillText(`MEJA ${table.table_number}`, 750, 1780);
+      
+      ctx.fillStyle = '#5C4B3E'; 
+      ctx.font = 'bold 40px Arial';
+      ctx.fillText('Scan untuk memesan menu', 750, 1860);
+      
+      ctx.fillStyle = '#888888'; 
+      ctx.font = '28px Arial';
+      ctx.fillText('Jika QR tidak terbaca, silakan hubungi kasir', 750, 1915);
 
       canvas.toBlob((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = blobUrl; link.download = `QR_Meja_${table.table_number}.png`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        link.href = blobUrl; 
+        link.download = `QR_Meja_${table.table_number}.png`;
+        document.body.appendChild(link); 
+        link.click(); 
+        document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
         showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
       }, 'image/png');
 
     } catch (error) {
-      console.error(error); showToast('Gagal membuat gambar QR.', 'error');
+      console.error(error); 
+      showToast('Gagal membuat gambar QR.', 'error');
     }
   };
 
-  // === UPDATE FILTER ANTREAN UNTUK MENDUKUNG PAY FIRST ===
   const displayOrders = orders.filter(o => {
-    // Jika fitur Pay First aktif, pastikan 'active' hanya menampilkan yang sudah PAID
     const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
     
     if (queueFilter === "unpaid") {
@@ -674,11 +831,11 @@ export function useDashboard() {
     if (queueFilter === "completed") {
       return o.status === "completed";
     }
-    return true; // "all"
+    return true;
   });
 
   return {
-    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen,
+    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, isSuspended,
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
