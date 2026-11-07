@@ -33,10 +33,10 @@ export function useDashboard() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [cancelModal, setCancelModal] = useState({ open: false, orderId: null, reason: '' });
 
   const [menuSearch, setMenuSearch] = useState("");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
-  // 🔥 DEFAULT FILTER: "Menunggu Bayar" saat buka/refresh
   const [queueFilter, setQueueFilter] = useState("unpaid");
 
   const [reportMode, setReportMode] = useState('daily');
@@ -137,7 +137,6 @@ export function useDashboard() {
       .order('created_at', { ascending: false });
     
     if (data) {
-      // 🔥 BUNYI NOTIFIKASI: Hanya untuk pesanan MENUNGGU BAYAR (WAITING_CASH / WAITING_QRIS)
       const waitingPaymentIds = new Set(data.filter(o => 
         o.status === 'pending' && 
         ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
@@ -167,7 +166,6 @@ export function useDashboard() {
   };
 
   useEffect(() => {
-    // 🔥 REMINDER BEEP: Hanya untuk pesanan yang masih MENUNGGU PEMBAYARAN
     hasPendingOrderRef.current = orders.some(o => 
       o.status === 'pending' && 
       ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
@@ -304,7 +302,6 @@ export function useDashboard() {
           if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
         });
 
-        // 🔥 POLLING DIPERCEPAT: 30s -> 5s
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
           fetchTenantStatus(tId);
@@ -395,7 +392,6 @@ export function useDashboard() {
       label = `${new Date(start).toLocaleDateString('id-ID')} - ${new Date(end).toLocaleDateString('id-ID')}`;
     }
 
-    // 🔥 PISAHKAN DATA YANG DITOLAK
     const cancelledFiltered = orders.filter(o => {
       if (o.status !== 'cancelled') return false;
       const localDate = getLocalDateStr(o.created_at);
@@ -496,7 +492,6 @@ export function useDashboard() {
       csv += `"${name}",${data.qty},${data.revenue}\n`;
     });
 
-    // 🔥 TAMBAHKAN REKAP PESANAN DITOLAK KE CSV
     csv += `\nPesanan Ditolak,Meja,Nama,Alasan\n`;
     reportStats.cancelledOrders.forEach(o => {
       csv += `"${o.id.slice(0,6)}","${o.table_number}","${o.customer_name}","${o.order_note || 'Tanpa Alasan'}"\n`;
@@ -600,24 +595,28 @@ export function useDashboard() {
     }
   };
 
-  const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
-    const currentOrder = ordersRef.current.find(o => o.id === id);
-    if (!currentOrder) return;
-    
-    // 🔥 MINTA ALASAN PENOLAKAN
-    const reason = window.prompt('Masukkan alasan penolakan (wajib):', 'Stok habis');
-    if (reason === null || !reason.trim()) {
-      showToast('Penolakan dibatalkan. Alasan harus diisi.', 'warning');
+  const handleCancelOrder = (id) => {
+    setCancelModal({ open: true, orderId: id, reason: 'Stok habis' });
+  };
+
+  const executeCancelOrder = async () => {
+    const { orderId, reason } = cancelModal;
+    if (!reason.trim()) {
+      showToast('Alasan penolakan wajib diisi', 'warning');
       return;
     }
+    setCancelModal({ open: false, orderId: null, reason: '' });
 
+    const currentOrder = ordersRef.current.find(o => o.id === orderId);
+    if (!currentOrder) return;
+    
     const prevStatus = currentOrder.status;
     const prevPaymentStatus = currentOrder.payment_status;
     const prevNote = currentOrder.order_note;
     const finalNote = `[DITOLAK: ${reason.trim()}]${prevNote ? ' ' + prevNote : ''}`;
 
     setOrders(prev => prev.map(o => 
-      o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED', order_note: finalNote } : o
+      o.id === orderId ? { ...o, status: 'cancelled', payment_status: 'CANCELLED', order_note: finalNote } : o
     ));
 
     if (currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
@@ -637,18 +636,18 @@ export function useDashboard() {
       status: 'cancelled', 
       payment_status: 'CANCELLED',
       order_note: finalNote
-    }).eq('id', id);
+    }).eq('id', orderId);
     
     if (error) {
       setOrders(prev => prev.map(o => 
-        o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus, order_note: prevNote } : o
+        o.id === orderId ? { ...o, status: prevStatus, payment_status: prevPaymentStatus, order_note: prevNote } : o
       ));
       showToast('Gagal batalkan: ' + error.message, 'error');
       return;
     }
     
     showToast('Pesanan ditolak dan dibatalkan', 'warning');
-  }, true);
+  };
 
   const handleDeleteMenu = (id) => askConfirm('Hapus Menu', 'Menu akan dihapus permanen. Lanjutkan?', async () => {
     await supabase.from('menus').delete().eq('id', id);
@@ -894,5 +893,7 @@ export function useDashboard() {
     reportLabel: reportData.label, reportStats: reportData.reportStats, topMenus: reportData.topMenus,
     chartData: reportData.chartData, maxChartRev: reportData.maxChartRev, totalChartRev: reportData.totalChartRev,
     showDailyBreakdown: false, activeDays: [], onExportCSV: handleExportCSV, onPrintReport: handlePrintReport,
+    
+    cancelModal, setCancelModal, executeCancelOrder
   };
 }

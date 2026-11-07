@@ -31,6 +31,8 @@ export function useDashboard() {
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const [menuSearch, setMenuSearch] = useState("");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
@@ -72,6 +74,7 @@ export function useDashboard() {
     if (audioCtxRef.current?.state === 'suspended') {
       audioCtxRef.current.resume();
     }
+    setAudioUnlocked(true);
   };
 
   const playBeep = () => {
@@ -392,6 +395,13 @@ export function useDashboard() {
       label = `${new Date(start).toLocaleDateString('id-ID')} - ${new Date(end).toLocaleDateString('id-ID')}`;
     }
 
+    // 🔥 PISAHKAN DATA YANG DITOLAK
+    const cancelledFiltered = orders.filter(o => {
+      if (o.status !== 'cancelled') return false;
+      const localDate = getLocalDateStr(o.created_at);
+      return localDate >= start && localDate <= end;
+    });
+
     const filtered = orders.filter(o => {
       if (o.status === 'cancelled') return false;
       const localDate = getLocalDateStr(o.created_at);
@@ -441,7 +451,9 @@ export function useDashboard() {
     const reportStats = { 
       totalOrders, revenue, avgOrder, totalItems,
       revenueQRIS, revenueCash, countQRIS, countCash,
-      statusCount
+      statusCount,
+      cancelledCount: cancelledFiltered.length,
+      cancelledOrders: cancelledFiltered
     };
 
     const chartData = [];
@@ -482,6 +494,12 @@ export function useDashboard() {
     csv += `Menu Terlaris,Qty,Omset\n`;
     topMenus.forEach(([name, data]) => {
       csv += `"${name}",${data.qty},${data.revenue}\n`;
+    });
+
+    // 🔥 TAMBAHKAN REKAP PESANAN DITOLAK KE CSV
+    csv += `\nPesanan Ditolak,Meja,Nama,Alasan\n`;
+    reportStats.cancelledOrders.forEach(o => {
+      csv += `"${o.id.slice(0,6)}","${o.table_number}","${o.customer_name}","${o.order_note || 'Tanpa Alasan'}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -585,11 +603,21 @@ export function useDashboard() {
   const handleCancelOrder = (id) => askConfirm('Tolak Pesanan', 'Pesanan akan dibatalkan. Lanjutkan?', async () => {
     const currentOrder = ordersRef.current.find(o => o.id === id);
     if (!currentOrder) return;
+    
+    // 🔥 MINTA ALASAN PENOLAKAN
+    const reason = window.prompt('Masukkan alasan penolakan (wajib):', 'Stok habis');
+    if (reason === null || !reason.trim()) {
+      showToast('Penolakan dibatalkan. Alasan harus diisi.', 'warning');
+      return;
+    }
+
     const prevStatus = currentOrder.status;
     const prevPaymentStatus = currentOrder.payment_status;
+    const prevNote = currentOrder.order_note;
+    const finalNote = `[DITOLAK: ${reason.trim()}]${prevNote ? ' ' + prevNote : ''}`;
 
     setOrders(prev => prev.map(o => 
-      o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED' } : o
+      o.id === id ? { ...o, status: 'cancelled', payment_status: 'CANCELLED', order_note: finalNote } : o
     ));
 
     if (currentOrder.status !== 'cancelled' && Array.isArray(currentOrder.items)) {
@@ -605,11 +633,15 @@ export function useDashboard() {
       fetchMenus(tenantId);
     }
 
-    const { error } = await supabase.from('orders').update({ status: 'cancelled', payment_status: 'CANCELLED' }).eq('id', id);
+    const { error } = await supabase.from('orders').update({ 
+      status: 'cancelled', 
+      payment_status: 'CANCELLED',
+      order_note: finalNote
+    }).eq('id', id);
     
     if (error) {
       setOrders(prev => prev.map(o => 
-        o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus } : o
+        o.id === id ? { ...o, status: prevStatus, payment_status: prevPaymentStatus, order_note: prevNote } : o
       ));
       showToast('Gagal batalkan: ' + error.message, 'error');
       return;
@@ -846,7 +878,7 @@ export function useDashboard() {
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, isSuspended,
-    todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen,
+    todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen, audioUnlocked,
     setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,

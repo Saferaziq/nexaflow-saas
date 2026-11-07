@@ -21,16 +21,16 @@ export default function Header({
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const headerClass = theme === 'light'
-    ? 'bg-[#F4EFE9]/95 border-b-2 border-[#D4C5B8]'
-    : 'bg-slate-900/95 border-b-2 border-slate-700';
+    ? 'bg-[#F4EFE9]/95 border-b-2 border-[#D4C5B8] shadow-sm'
+    : 'bg-slate-900/95 border-b-2 border-slate-700 shadow-sm';
 
   const navBtnClass = (isActive) =>
-    `relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-extrabold transition-all duration-200 ${
+    `relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-black transition-all duration-200 border-2 ${
       isActive
-        ? 'bg-[var(--primary-light)] text-[var(--primary-color)] shadow-sm border border-[var(--primary-color)]/20'
+        ? 'bg-[#3A2A20] text-white border-[#2A1F17] shadow-sm'
         : theme === 'light'
-          ? 'text-[#5C4B3E] hover:text-[#2A1F17] hover:bg-white border border-transparent'
-          : 'text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent'
+          ? 'text-slate-600 hover:text-[#2A1F17] hover:bg-white border-transparent'
+          : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'
     }`;
 
   const navItems = [
@@ -46,27 +46,25 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-20">
 
-          {/* Logo diganti dengan Gambar */}
           <div className="flex items-center gap-3 shrink-0">
             <img 
               src="/logo-nexaflow.png" 
               alt="NexaFlow Logo" 
-              className={`w-11 h-11 object-contain rounded-xl ${theme === 'light' ? 'mix-blend-multiply' : 'mix-blend-screen'}`} 
+              className={`w-11 h-11 object-contain rounded-lg ${theme === 'light' ? 'mix-blend-multiply' : 'mix-blend-screen'}`} 
             />
             <div>
               <h1 className={`text-lg font-black tracking-tight leading-none ${textMainClass}`}>NexaFlow</h1>
-              <p className="text-[10px] font-extrabold text-[var(--primary-color)] tracking-widest uppercase mt-0.5">Kasir</p>
+              <p className="text-[10px] font-black text-[var(--primary-color)] tracking-widest uppercase mt-0.5">Kasir</p>
             </div>
           </div>
 
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map(({ key, label, Icon, badge }) => (
               <button key={key} onClick={() => setActiveTab(key)} className={navBtnClass(activeTab === key)}>
                 <Icon />
                 <span>{label}</span>
                 {badge > 0 && (
-                  <span className="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-sm border border-white">
                     {badge}
                   </span>
                 )}
@@ -74,21 +72,19 @@ export default function Header({
             ))}
           </nav>
 
-          {/* Right Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`md:hidden p-2.5 rounded-2xl transition-colors border-2 ${theme === 'light' ? 'text-[#2A1F17] hover:bg-white border-[#D4C5B8]' : 'text-slate-300 hover:bg-slate-800 border-slate-600'}`}
+              className={`md:hidden p-2.5 rounded-lg transition-colors border-2 ${theme === 'light' ? 'text-[#2A1F17] hover:bg-white border-[#D4C5B8]' : 'text-slate-300 hover:bg-slate-800 border-slate-600'}`}
             >
               <Icons.Menu />
             </button>
 
-            {/* TOMBOL BUKA/TUTUP KAFE */}
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
               title={isOpen ? 'Klik untuk menutup kafe' : 'Klik untuk membuka kafe'}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl font-black text-xs shadow-md border-2 transition-all active:scale-95 ${
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg font-black text-xs shadow-sm border-2 transition-all active:scale-95 ${
                 isOpen
                   ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600'
                   : 'bg-rose-500 hover:bg-rose-600 text-white border-rose-600 animate-pulse'
@@ -101,13 +97,13 @@ export default function Header({
             <button
               onClick={onOpenKitchen}
               title="Layar Dapur (KDS)"
-              className={`flex items-center justify-center px-3 py-2.5 rounded-2xl shadow-sm transition-all text-xs font-bold border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}
+              className={`flex items-center justify-center px-3 py-2.5 rounded-lg shadow-sm transition-all text-xs font-black border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] text-[#2A1F17] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}
             >
               <Icons.Utensils />
               <span className="hidden xl:inline ml-1.5">Layar Dapur</span>
             </button>
 
-            <div className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-2xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/50' : realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/50' : 'bg-amber-500/10 border-amber-500/50'}`}>
+            <div className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-lg border-2 ${realtimeStatus === 'online' ? 'bg-emerald-500/10 border-emerald-500/50' : realtimeStatus === 'offline' ? 'bg-rose-500/10 border-rose-500/50' : 'bg-amber-500/10 border-amber-500/50'}`}>
               <span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
             </div>
 
@@ -116,7 +112,7 @@ export default function Header({
             <button
               onClick={onToggleTheme}
               title="Ganti Tema"
-              className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}
+              className={`p-2.5 rounded-lg border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}
             >
               {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
             </button>
@@ -124,7 +120,7 @@ export default function Header({
             <button
               onClick={onToggleFullscreen}
               title="Layar Penuh"
-              className={`hidden sm:block p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}
+              className={`hidden sm:block p-2.5 rounded-lg border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}
             >
               {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
             </button>
@@ -132,7 +128,7 @@ export default function Header({
             <button
               onClick={onLogout}
               title="Logout"
-              className={`p-2.5 rounded-2xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}
+              className={`p-2.5 rounded-lg border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#5C4B3E] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}
             >
               <Icons.Logout />
             </button>
@@ -140,23 +136,22 @@ export default function Header({
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className={`md:hidden border-t-2 p-4 space-y-2 absolute w-full shadow-xl z-50 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
           {navItems.map(({ key, label, Icon, badge }) => (
             <button
               key={key}
               onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-extrabold transition-all border-2 ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-black transition-all border-2 ${
                 activeTab === key
-                  ? 'bg-[var(--primary-light)] text-[var(--primary-color)] border-[var(--primary-color)]/20'
+                  ? 'bg-[#3A2A20] text-white border-[#2A1F17]'
                   : theme === 'light'
                     ? 'text-[#5C4B3E] hover:bg-[#F4EFE9] border-transparent'
                     : 'text-slate-300 hover:bg-slate-800 border-transparent'
               }`}
             >
               <Icon /> {label}
-              {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
+              {badge > 0 && <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-md">{badge}</span>}
             </button>
           ))}
         </div>
