@@ -257,13 +257,7 @@ export default function AdminDashboard() {
     setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
   };
 
-  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v2
-  // Perubahan:
-  // 1. Tambah callback subscribe((status)) untuk deteksi SUBSCRIBED / ERROR
-  // 2. Panggil handlePresenceChange() SEKALI saat SUBSCRIBED (baca presence awal)
-  // 3. Polling fallback 3 detik (jaga-jaga kalau event sync tidak fire)
-  // 4. Re-check saat tab visible kembali (visibilitychange)
-  // 5. try/catch presenceState() — cegah crash bila channel belum siap
+  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v3
   useEffect(() => {
     let channel = null;
     let pollInterval = null;
@@ -273,6 +267,7 @@ export default function AdminDashboard() {
       if (!isMounted || !channel) return;
       try {
         const state = channel.presenceState();
+        console.log('[Admin Presence] Raw State:', state);
         const onlineMap = {};
         Object.keys(state).forEach((key) => {
           state[key].forEach((p) => {
@@ -285,14 +280,20 @@ export default function AdminDashboard() {
       }
     };
 
-    channel = supabase.channel('online-rooms');
+    channel = supabase.channel('online-rooms', {
+      config: {
+        presence: { key: 'admin-' + Date.now() }
+      }
+    });
 
     channel
       .on('presence', { event: 'sync' }, handlePresenceChange)
       .on('presence', { event: 'join' }, handlePresenceChange)
       .on('presence', { event: 'leave' }, handlePresenceChange)
-      .subscribe((status) => {
+      .subscribe(async (status) => {
+        console.log('[Admin Presence] Channel Status:', status);
         if (status === 'SUBSCRIBED') {
+          await channel.track({ role: 'admin', online_at: new Date().toISOString() });
           handlePresenceChange();
           if (!pollInterval) {
             pollInterval = setInterval(handlePresenceChange, 3000);
