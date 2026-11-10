@@ -55,7 +55,7 @@ export default function TabSettings({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
           <div>
             <h3 className={`font-black text-2xl mb-1 ${isOpen ? 'text-emerald-800' : 'text-rose-800'}`}>
-              {isOpen ? '✅ KAFE SEDANG BUKA' : '🔒 KAFE SEDANG TUTUP'}
+              {isOpen ? 'KAFE SEDANG BUKA' : 'KAFE SEDANG TUTUP'}
             </h3>
             <p className={`text-xs font-semibold ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
               {isOpen 
@@ -99,6 +99,24 @@ export default function TabSettings({
               placeholder="08xxxxxxxxxx"
             />
           </div>
+        </div>
+
+        {/* 🔥 JENIS BIDANG USAHA */}
+        <div>
+          <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Jenis Bidang Usaha</label>
+          <select
+            value={settings.business_type || 'kafe'}
+            onChange={e => setSettings({ ...settings, business_type: e.target.value })}
+            className={inputClass}
+          >
+            <option value="kafe">Kafe / Coffee Shop</option>
+            <option value="resto">Restoran / Rumah Makan</option>
+            <option value="bakery">Bakery / Pastry</option>
+            <option value="foodcourt">Food Court / Booth</option>
+          </select>
+          <p className={`text-[11px] font-semibold mt-2 ${textSubClass}`}>
+            Jenis ini akan mempengaruhi ikon dan tampilan di halaman pelanggan.
+          </p>
         </div>
 
         {/* Alamat */}

@@ -18,7 +18,7 @@ export function useDashboard() {
   const [settings, setSettings] = useState({ 
     name: '', wa: '', address: '', logo_url: '', qris_string: '', 
     banner_url: '', tax_percentage: 11, notify_order_ready: true,
-    is_pay_first: true
+    is_pay_first: true, business_type: 'kafe'
   });
   const [isOpen, setIsOpen] = useState(true);
   const [todayStr, setTodayStr] = useState('');
@@ -269,6 +269,7 @@ export function useDashboard() {
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
           notify_order_ready: userData.tenants.notify_order_ready !== false,
           is_pay_first: userData.tenants.is_pay_first !== false,
+          business_type: userData.tenants.business_type || 'kafe', // 🔥 TAMBAHAN
         });
 
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
@@ -290,6 +291,7 @@ export function useDashboard() {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
             if (payload.new.is_active !== undefined) setIsSuspended(payload.new.is_active === false);
+            if (payload.new.business_type !== undefined) setSettings(prev => ({ ...prev, business_type: payload.new.business_type })); // 🔥 TAMBAHAN
           })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
@@ -334,7 +336,7 @@ export function useDashboard() {
     const { error } = await supabase.from('tenants').update({ is_open: newStatus }).eq('id', tenantId);
     if (error) { showToast('Gagal ubah status: ' + error.message, 'error'); return; }
     setIsOpen(newStatus);
-    showToast(newStatus ? 'Kafe sekarang BUKA ✅' : 'Kafe sekarang TUTUP 🔒', newStatus ? 'success' : 'warning');
+    showToast(newStatus ? 'Kafe sekarang BUKA' : 'Kafe sekarang TUTUP', newStatus ? 'success' : 'warning');
   };
 
   const handleTogglePayFirst = async () => {
@@ -343,7 +345,7 @@ export function useDashboard() {
     const { error } = await supabase.from('tenants').update({ is_pay_first: newStatus }).eq('id', tenantId);
     if (error) { showToast('Gagal ubah pengaturan: ' + error.message, 'error'); return; }
     setSettings(prev => ({ ...prev, is_pay_first: newStatus }));
-    showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF ✅' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF 🔒', newStatus ? 'success' : 'warning');
+    showToast(newStatus ? 'Sistem Wajib Bayar Dulu (Pay First) AKTIF' : 'Sistem Wajib Bayar Dulu (Pay First) NONAKTIF', newStatus ? 'success' : 'warning');
   };
 
   const handleConfirmPayment = (orderId) => {
@@ -704,9 +706,14 @@ export function useDashboard() {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     const { data, error } = await supabase.from('tenants').update({
-      name: settings.name, wa_number: settings.wa, address: settings.address,
-      logo_url: settings.logo_url, qris_string: settings.qris_string,
-      banner_url: settings.banner_url, tax_percentage: settings.tax_percentage,
+      name: settings.name, 
+      wa_number: settings.wa, 
+      address: settings.address,
+      logo_url: settings.logo_url, 
+      qris_string: settings.qris_string,
+      banner_url: settings.banner_url, 
+      tax_percentage: settings.tax_percentage,
+      business_type: settings.business_type, // 🔥 TAMBAHAN
     }).eq('id', tenantId).select();
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
@@ -727,7 +734,6 @@ export function useDashboard() {
       status: currentMenu.status, 
       image_url: currentMenu.image_url,
       stock: parseInt(currentMenu.stock, 10) || 0,
-      // 🔥 FITUR BARU: UNGGULAN, BARU, DAN DISKON
       is_featured: currentMenu.is_featured || false,
       is_new: currentMenu.is_new || false,
       discount_price: currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null,
