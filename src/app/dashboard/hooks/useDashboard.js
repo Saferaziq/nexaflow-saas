@@ -297,9 +297,12 @@ export function useDashboard() {
             else setRealtimeStatus('connecting');
           });
 
-        presenceChannel = supabase.channel('online-rooms', { config: { presence: { key: session.user.id } } });
+        // 🔥 PERBAIKAN BUG PRESENCE: Hapus hardcoded key agar Supabase membuatkan ID unik per tab/device.
+        presenceChannel = supabase.channel('online-rooms');
         presenceChannel.subscribe(async (s) => {
-          if (s === 'SUBSCRIBED') await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
+          if (s === 'SUBSCRIBED') {
+            await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
+          }
         });
 
         pollingInterval = setInterval(() => {
@@ -367,7 +370,6 @@ export function useDashboard() {
     return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
   };
 
-  // 🔥 OPTIMASI 1: Bungkus getReportData dengan useMemo agar tidak dihitung ulang saat ganti tab
   const reportData = useMemo(() => {
     let start = '', end = '', label = '';
 
@@ -859,7 +861,6 @@ export function useDashboard() {
     }
   };
 
-  // 🔥 OPTIMASI 2: Bungkus displayOrders dengan useMemo
   const displayOrders = useMemo(() => {
     return orders.filter(o => {
       const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);

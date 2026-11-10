@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -48,7 +48,6 @@ const formatPhone = (num) => {
   return phone;
 };
 
-// Parser String QRIS Standar EMVCo
 const parseQRIS = (qris) => {
   if (!qris) return { merchantName: 'MERCHANT NAME', nmid: 'ID...', terminalId: 'A01' };
   let merchantName = 'MERCHANT NAME';
@@ -108,6 +107,8 @@ export default function AdminDashboard() {
   
   const [actionLoading, setActionLoading] = useState({});
   const router = useRouter();
+  
+  const audioCtxRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('nexaflow_admin_theme');
@@ -125,6 +126,39 @@ export default function AdminDashboard() {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  }, []);
+
+  const playBeep = () => {
+    if (!audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  };
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (!audioCtxRef.current) {
+        try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { }
+      }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -189,7 +223,6 @@ export default function AdminDashboard() {
     const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
     if (error) {
       console.error('Fetch settings error:', error);
-      showToast('Gagal memuat pengaturan: ' + error.message, 'error');
       return;
     }
     if (data) {
@@ -238,7 +271,13 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const sub = supabase.channel('admin-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenants' }, fetchTenants)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tenants' }, (payload) => {
+        showToast(`🎉 Pendaftar Baru: ${payload.new.name}`, 'success');
+        playBeep();
+        fetchTenants();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants' }, fetchTenants)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tenants' }, fetchTenants)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'marketers' }, fetchMarketers)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, fetchSettings)
       .subscribe();
@@ -320,25 +359,69 @@ export default function AdminDashboard() {
     showToast('Data finansial disimpan', 'success'); setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' }); fetchTenants();
   };
 
+  // 🔥 UPDATE: Pesan peringatan lebih detail
   const requestDelete = (tenant) => {
     setConfirmModal({
-      open: true, title: 'Hapus Permanen',
-      message: `Semua data "${tenant.name}" akan dihapus: pesanan, menu, dan akun tenant. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
+      open: true, title: 'Hapus Permanen Semua Data',
+      message: `⚠️ Semua data "${tenant.name}" akan DIHAPUS TOTAL:\n\n• Pesanan & riwayat transaksi\n• Menu & gambar menu\n• Meja & QR code\n• Tagihan (invoices)\n• File logo & banner\n• Akun tenant\n• Akun login (email)\n\nSetelah dihapus, email pemilik bisa didaftarkan ulang. TINDAKAN INI TIDAK BISA DIBATALKAN.`,
       requireInput: tenant.name, inputValue: '', danger: true, loading: false,
       onConfirm: () => performDelete(tenant),
     });
   };
 
+  // 🔥 UPDATE: Cascade delete 7 lapis
   const performDelete = async (tenant) => {
-    setConfirmModal(prev => ({ ...prev, loading: true })); setTenantLoading(tenant.id, 'delete');
-    const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
-    if (orderErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus orders: ' + orderErr.message, 'error'); }
-    const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
-    if (menuErr) { setTenantLoading(tenant.id, null); setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus menus: ' + menuErr.message, 'error'); }
-    const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
-    setTenantLoading(tenant.id, null);
-    if (tenantErr) { setConfirmModal(prev => ({ ...prev, loading: false })); return showToast('Gagal hapus tenant: ' + tenantErr.message, 'error'); }
-    setConfirmModal(EMPTY_CONFIRM); showToast(`Kafe ${tenant.name} berhasil dihapus total.`, 'success'); fetchTenants();
+    setConfirmModal(prev => ({ ...prev, loading: true }));
+    setTenantLoading(tenant.id, 'delete');
+
+    try {
+      // 1. Ambil user_id sebelum data dihapus
+      const { data: userRows } = await supabase.from('users').select('id').eq('tenant_id', tenant.id);
+      const userIds = (userRows || []).map(u => u.id);
+
+      // 2. Hapus orders
+      const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
+      if (orderErr) throw new Error('Gagal hapus pesanan: ' + orderErr.message);
+
+      // 3. Hapus menus
+      const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
+      if (menuErr) throw new Error('Gagal hapus menu: ' + menuErr.message);
+
+      // 4. Hapus tables
+      const { error: tableErr } = await supabase.from('tables').delete().eq('tenant_id', tenant.id);
+      if (tableErr && !tableErr.message.includes('does not exist')) {
+        throw new Error('Gagal hapus meja: ' + tableErr.message);
+      }
+
+      // 5. Hapus invoices (kalau tabel ada)
+      const { error: invoiceErr } = await supabase.from('invoices').delete().eq('tenant_id', tenant.id);
+      if (invoiceErr && !invoiceErr.message.includes('does not exist')) {
+        throw new Error('Gagal hapus tagihan: ' + invoiceErr.message);
+      }
+
+      // 6. Hapus file storage via RPC
+      const { error: fileErr } = await supabase.rpc('admin_delete_tenant_files', { p_tenant_id: tenant.id });
+      if (fileErr) console.warn('Gagal hapus file storage:', fileErr.message);
+
+      // 7. Hapus tenant (baris utama)
+      const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
+      if (tenantErr) throw new Error('Gagal hapus tenant: ' + tenantErr.message);
+
+      // 8. Hapus akun auth (email/password) via RPC — setelah tenant hilang
+      for (const uid of userIds) {
+        const { error: authErr } = await supabase.rpc('admin_delete_auth_user', { p_user_id: uid });
+        if (authErr) console.warn('Gagal hapus akun auth:', authErr.message);
+      }
+
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(EMPTY_CONFIRM);
+      showToast(`✅ ${tenant.name} dihapus total. Email sudah bisa didaftarkan ulang.`, 'success');
+      fetchTenants();
+    } catch (err) {
+      setTenantLoading(tenant.id, null);
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+      showToast(err.message, 'error');
+    }
   };
 
   const copyToClipboard = async (text, label = 'ID') => {
@@ -377,7 +460,6 @@ export default function AdminDashboard() {
     fetchSettings();
   };
 
-  // === FUNGSI GENERATE GAMBAR QRIS BERBINGKAI (STANDAR ASPI) ===
   const generateQRISImage = async (qrisString, tenantName) => {
     return new Promise(async (resolve, reject) => {
       try {
@@ -389,11 +471,9 @@ export default function AdminDashboard() {
         canvas.height = 1130;
         const ctx = canvas.getContext('2d');
 
-        // 1. Background Putih
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 2. Pola Background (Garis Isometrik Faint)
         ctx.strokeStyle = '#f1f5f9';
         ctx.lineWidth = 1.5;
         for (let i = -canvas.height; i < canvas.width; i += 30) {
@@ -403,26 +483,16 @@ export default function AdminDashboard() {
           ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - canvas.height, canvas.height); ctx.stroke();
         }
 
-        // 3. Gambar Segitiga Merah (Standar Cetak)
         ctx.fillStyle = '#E21E26'; 
-        
-        // Segitiga Kiri Atas (Lebih tajam)
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(320, 0); ctx.lineTo(0, 320); ctx.fill();
-        
-        // Segitiga Kiri Tengah
         ctx.beginPath(); ctx.moveTo(0, 320); ctx.lineTo(180, 500); ctx.lineTo(0, 680); ctx.fill();
-        
-        // Segitiga Kanan Bawah
         ctx.beginPath(); ctx.moveTo(800, 1130); ctx.lineTo(480, 1130); ctx.lineTo(800, 810); ctx.fill();
 
-        // 4. Header Logos (Simulasi)
-        // --- Logo QRIS (Kiri) ---
         ctx.fillStyle = '#000000';
         ctx.font = '900 44px Arial';
         ctx.textAlign = 'left';
         ctx.fillText('QRIS', 50, 80);
         
-        // Garis siku khas QRIS
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(45, 85); ctx.lineTo(45, 60); ctx.lineTo(70, 60); ctx.stroke();
 
@@ -430,19 +500,15 @@ export default function AdminDashboard() {
         ctx.fillText('QR Code Standar', 50, 105);
         ctx.fillText('Pembayaran Nasional', 50, 125);
         
-        // --- Logo GPN (Kanan) ---
-        // Sayap Merah
         ctx.fillStyle = '#E21E26';
         ctx.beginPath();
         ctx.moveTo(730, 70); ctx.lineTo(680, 40); ctx.lineTo(710, 75); ctx.lineTo(680, 90); ctx.lineTo(730, 85);
         ctx.fill();
-        // Teks GPN
         ctx.fillStyle = '#1e3a8a';
         ctx.font = '900 38px Arial';
         ctx.textAlign = 'right';
         ctx.fillText('GPN', 760, 85);
 
-        // 5. Teks Informasi Merchant (Center)
         ctx.textAlign = 'center';
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 40px Arial';
@@ -451,11 +517,9 @@ export default function AdminDashboard() {
         ctx.font = '26px Arial';
         ctx.fillText(`NMID : ${parsed.nmid}`, 400, 285);
         
-        // Terminal ID
         ctx.font = '28px Arial';
         ctx.fillText(parsed.terminalId, 400, 335);
 
-        // 6. Gambar QR Code (API)
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrisString)}&margin=0`;
         const qrImg = new Image();
         qrImg.crossOrigin = 'Anonymous';
@@ -469,7 +533,6 @@ export default function AdminDashboard() {
           qrImg.onerror = rej;
         });
 
-        // 7. Teks Bawah QR Code
         ctx.fillStyle = '#000000';
         ctx.font = '28px Arial';
         ctx.fillText('SATU QRIS UNTUK SEMUA', 400, 920);
@@ -478,18 +541,15 @@ export default function AdminDashboard() {
         ctx.fillText('Cek aplikasi penyelenggara di:', 400, 965);
         ctx.fillText('www.aspi-qris.id', 400, 1000);
 
-        // 8. Teks Kiri Bawah
         ctx.textAlign = 'left';
         ctx.font = '18px Arial';
         ctx.fillText('Dicetak oleh: 93600915', 50, 1050);
         ctx.fillText('Versi cetak: 1.0.05.11.26', 50, 1080);
 
-        // 9. Ikon Kanan Bawah
         ctx.textAlign = 'center';
         ctx.font = 'bold 16px Arial';
         ctx.fillText('Cara bayar dengan QRIS:', 650, 1010);
         
-        // Ikon 1: Buka Aplikasi
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#000000';
         ctx.beginPath(); ctx.arc(550, 1065, 25, 0, Math.PI * 2); ctx.stroke();
@@ -498,26 +558,22 @@ export default function AdminDashboard() {
         ctx.fillText('Buka Aplikasi', 550, 1110);
         ctx.fillText('Berlogo QRIS', 550, 1125);
         
-        // Ikon HP
         ctx.fillRect(543, 1052, 14, 24);
         ctx.fillStyle = '#ffffff'; 
         ctx.fillRect(545, 1054, 10, 16); 
         ctx.fillStyle = '#000000';
 
-        // Ikon 2: Scan
         ctx.beginPath(); ctx.arc(650, 1065, 25, 0, Math.PI * 2); ctx.stroke();
         ctx.fillText('Scan dan Cek', 650, 1110);
         ctx.lineWidth = 3;
         ctx.strokeRect(638, 1053, 24, 24);
 
-        // Ikon 3: Bayar
         ctx.beginPath(); ctx.arc(750, 1065, 25, 0, Math.PI * 2); ctx.stroke();
         ctx.fillText('Bayar', 750, 1110);
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(750, 1065, 12, 0, Math.PI * 2); ctx.stroke();
         ctx.fillText('Rp', 750, 1069);
 
-        // 10. Convert to Blob & Upload
         canvas.toBlob(async (blob) => {
           try {
             const fileName = `qris-${tenantName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.png`;
@@ -1158,7 +1214,7 @@ export default function AdminDashboard() {
               <button disabled={confirmModal.loading} onClick={() => setConfirmModal(EMPTY_CONFIRM)} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'} disabled:opacity-50`}><Icons.X /></button>
             </div>
             <div className="p-5 space-y-3">
-              <p className={`text-xs font-bold ${textSub}`}>{confirmModal.message}</p>
+              <p className={`text-xs font-bold whitespace-pre-line ${textSub}`}>{confirmModal.message}</p>
               {confirmModal.requireInput && (
                 <>
                   <p className={`text-[10px] font-black uppercase ${textSub}`}>Ketik <span className={confirmModal.danger ? 'text-rose-500' : 'text-cyan-500'}>&quot;{confirmModal.requireInput}&quot;</span> untuk konfirmasi:</p>

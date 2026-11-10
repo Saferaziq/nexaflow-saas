@@ -257,15 +257,29 @@ export default function AdminDashboard() {
     setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
   };
 
+  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN)
   useEffect(() => {
-    const channel = supabase.channel('online-rooms', { config: { presence: { key: 'user_id' } } });
-    channel.on('presence', { event: 'sync' }, () => {
+    // Hapus hardcoded key 'user_id' agar Admin punya ID unik per tab.
+    // Ini mencegah Admin saling menimpa state dan memastikan sinkronisasi berjalan.
+    const channel = supabase.channel('online-rooms');
+    
+    const handlePresenceChange = () => {
       const state = channel.presenceState();
       const onlineMap = {};
-      Object.keys(state).forEach((key) => { state[key].forEach((p) => { if (p.tenant_id) onlineMap[p.tenant_id] = true; }); });
+      Object.keys(state).forEach((key) => { 
+        state[key].forEach((p) => { 
+          if (p.tenant_id) onlineMap[p.tenant_id] = true; 
+        }); 
+      });
       setOnlineUsers(onlineMap);
-    });
-    channel.subscribe();
+    };
+
+    channel
+      .on('presence', { event: 'sync' }, handlePresenceChange)
+      .on('presence', { event: 'join' }, handlePresenceChange)
+      .on('presence', { event: 'leave' }, handlePresenceChange)
+      .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, []);
 
@@ -359,7 +373,6 @@ export default function AdminDashboard() {
     showToast('Data finansial disimpan', 'success'); setFinanceModal({ open: false, tenant: null, loading: false, price: '', referral: '', commission: '' }); fetchTenants();
   };
 
-  // 🔥 UPDATE: Pesan peringatan lebih detail
   const requestDelete = (tenant) => {
     setConfirmModal({
       open: true, title: 'Hapus Permanen Semua Data',
@@ -369,45 +382,36 @@ export default function AdminDashboard() {
     });
   };
 
-  // 🔥 UPDATE: Cascade delete 7 lapis
   const performDelete = async (tenant) => {
     setConfirmModal(prev => ({ ...prev, loading: true }));
     setTenantLoading(tenant.id, 'delete');
 
     try {
-      // 1. Ambil user_id sebelum data dihapus
       const { data: userRows } = await supabase.from('users').select('id').eq('tenant_id', tenant.id);
       const userIds = (userRows || []).map(u => u.id);
 
-      // 2. Hapus orders
       const { error: orderErr } = await supabase.from('orders').delete().eq('tenant_id', tenant.id);
       if (orderErr) throw new Error('Gagal hapus pesanan: ' + orderErr.message);
 
-      // 3. Hapus menus
       const { error: menuErr } = await supabase.from('menus').delete().eq('tenant_id', tenant.id);
       if (menuErr) throw new Error('Gagal hapus menu: ' + menuErr.message);
 
-      // 4. Hapus tables
       const { error: tableErr } = await supabase.from('tables').delete().eq('tenant_id', tenant.id);
       if (tableErr && !tableErr.message.includes('does not exist')) {
         throw new Error('Gagal hapus meja: ' + tableErr.message);
       }
 
-      // 5. Hapus invoices (kalau tabel ada)
       const { error: invoiceErr } = await supabase.from('invoices').delete().eq('tenant_id', tenant.id);
       if (invoiceErr && !invoiceErr.message.includes('does not exist')) {
         throw new Error('Gagal hapus tagihan: ' + invoiceErr.message);
       }
 
-      // 6. Hapus file storage via RPC
       const { error: fileErr } = await supabase.rpc('admin_delete_tenant_files', { p_tenant_id: tenant.id });
       if (fileErr) console.warn('Gagal hapus file storage:', fileErr.message);
 
-      // 7. Hapus tenant (baris utama)
       const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenant.id);
       if (tenantErr) throw new Error('Gagal hapus tenant: ' + tenantErr.message);
 
-      // 8. Hapus akun auth (email/password) via RPC — setelah tenant hilang
       for (const uid of userIds) {
         const { error: authErr } = await supabase.rpc('admin_delete_auth_user', { p_user_id: uid });
         if (authErr) console.warn('Gagal hapus akun auth:', authErr.message);
