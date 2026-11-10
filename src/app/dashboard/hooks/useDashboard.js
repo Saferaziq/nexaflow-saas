@@ -297,11 +297,22 @@ export function useDashboard() {
             else setRealtimeStatus('connecting');
           });
 
-        // 🔥 PERBAIKAN BUG PRESENCE: Hapus hardcoded key agar Supabase membuatkan ID unik per tab/device.
+        // 🔥 DIAGNOSTIK PRESENCE KASIR
         presenceChannel = supabase.channel('online-rooms');
         presenceChannel.subscribe(async (s) => {
+          console.log('[Kasir Presence] Status:', s);
           if (s === 'SUBSCRIBED') {
-            await presenceChannel.track({ tenant_id: tId, user_email: session.user.email, online_at: new Date().toISOString() });
+            try {
+              const trackRes = await presenceChannel.track({ 
+                tenant_id: tId, 
+                user_email: session.user.email, 
+                online_at: new Date().toISOString() 
+              });
+              console.log('[Kasir Presence] Track Result:', trackRes);
+              console.log('[Kasir Presence] My State:', presenceChannel.presenceState());
+            } catch (err) {
+              console.error('[Kasir Presence] Track Error:', err);
+            }
           }
         });
 
