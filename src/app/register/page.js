@@ -1,240 +1,245 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+const LogoImg = ({ className = "w-12 h-12" }) => (
+  <img src="/logo-nexaflow.png" alt="NexaFlow Logo" className={`${className} object-contain mix-blend-multiply`} />
+);
+
 const Icons = {
-  ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
-  Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
-  Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
-  EyeOff: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>,
+  Coffee: () => <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
+  User: () => <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Phone: () => <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  Mail: () => <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  Eye: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  EyeOff: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+  ArrowRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  Check: () => <svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>,
 };
 
 export default function RegisterPage() {
-  const [cafeName, setCafeName] = useState('');
-  const [waNumber, setWaNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    cafeName: '', ownerName: '', waNumber: '', businessType: '', email: '', password: ''
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    const canvas = document.getElementById('network-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    let particles = [];
-    const particleCount = window.innerWidth < 768 ? 25 : 50;
-    const maxDistance = 200;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', resize);
-    resize();
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        radius: Math.random() * 2 + 1
-      });
-    }
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < particles.length; i++) {
-        let p = particles[i];
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(160, 140, 120, 0.4)';
-        ctx.fill();
-        for (let j = i + 1; j < particles.length; j++) {
-          let p2 = particles[j];
-          let dx = p.x - p2.x; let dy = p.y - p2.y;
-          let distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < maxDistance) {
-            let opacity = 1 - (distance / maxDistance);
-            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(160, 140, 120, ${opacity * 0.3})`;
-            ctx.lineWidth = 1; ctx.stroke();
-          }
-        }
-      }
-      animationFrameId = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
-  }, []);
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setLoading(true);
     setErrorMsg('');
 
-    const finalCafeName = cafeName.trim();
-    const finalWaNumber = waNumber.trim();
-
-    if (!agreeTerms) {
-      setErrorMsg('Anda harus menyetujui Syarat & Ketentuan.');
-      return;
-    }
-
-    if (!finalCafeName) {
-      setErrorMsg('Nama Kafe/Resto tidak boleh kosong.');
-      return;
-    }
-
-    if (!finalWaNumber) {
-      setErrorMsg('Nomor WhatsApp tidak boleh kosong.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMsg('Password dan Konfirmasi Password tidak cocok!');
-      return;
-    }
-
-    if (password.length < 6) {
+    if (formData.password.length < 6) {
       setErrorMsg('Password minimal 6 karakter.');
-      return;
-    }
-
-    setLoading(true);
-
-    // 1. Daftarkan Email & Password ke Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-
-    if (authError) {
-      setErrorMsg(authError.message === 'User already registered' ? 'Email ini sudah terdaftar. Silakan login.' : authError.message);
       setLoading(false);
       return;
     }
 
-    if (authData.user) {
-      // 2. Panggil RPC untuk membuat Kafe & User (Bypass RLS)
-      const { error: rpcError } = await supabase.rpc('register_new_tenant', {
-        p_user_id: authData.user.id,
-        p_cafe_name: finalCafeName,
-        p_wa_number: finalWaNumber
+    try {
+      // 1. Daftar ke Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password,
       });
 
-      if (rpcError) {
-        setErrorMsg('Gagal membuat profil Kafe/Resto: ' + rpcError.message);
-        setLoading(false);
-        return;
-      }
+      if (authError) throw new Error(authError.message);
 
-      // 3. Auto Login & Masuk Dashboard
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (loginError) {
-         alert('Pendaftaran Berhasil! Silakan login manual.');
-         router.push('/login');
-      } else {
-         router.push('/dashboard');
+      if (authData.user) {
+        // 2. Buat data Tenant (Kafe)
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .insert([{
+            name: formData.cafeName,
+            wa_number: formData.waNumber,
+            is_active: true,
+            is_open: true,
+            // Anda bisa menambahkan kolom lain seperti business_type jika ada di DB
+          }])
+          .select()
+          .single();
+
+        if (tenantError) throw new Error('Gagal membuat data kafe: ' + tenantError.message);
+
+        // 3. Hubungkan User ke Tenant di tabel users
+        const { error: userError } = await supabase
+          .from('users')
+          .insert([{
+            id: authData.user.id,
+            tenant_id: tenantData.id,
+            role: 'owner',
+            email: formData.email.trim(),
+          }]);
+
+        if (userError) throw new Error('Gagal menghubungkan akun: ' + userError.message);
+
+        // Sukses
+        router.push('/dashboard');
       }
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#F4EFE9] flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans">
-      <canvas id="network-canvas" className="fixed inset-0 z-0 pointer-events-none"></canvas>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 relative overflow-hidden bg-gray-100 font-sans">
+      
+      {/* BACKGROUND IMAGE */}
+      <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=2500&auto=format&fit=crop" alt="Background Cafe" className="absolute inset-0 w-full h-full object-cover" />
+      
+      {/* OVERLAY CERAH */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-[#F4EFE9]/70 backdrop-blur-[3px]"></div>
 
-      <div className="relative z-10 w-full max-w-5xl bg-white/80 backdrop-blur-xl border border-[#E3DCD1] rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row my-auto">
+      {/* KARTU DAFTAR */}
+      <div className="relative z-10 w-full max-w-[1050px] rounded-[2.5rem] overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[680px] border border-white/60 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] backdrop-blur-[30px] bg-white/45">
         
-        <div className="hidden md:flex w-full md:w-1/2 p-10 lg:p-14 flex-col justify-center relative overflow-hidden bg-[#F4EFE9]">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3A2A20_1px,transparent_1px)] bg-[size:20px_20px] opacity-10"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-8">
-              <img src="/logo-nexaflow.png" alt="Logo" className="w-20 h-20 object-contain mix-blend-multiply" />
-              <div>
-                <h1 className="text-3xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
-                <p className="text-[11px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
-              </div>
+        {/* SISI KIRI (BRANDING) */}
+        <div className="hidden md:flex md:col-span-5 flex-col justify-between p-10 lg:p-12 relative bg-[#3A2A20]/90 text-white">
+          <img src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-30" alt="Cafe Interior" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#2A1F17] via-[#3A2A20]/80 to-black/40"></div>
+
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="p-1 bg-white rounded-xl shadow-lg">
+              <LogoImg className="w-10 h-10" />
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E3DCD1] text-[#3A2A20] text-[10px] font-black tracking-widest uppercase mb-6 shadow-sm"><Icons.Sparkles /> Langkah Baru Bisnis Anda</div>
-            <h2 className="text-4xl lg:text-5xl font-black text-[#3A2A20] leading-tight mb-4">Daftarkan<br /><span className="text-[#8C7A6B]">Kafe / Resto Anda.</span></h2>
-            <p className="text-sm font-medium text-[#7A6A5F] leading-relaxed max-w-sm">Mulai transformasi digital bisnis Anda. Gratis uji coba 7 hari. Tanpa kartu kredit, tanpa biaya tersembunyi.</p>
+            <div>
+              <p className="text-2xl font-black tracking-tight leading-none uppercase text-white">NEXAFLOW</p>
+              <p className="text-[10px] font-bold text-[#D3C8BB] tracking-[0.2em] uppercase mt-1">RESTAURANT SAAS</p>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-8">
+            <h2 className="text-3xl lg:text-4xl font-black leading-tight tracking-tight mb-6">Solusi Tepat untuk <br /><span className="text-[#06b6d4]">Kafe & Resto</span> Anda.</h2>
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#06b6d4]/20 flex items-center justify-center border border-[#06b6d4]/50 shrink-0"><Icons.Check /></div>
+                <span className="text-sm font-bold text-gray-200">Kelola Menu & Stok Otomatis</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#06b6d4]/20 flex items-center justify-center border border-[#06b6d4]/50 shrink-0"><Icons.Check /></div>
+                <span className="text-sm font-bold text-gray-200">Layar Dapur (KDS) Terhubung</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#06b6d4]/20 flex items-center justify-center border border-[#06b6d4]/50 shrink-0"><Icons.Check /></div>
+                <span className="text-sm font-bold text-gray-200">Pelanggan Pesan Sendiri via QR</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="relative z-10">
+            <p className="text-xs font-bold text-gray-400">© {new Date().getFullYear()} NexaFlow. All rights reserved.</p>
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-14 bg-white flex flex-col justify-center relative z-20">
-          <div className="max-w-sm mx-auto w-full">
-            
-            <div className="flex md:hidden items-center gap-3 mb-6">
-              <img src="/logo-nexaflow.png" alt="Logo" className="w-12 h-12 object-contain mix-blend-multiply" />
-              <div>
-                <h1 className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</h1>
-                <p className="text-[9px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-1">SAAS RESTAURANT</p>
+        {/* SISI KANAN (FORM) */}
+        <div className="md:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-center bg-white/40 backdrop-blur-md relative overflow-y-auto">
+          
+          <div className="md:hidden flex items-center gap-3 mb-6">
+            <LogoImg className="w-10 h-10" />
+            <div><p className="text-lg font-black text-[#3A2A20] leading-none uppercase">NEXAFLOW</p></div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl font-black text-[#3A2A20] tracking-tight mb-2">Daftarkan Kafe / Resto</h1>
+            <p className="text-sm font-semibold text-[#5C4B3E]">Mulai uji coba gratis 7 hari. Tanpa kartu kredit.</p>
+          </div>
+
+          {errorMsg && (
+            <div className="mb-4 bg-rose-50 border-2 border-rose-200 text-rose-600 text-xs font-bold px-4 py-3 rounded-xl">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">Nama Kafe / Resto <span className="text-rose-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.Coffee /></div>
+                <input type="text" name="cafeName" value={formData.cafeName} onChange={handleChange} placeholder="Cth: Kopi Senja / Resto Rasa" className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#3A2A20] outline-none focus:bg-white focus:border-[#06b6d4] transition-all placeholder:text-[#A69B91]" required />
               </div>
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-2">Daftarkan Kafe / Resto</h3>
-            <p className="text-xs sm:text-sm font-medium text-[#8C7A6B] mb-6 sm:mb-8">Mulai transformasi digital bisnis Anda.</p>
-
-            {errorMsg && (<div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold text-center">{errorMsg}</div>)}
-
-            <form onSubmit={handleRegister} autoComplete="off" className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Nama Kafe / Resto</label>
-                <input type="text" autoComplete="off" value={cafeName} onChange={(e) => setCafeName(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Contoh: Kopi Senja / Resto Nusantara" required />
-              </div>
-              
-              <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">No. WhatsApp (Aktif)</label>
-                <input type="tel" autoComplete="off" value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="0812xxxxxx" required />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Email Address</label>
-                <input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="owner@nexaflow.id" required />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Password</label>
-                <div className="relative">
-                  <input type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all pr-12" placeholder="Minimal 6 karakter" required />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8C7A6B] hover:text-[#3A2A20] transition-colors">
-                    {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
-                  </button>
+            <div>
+              <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">Jenis Bisnis <span className="text-rose-500">*</span></label>
+              <div className="relative">
+                <select name="businessType" value={formData.businessType} onChange={handleChange} className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#3A2A20] outline-none appearance-none cursor-pointer focus:bg-white focus:border-[#06b6d4] transition-all" required>
+                  <option value="" disabled>Pilih jenis bisnis Anda</option>
+                  <option value="kafe">Kafe / Coffee Shop</option>
+                  <option value="resto">Restoran / Rumah Makan</option>
+                  <option value="bakery">Bakery / Pastry</option>
+                  <option value="foodcourt">Food Court / Booth</option>
+                </select>
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.Coffee /></div>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#8C7A6B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-[#3A2A20] uppercase tracking-widest mb-2">Konfirmasi Password</label>
-                <input type={showPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-[#E3DCD1] bg-[#F4EFE9] rounded-xl px-4 py-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3A2A20]/20 focus:border-[#3A2A20] font-medium text-[#3A2A20] transition-all" placeholder="Ulangi password" required />
-              </div>
-
-              <div className="flex items-start gap-2 pt-2">
-                <input type="checkbox" id="terms" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} className="mt-1 w-4 h-4 text-[#3A2A20] border-[#E3DCD1] rounded focus:ring-[#3A2A20]" />
-                <label htmlFor="terms" className="text-xs text-[#7A6A5F] font-medium leading-tight">
-                  Saya menyetujui <a href="#" className="font-bold text-[#3A2A20] hover:underline">Syarat & Ketentuan</a> serta <a href="#" className="font-bold text-[#3A2A20] hover:underline">Kebijakan Privasi</a> NexaFlow.
-                </label>
-              </div>
-              
-              <button type="submit" disabled={loading} className="w-full bg-[#3A2A20] hover:bg-[#2A1F17] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#3A2A20]/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 text-sm sm:text-base disabled:opacity-70 disabled:cursor-not-allowed">
-                {loading ? 'Memproses...' : 'Mulai Uji Coba Gratis'} <Icons.ArrowRight />
-              </button>
-            </form>
-
-            <div className="mt-6 text-center relative z-[999]">
-              <p className="text-xs font-medium text-[#8C7A6B]">
-                Sudah punya akun? 
-                <button type="button" onClick={() => router.push('/login')} className="font-bold text-[#3A2A20] hover:underline cursor-pointer ml-1 p-2">Masuk di sini</button>
-              </p>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">Nama Pemilik <span className="text-rose-500">*</span></label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.User /></div>
+                  <input type="text" name="ownerName" value={formData.ownerName} onChange={handleChange} placeholder="Nama Anda" className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#3A2A20] outline-none focus:bg-white focus:border-[#06b6d4] transition-all placeholder:text-[#A69B91]" required />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">No. WhatsApp <span className="text-rose-500">*</span></label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.Phone /></div>
+                  <input type="tel" name="waNumber" value={formData.waNumber} onChange={handleChange} placeholder="081234..." className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#3A2A20] outline-none focus:bg-white focus:border-[#06b6d4] transition-all placeholder:text-[#A69B91]" required />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">Alamat Email <span className="text-rose-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.Mail /></div>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="admin@kafe.com" className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#3A2A20] outline-none focus:bg-white focus:border-[#06b6d4] transition-all placeholder:text-[#A69B91]" required />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-[#3A2A20] mb-1.5 uppercase tracking-wider">Password <span className="text-rose-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"><Icons.Lock /></div>
+                <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} placeholder="Minimal 6 karakter" className="w-full bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl pl-10 pr-12 py-3 text-sm font-bold text-[#3A2A20] outline-none focus:bg-white focus:border-[#06b6d4] transition-all placeholder:text-[#A69B91]" required minLength={6} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#8C7A6B] hover:text-[#3A2A20] transition-colors">
+                  {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-start mt-2">
+              <input type="checkbox" id="terms" className="mt-1 w-4 h-4 text-[#06b6d4] border-[#D3C8BB] rounded focus:ring-[#06b6d4]" required />
+              <label htmlFor="terms" className="ml-2 text-[11px] font-bold text-[#5C4B3E] leading-snug cursor-pointer">
+                Saya menyetujui <a href="#" className="text-[#06b6d4] hover:underline">Syarat & Ketentuan</a> NexaFlow.
+              </label>
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full mt-2 bg-[#3A2A20] text-[#F4EFE9] font-black py-4 rounded-xl text-sm shadow-xl shadow-[#3A2A20]/20 hover:bg-[#2A1F17] hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:translate-y-0">
+              {loading ? 'Memproses Pendaftaran...' : <><span>Daftar Kafe & Mulai Uji Coba</span> <Icons.ArrowRight /></>}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm font-bold text-[#5C4B3E]">
+              Sudah punya akun? <Link href="/login" className="text-[#06b6d4] hover:text-[#0891b2] font-black transition-colors">Masuk di sini</Link>
+            </p>
           </div>
+
         </div>
       </div>
     </div>
