@@ -530,7 +530,11 @@ function OrderContent() {
   const recommendedMenus = menus.filter(m => (m.is_featured || m.is_new) && !getMenuStock(m).isOut);
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
-  const hasReadyOrder = myOrders.some(o => o.status === 'ready');
+  
+  // 🔥 LOGIKA UNTUK POPUP SIAP (Hanya kontrol Kasir)
+  const readyOrder = myOrders.find(o => o.status === 'ready');
+  const showReadyPopup = !!readyOrder && cafe.notify_order_ready !== false;
+
   const hasWaitingOrder = myOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
 
   return (
@@ -608,20 +612,6 @@ function OrderContent() {
         </div>
       </div>
 
-      {hasReadyOrder && cafe.notify_order_ready !== false && (
-        <div className="px-5 mt-4 relative z-30 animate-in slide-in-from-top-4 fade-in duration-300">
-          <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-emerald-500/20">
-            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-xl text-white shadow-inner animate-bounce">
-              🍽️
-            </div>
-            <div>
-              <p className="text-emerald-900 font-black text-sm uppercase tracking-wide">Pesanan Siap!</p>
-              <p className="text-emerald-700 font-bold text-xs mt-0.5">"Yeay! Pesanan Anda sudah siap. Silakan menuju kasir untuk mengambilnya."</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="px-5 mt-4 relative z-20">
         <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border-2 border-slate-300 flex items-center px-4 py-3">
           <span className="text-slate-500 text-lg">🔍</span>
@@ -653,7 +643,6 @@ function OrderContent() {
                         <div className="relative h-32 w-full bg-slate-100">
                           {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>}
                           
-                          {/* BADGE LOGIC: Bisa Menampilkan Unggulan & Baru sekaligus */}
                           <div className="absolute top-2 left-2 flex flex-col gap-1">
                             {menu.is_featured && (
                               <span className="bg-[var(--primary-color)] text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center gap-1 shadow-sm border border-white/20">
@@ -1118,6 +1107,24 @@ function OrderContent() {
           </div>
         );
       })()}
+
+      {/* 🔥 MODAL POPUP PESANAN SIAP (STRICT MODE - NO CLOSE BUTTON) */}
+      {showReadyPopup && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#F4EFE9] w-full max-w-sm rounded-[32px] p-6 text-center border-4 border-emerald-500 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-emerald-300 animate-bounce">
+              <span className="text-4xl text-emerald-600">🍽️</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Pesanan Siap!</h2>
+            <p className="text-sm font-bold text-slate-600 mb-6 leading-relaxed">
+              Yeay! Pesanan Anda sudah selesai dimasak. Silakan menuju ke kasir untuk mengambil pesanan Anda.
+            </p>
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-3 text-emerald-800 text-xs font-bold">
+              Notifikasi ini akan hilang secara otomatis setelah kasir menyelesaikan pesanan Anda.
+            </div>
+          </div>
+        </div>
+      )}
 
       {showConfirmModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
