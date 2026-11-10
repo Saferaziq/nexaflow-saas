@@ -297,19 +297,15 @@ export function useDashboard() {
             else setRealtimeStatus('connecting');
           });
 
-        // 🔥 DIAGNOSTIK PRESENCE KASIR
         presenceChannel = supabase.channel('online-rooms');
         presenceChannel.subscribe(async (s) => {
-          console.log('[Kasir Presence] Status:', s);
           if (s === 'SUBSCRIBED') {
             try {
-              const trackRes = await presenceChannel.track({ 
+              await presenceChannel.track({ 
                 tenant_id: tId, 
                 user_email: session.user.email, 
                 online_at: new Date().toISOString() 
               });
-              console.log('[Kasir Presence] Track Result:', trackRes);
-              console.log('[Kasir Presence] My State:', presenceChannel.presenceState());
             } catch (err) {
               console.error('[Kasir Presence] Track Error:', err);
             }
@@ -731,6 +727,10 @@ export function useDashboard() {
       status: currentMenu.status, 
       image_url: currentMenu.image_url,
       stock: parseInt(currentMenu.stock, 10) || 0,
+      // 🔥 FITUR BARU: UNGGULAN, BARU, DAN DISKON
+      is_featured: currentMenu.is_featured || false,
+      is_new: currentMenu.is_new || false,
+      discount_price: currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null,
     };
     
     if (isEdit) {
@@ -752,7 +752,10 @@ export function useDashboard() {
       setMenus(prev => [data, ...prev]);
     }
     
-    resetFn({ id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0 });
+    resetFn({ 
+      id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0,
+      is_featured: false, is_new: false, discount_price: ''
+    });
     showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
   };
 
