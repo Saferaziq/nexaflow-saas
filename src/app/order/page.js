@@ -81,7 +81,7 @@ function OrderContent() {
   // 🔥 STATE UNTUK POPUP MENU & TTS
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [popupNote, setPopupNote] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false); // Indikator animasi suara
+  const [isSpeaking, setIsSpeaking] = useState(false); 
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -97,7 +97,7 @@ function OrderContent() {
   const myOrdersRef = useRef([]);
   myOrdersRef.current = myOrders;
   const prevReadyRef = useRef(false);
-  const spokenReadyOrderIdRef = useRef(null); // Mencegah TTS berulang terus-menerus
+  const spokenReadyOrderIdRef = useRef(null);
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -297,31 +297,50 @@ function OrderContent() {
     };
   }, [audioUnlocked, cafe.notify_order_ready]);
 
-  // 🔥 FUNGSI TEXT-TO-SPEECH (PANGGILAN SUARA)
+  // 🔥 FUNGSI TEXT-TO-SPEECH YANG DIPERBAIKI
   const speakReadyOrder = (order) => {
     if (!('speechSynthesis' in window)) {
       showToast('Browser Anda tidak mendukung fitur suara.');
       return;
     }
-    window.speechSynthesis.cancel(); // Hentikan suara yang sedang berjalan
+    
+    // Paksa resume jika sebelumnya ditangguhkan oleh OS
+    window.speechSynthesis.resume();
+    window.speechSynthesis.cancel(); // Bersihkan antrean suara sebelumnya
 
-    // Teks yang akan diucapkan
-    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, sudah siap di kasir.`;
+    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, sudah siap silahkan ambil di kasir.`;
     const utterance = new SpeechSynthesisUtterance(text);
     
     utterance.lang = 'id-ID';
-    utterance.rate = 0.9; 
+    utterance.rate = 0.9;
     utterance.pitch = 1;
-    
-    const voices = window.speechSynthesis.getVoices();
-    const idVoice = voices.find(voice => voice.lang.includes('id-ID'));
-    if (idVoice) utterance.voice = idVoice;
+    utterance.volume = 1;
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    const playVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      // Prioritaskan suara bahasa Indonesia
+      const idVoice = voices.find(v => v.lang.includes('id-ID') || v.lang.includes('id_ID'));
+      if (idVoice) utterance.voice = idVoice;
 
-    window.speechSynthesis.speak(utterance);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = (e) => {
+        console.error('TTS Error:', e);
+        setIsSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Trik untuk memastikan voice sudah termuat (sering terjadi di HP)
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        playVoice();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    } else {
+      playVoice();
+    }
   };
 
   // 🔥 EFFECT UNTUK MEMICU GETAR (VIBRATE) & SUARA (TTS) SAAT POPUP MUNCUL
@@ -330,18 +349,17 @@ function OrderContent() {
 
   useEffect(() => {
     if (showReadyPopup && readyOrder) {
-      // 1. Getarkan HP (Vibrate)
+      // 1. Getarkan HP
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200, 100, 500]);
       }
       
       // 2. Panggil Suara (TTS) HANYA SEKALI per pesanan
       if (spokenReadyOrderIdRef.current !== readyOrder.id) {
-        // Beri sedikit jeda agar tidak bentrok dengan getaran/suara kasir
         setTimeout(() => {
           speakReadyOrder(readyOrder);
           spokenReadyOrderIdRef.current = readyOrder.id;
-        }, 500);
+        }, 800); // Jeda sedikit lebih lama agar browser siap
       }
     }
   }, [showReadyPopup, readyOrder]);
@@ -380,7 +398,7 @@ function OrderContent() {
       return [...prev, { ...menu, price: effectivePrice, qty: 1, note: note }];
     });
     showToast(`${menu.name} ditambah ✔`);
-    setPopupNote(''); // Reset note popup
+    setPopupNote(''); 
   };
 
   const decCart = (id) => {
@@ -1156,7 +1174,6 @@ function OrderContent() {
         <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#F4EFE9] w-full max-w-sm rounded-[32px] p-6 text-center border-4 border-emerald-500 shadow-2xl animate-in zoom-in-95 duration-300">
             
-            {/* Ikon Animasi Suara */}
             <div className="relative w-24 h-24 mx-auto mb-4">
               {isSpeaking && (
                 <>
@@ -1170,8 +1187,9 @@ function OrderContent() {
             </div>
             
             <h2 className="text-2xl font-black text-slate-900 mb-2">Pesanan Siap!</h2>
+            {/* TEKS SUDAH DISESUAIKAN */}
             <p className="text-sm font-bold text-slate-600 mb-6 leading-relaxed">
-              Pesanan atas nama <strong>{readyOrder?.customer_name}</strong>, meja <strong>{readyOrder?.table_number}</strong>, sudah siap di kasir.
+              Pesanan atas nama <strong>{readyOrder?.customer_name}</strong>, meja <strong>{readyOrder?.table_number}</strong>, sudah siap silahkan ambil di kasir.
             </p>
 
             <button 
