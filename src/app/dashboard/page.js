@@ -55,17 +55,17 @@ function DashboardContent() {
   if (d.isSuspended) {
     const waMessage = `Halo Admin NexaFlow, akun kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) sedang disuspend. Mohon bantu aktifkan kembali. Terima kasih.`;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 font-sans">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500">
-          <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300">
+      <div className="min-h-screen bg-[#2A1F17] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500">
+          <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-200">
             <span className="text-5xl">🔒</span>
           </div>
           
-          <h1 className="text-3xl font-black text-slate-900 mb-2">Akun Disuspend</h1>
-          <p className="text-sm font-semibold text-slate-600 mb-1">Kafe: <span className="font-black text-slate-900">{d.cafeName || '-'}</span></p>
-          <p className="text-xs font-semibold text-slate-500 mb-6">{d.userEmail || '-'}</p>
+          <h1 className="text-3xl font-black text-[#1A1512] mb-2">Akun Disuspend</h1>
+          <p className="text-sm font-bold text-[#8C7A6B] mb-1">Kafe: <span className="font-black text-[#1A1512]">{d.cafeName || '-'}</span></p>
+          <p className="text-xs font-semibold text-[#A69B91] mb-6">{d.userEmail || '-'}</p>
           
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 mb-6 text-left">
+          <div className="bg-rose-50 border-2 border-rose-200 rounded-xl p-4 mb-6 text-left">
             <p className="text-sm font-bold text-rose-900 leading-relaxed">
               Akun kafe Anda telah <strong>dinonaktifkan oleh Admin NexaFlow</strong>. 
               Silakan hubungi admin untuk informasi lebih lanjut dan mengaktifkan kembali akun Anda.
@@ -83,13 +83,13 @@ function DashboardContent() {
             </a>
             <button
               onClick={d.handleLogout}
-              className="w-full flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-3 rounded-xl text-sm active:scale-95 transition-transform border-2 border-slate-300"
+              className="w-full flex items-center justify-center gap-2 bg-[#F4EFE9] hover:bg-[#E8DFD3] text-[#2A1F17] font-black py-3 rounded-xl text-sm active:scale-95 transition-transform border-2 border-[#D3C8BB]"
             >
               🚪 Logout
             </button>
           </div>
 
-          <p className="text-[10px] font-bold text-slate-400 mt-6">
+          <p className="text-[10px] font-bold text-[#A69B91] mt-6">
             NexaFlow SaaS · Sistem dalam mode terbatas
           </p>
         </div>
@@ -99,19 +99,27 @@ function DashboardContent() {
 
   if (d.isExpired) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border-2 border-red-200">
+      <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9] p-6">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border-2 border-rose-200">
           <div className="text-6xl mb-4">⏳</div>
-          <h1 className="text-2xl font-black text-slate-900 mb-2">Masa Trial Habis</h1>
-          <p className="text-slate-600 mb-6 font-medium">Silakan hubungi admin untuk memperpanjang langganan kafe Anda.</p>
-          <button onClick={d.handleLogout} className="bg-slate-800 text-white font-bold py-3 px-6 rounded-xl w-full border-2 border-slate-900">Logout</button>
+          <h1 className="text-2xl font-black text-[#1A1512] mb-2">Masa Trial Habis</h1>
+          <p className="text-[#8C7A6B] mb-6 font-medium">Silakan hubungi admin untuk memperpanjang langganan kafe Anda.</p>
+          <button onClick={d.handleLogout} className="bg-[#2A1F17] hover:bg-[#1A1512] text-white font-black py-3 px-6 rounded-xl w-full transition-colors border-2 border-[#1A1512]">Logout</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div onClick={d.unlockAudio} className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#2A1F17]' : 'bg-slate-950 text-white'}`}>
+    <div onClick={d.unlockAudio} className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#1A1512]' : 'bg-[#0a192f] text-white'}`}>
+      
+      {/* 
+        CATATAN UNTUK ANDA:
+        Komponen <Header /> di bawah ini memegang peran Sidebar & Top Nav.
+        Agar tampilannya 100% seperti mockup "Tegas & Jelas" (sidebar coklat gelap),
+        kita perlu memperbarui file Header.js dan StatsCards.js terpisah.
+        Untuk saat ini, wrapper utama sudah diatur ke warna Cream & Teks Tegas.
+      */}
       <Header 
         theme={d.theme} cafeName={d.cafeName} activeTab={activeTab} setActiveTab={setActiveTab} 
         activeOrdersCount={activeOrdersCount} realtimeStatus={d.realtimeStatus} isFullscreen={d.isFullscreen}
@@ -122,12 +130,16 @@ function DashboardContent() {
       />
 
       {!d.audioUnlocked && (
-        <div className="w-full bg-amber-500 text-white text-center py-3 px-4 text-sm font-black shadow-md animate-pulse cursor-pointer border-b-2 border-amber-700" onClick={d.unlockAudio}>
+        <div className="w-full bg-amber-500 text-[#1A1512] text-center py-3 px-4 text-sm font-black shadow-md animate-pulse cursor-pointer border-b-2 border-amber-700" onClick={d.unlockAudio}>
           🔔 Klik di sini untuk mengaktifkan suara notifikasi pesanan
         </div>
       )}
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">
+        
+        {/* Memanggil komponen StatsCards. 
+            Untuk teks yang super tebal dan kartu bergaris tegas, file StatsCards.js juga perlu disesuaikan. 
+        */}
         <StatsCards theme={d.theme} stats={stats} rp={d.rp} />
 
         <div className="mt-6">
@@ -162,37 +174,38 @@ function DashboardContent() {
         />
       )}
 
+      {/* MODAL CANCEL ORDER (Tegas & Jelas) */}
       {d.cancelModal?.open && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className={`w-full max-w-md rounded-xl shadow-2xl border-2 overflow-hidden animate-in zoom-in-95 duration-200 ${d.theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
+        <div className="fixed inset-0 bg-[#1A1512]/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+          <div className={`w-full max-w-md rounded-2xl shadow-2xl border-2 overflow-hidden animate-in zoom-in-95 duration-200 ${d.theme === 'light' ? 'bg-white border-[#E0D6CC]' : 'bg-slate-900 border-slate-700'}`}>
             <div className="p-6">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 mx-auto border-2 ${d.theme === 'light' ? 'bg-rose-100 text-rose-600 border-rose-300' : 'bg-rose-900/30 text-rose-400 border-rose-700'}`}>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 mx-auto border-2 ${d.theme === 'light' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-rose-900/30 text-rose-400 border-rose-700'}`}>
                 <span className="text-2xl font-black">!</span>
               </div>
-              <h3 className={`text-xl font-black text-center mb-2 ${d.theme === 'light' ? 'text-[#2A1F17]' : 'text-white'}`}>Tolak Pesanan</h3>
-              <p className={`text-sm font-bold text-center mb-6 ${d.theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Pesanan akan dibatalkan permanen. Harap masukkan alasan penolakan.</p>
+              <h3 className={`text-xl font-black text-center mb-2 ${d.theme === 'light' ? 'text-[#1A1512]' : 'text-white'}`}>Tolak Pesanan</h3>
+              <p className={`text-sm font-bold text-center mb-6 ${d.theme === 'light' ? 'text-[#8C7A6B]' : 'text-slate-400'}`}>Pesanan akan dibatalkan permanen. Harap masukkan alasan penolakan.</p>
               
               <div className="mb-6">
-                <label className={`block text-xs font-black uppercase tracking-widest mb-2 ${d.theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>Alasan Penolakan</label>
+                <label className={`block text-xs font-black uppercase tracking-widest mb-2 ${d.theme === 'light' ? 'text-[#2A1F17]' : 'text-slate-400'}`}>Alasan Penolakan</label>
                 <input 
                   type="text" 
                   value={d.cancelModal.reason} 
                   onChange={(e) => d.setCancelModal({ ...d.cancelModal, reason: e.target.value })}
                   placeholder="Contoh: Stok habis, Pembeli batal"
-                  className={`w-full border-2 rounded-lg px-4 py-3 text-sm font-bold outline-none transition-all focus:border-[var(--primary-color)] ${d.theme === 'light' ? 'border-[#D4C5B8] bg-[#F4EFE9] text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`}
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-sm font-bold outline-none transition-all focus:border-[var(--primary-color)] ${d.theme === 'light' ? 'border-[#E0D6CC] bg-[#FAF6F2] text-[#1A1512] focus:bg-white' : 'border-slate-600 bg-slate-800 text-white'}`}
                 />
               </div>
 
               <div className="flex gap-3">
                 <button 
                   onClick={() => d.setCancelModal({ open: false, orderId: null, reason: '' })} 
-                  className={`flex-1 font-black py-3 rounded-lg border-2 transition-all text-sm uppercase tracking-wide ${d.theme === 'light' ? 'bg-white border-[#D4C5B8] text-slate-700 hover:bg-slate-50' : 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700'}`}
+                  className={`flex-1 font-black py-3 rounded-xl border-2 transition-all text-sm uppercase tracking-wide ${d.theme === 'light' ? 'bg-[#FAF6F2] border-[#E0D6CC] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700'}`}
                 >
                   Batal
                 </button>
                 <button 
                   onClick={d.executeCancelOrder}
-                  className="flex-1 bg-rose-600 text-white font-black py-3 rounded-lg border-2 border-rose-700 hover:bg-rose-700 transition-all shadow-sm text-sm uppercase tracking-wide"
+                  className="flex-1 bg-rose-600 text-white font-black py-3 rounded-xl border-2 border-rose-700 hover:bg-rose-700 transition-all shadow-md text-sm uppercase tracking-wide"
                 >
                   Tolak Pesanan
                 </button>
