@@ -257,30 +257,65 @@ export default function AdminDashboard() {
     setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
   };
 
-  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN)
+  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v2
+  // Perubahan:
+  // 1. Tambah callback subscribe((status)) untuk deteksi SUBSCRIBED / ERROR
+  // 2. Panggil handlePresenceChange() SEKALI saat SUBSCRIBED (baca presence awal)
+  // 3. Polling fallback 3 detik (jaga-jaga kalau event sync tidak fire)
+  // 4. Re-check saat tab visible kembali (visibilitychange)
+  // 5. try/catch presenceState() — cegah crash bila channel belum siap
   useEffect(() => {
-    // Hapus hardcoded key 'user_id' agar Admin punya ID unik per tab.
-    // Ini mencegah Admin saling menimpa state dan memastikan sinkronisasi berjalan.
-    const channel = supabase.channel('online-rooms');
-    
+    let channel = null;
+    let pollInterval = null;
+    let isMounted = true;
+
     const handlePresenceChange = () => {
-      const state = channel.presenceState();
-      const onlineMap = {};
-      Object.keys(state).forEach((key) => { 
-        state[key].forEach((p) => { 
-          if (p.tenant_id) onlineMap[p.tenant_id] = true; 
-        }); 
-      });
-      setOnlineUsers(onlineMap);
+      if (!isMounted || !channel) return;
+      try {
+        const state = channel.presenceState();
+        const onlineMap = {};
+        Object.keys(state).forEach((key) => {
+          state[key].forEach((p) => {
+            if (p.tenant_id) onlineMap[p.tenant_id] = true;
+          });
+        });
+        setOnlineUsers(onlineMap);
+      } catch (err) {
+        console.warn('[Admin Presence] presenceState error:', err);
+      }
     };
+
+    channel = supabase.channel('online-rooms');
 
     channel
       .on('presence', { event: 'sync' }, handlePresenceChange)
       .on('presence', { event: 'join' }, handlePresenceChange)
       .on('presence', { event: 'leave' }, handlePresenceChange)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          handlePresenceChange();
+          if (!pollInterval) {
+            pollInterval = setInterval(handlePresenceChange, 3000);
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('[Admin Presence] Channel status:', status);
+          if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        }
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handlePresenceChange();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
