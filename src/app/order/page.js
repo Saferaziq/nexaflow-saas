@@ -78,9 +78,10 @@ function OrderContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
 
-  // 🔥 STATE UNTUK POPUP MENU
+  // 🔥 STATE UNTUK POPUP MENU & TTS
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [popupNote, setPopupNote] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false); // Indikator animasi suara
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -96,6 +97,7 @@ function OrderContent() {
   const myOrdersRef = useRef([]);
   myOrdersRef.current = myOrders;
   const prevReadyRef = useRef(false);
+  const spokenReadyOrderIdRef = useRef(null); // Mencegah TTS berulang terus-menerus
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -294,6 +296,55 @@ function OrderContent() {
       }
     };
   }, [audioUnlocked, cafe.notify_order_ready]);
+
+  // 🔥 FUNGSI TEXT-TO-SPEECH (PANGGILAN SUARA)
+  const speakReadyOrder = (order) => {
+    if (!('speechSynthesis' in window)) {
+      showToast('Browser Anda tidak mendukung fitur suara.');
+      return;
+    }
+    window.speechSynthesis.cancel(); // Hentikan suara yang sedang berjalan
+
+    // Teks yang akan diucapkan
+    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, sudah siap di kasir.`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.9; 
+    utterance.pitch = 1;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const idVoice = voices.find(voice => voice.lang.includes('id-ID'));
+    if (idVoice) utterance.voice = idVoice;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // 🔥 EFFECT UNTUK MEMICU GETAR (VIBRATE) & SUARA (TTS) SAAT POPUP MUNCUL
+  const readyOrder = myOrders.find(o => o.status === 'ready');
+  const showReadyPopup = !!readyOrder && cafe.notify_order_ready !== false;
+
+  useEffect(() => {
+    if (showReadyPopup && readyOrder) {
+      // 1. Getarkan HP (Vibrate)
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 500]);
+      }
+      
+      // 2. Panggil Suara (TTS) HANYA SEKALI per pesanan
+      if (spokenReadyOrderIdRef.current !== readyOrder.id) {
+        // Beri sedikit jeda agar tidak bentrok dengan getaran/suara kasir
+        setTimeout(() => {
+          speakReadyOrder(readyOrder);
+          spokenReadyOrderIdRef.current = readyOrder.id;
+        }, 500);
+      }
+    }
+  }, [showReadyPopup, readyOrder]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -526,15 +577,8 @@ function OrderContent() {
     return matchCat && matchSearch;
   });
 
-  // 🔥 FILTER GABUNGAN: MENU UNGGULAN & MENU BARU
   const recommendedMenus = menus.filter(m => (m.is_featured || m.is_new) && !getMenuStock(m).isOut);
-
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
-  
-  // 🔥 LOGIKA UNTUK POPUP SIAP (Hanya kontrol Kasir)
-  const readyOrder = myOrders.find(o => o.status === 'ready');
-  const showReadyPopup = !!readyOrder && cafe.notify_order_ready !== false;
-
   const hasWaitingOrder = myOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
 
   return (
@@ -623,7 +667,6 @@ function OrderContent() {
       <div className="px-5 mt-6">
         {activeTab === 'menu' && (
           <>
-            {/* SECTION REKOMENDASI PILIHAN (UNGULAN & BARU) */}
             {!searchQuery && category === 'all' && recommendedMenus.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -1108,19 +1151,39 @@ function OrderContent() {
         );
       })()}
 
-      {/* 🔥 MODAL POPUP PESANAN SIAP (STRICT MODE - NO CLOSE BUTTON) */}
+      {/* 🔥 MODAL POPUP PESANAN SIAP (DENGAN SUARA & GETAR) */}
       {showReadyPopup && (
         <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#F4EFE9] w-full max-w-sm rounded-[32px] p-6 text-center border-4 border-emerald-500 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-emerald-300 animate-bounce">
-              <span className="text-4xl text-emerald-600">🍽️</span>
+            
+            {/* Ikon Animasi Suara */}
+            <div className="relative w-24 h-24 mx-auto mb-4">
+              {isSpeaking && (
+                <>
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite_0.5s]"></div>
+                </>
+              )}
+              <div className="w-full h-full bg-emerald-100 rounded-full flex items-center justify-center border-2 border-emerald-300 relative z-10">
+                <span className="text-4xl text-emerald-600">🔊</span>
+              </div>
             </div>
+            
             <h2 className="text-2xl font-black text-slate-900 mb-2">Pesanan Siap!</h2>
             <p className="text-sm font-bold text-slate-600 mb-6 leading-relaxed">
-              Yeay! Pesanan Anda sudah selesai dimasak. Silakan menuju ke kasir untuk mengambil pesanan Anda.
+              Pesanan atas nama <strong>{readyOrder?.customer_name}</strong>, meja <strong>{readyOrder?.table_number}</strong>, sudah siap di kasir.
             </p>
-            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-3 text-emerald-800 text-xs font-bold">
-              Notifikasi ini akan hilang secara otomatis setelah kasir menyelesaikan pesanan Anda.
+
+            <button 
+              onClick={() => speakReadyOrder(readyOrder)}
+              className={`w-full bg-white border-2 border-emerald-500 text-emerald-700 font-black py-4 rounded-xl shadow-sm active:scale-95 transition-transform flex justify-center items-center gap-2 ${isSpeaking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isSpeaking}
+            >
+              <span>🔈</span> {isSpeaking ? 'Sedang Memanggil...' : 'Putar Suara Panggilan'}
+            </button>
+            
+            <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-800 text-[10px] font-bold leading-relaxed">
+              Notifikasi ini akan hilang otomatis setelah kasir menyelesaikan pesanan Anda.
             </div>
           </div>
         </div>
