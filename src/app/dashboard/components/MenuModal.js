@@ -5,7 +5,8 @@ import { Icons } from '../helpers/icons';
 
 export default function MenuModal({ theme, mode, initialData, onClose, onSave, onUploadImage }) {
   const [formData, setFormData] = useState({
-    id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0
+    id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0,
+    is_featured: false, is_new: false, discount_price: '' // 🔥 FITUR BARU
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -20,11 +21,16 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         desc: initialData.description || '',
         status: initialData.status || 'available',
         image_url: initialData.image_url || '',
-        stock: initialData.stock || 0
+        stock: initialData.stock || 0,
+        // 🔥 SET NILAI AWAL UNTUK EDIT
+        is_featured: initialData.is_featured || false,
+        is_new: initialData.is_new || false,
+        discount_price: initialData.discount_price || ''
       });
     } else {
       setFormData({
-        id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0
+        id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0,
+        is_featured: false, is_new: false, discount_price: '' // Reset form
       });
     }
   }, [mode, initialData]);
@@ -79,7 +85,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
               <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputClass} placeholder="Contoh: Nasi Goreng Spesial" required />
             </div>
             <div>
-              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Harga (Rp) <span className="text-rose-500">*</span></label>
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Harga Normal (Rp) <span className="text-rose-500">*</span></label>
               <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className={inputClass} placeholder="15000" required />
             </div>
             <div>
@@ -97,6 +103,53 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
             <div className="col-span-2">
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Deskripsi (Opsional)</label>
               <textarea value={formData.desc} onChange={e => setFormData({ ...formData, desc: e.target.value })} className={`${inputClass} resize-none`} rows="2" placeholder="Deskripsi singkat menu..."></textarea>
+            </div>
+          </div>
+
+          {/* 🔥 FITUR BARU: STATUS & PROMOSI */}
+          <div className={`col-span-2 p-4 rounded-2xl border-2 space-y-4 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+            <h3 className={`font-black text-sm uppercase tracking-wide ${textMainClass}`}>Status & Promosi</h3>
+            
+            {/* Switch Unggulan */}
+            <div className="flex justify-between items-center">
+              <div>
+                <p className={`text-sm font-bold flex items-center gap-1.5 ${textMainClass}`}>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-[var(--primary-color)]"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  Menu Unggulan
+                </p>
+                <p className={`text-xs mt-0.5 ${textSubClass}`}>Tampil paling atas di halaman pelanggan</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={formData.is_featured} onChange={e => setFormData({...formData, is_featured: e.target.checked})} className="sr-only peer" />
+                <div className={`w-11 h-6 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${theme === 'light' ? 'bg-[#D4C5B8] peer-checked:bg-[var(--primary-color)]' : 'bg-slate-600 peer-checked:bg-[var(--primary-color)]'}`}></div>
+              </label>
+            </div>
+
+            {/* Switch Baru */}
+            <div className="flex justify-between items-center">
+              <div>
+                <p className={`text-sm font-bold flex items-center gap-1.5 ${textMainClass}`}>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-emerald-500"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                  Menu Baru
+                </p>
+                <p className={`text-xs mt-0.5 ${textSubClass}`}>Beri label "BARU" pada foto menu</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={formData.is_new} onChange={e => setFormData({...formData, is_new: e.target.checked})} className="sr-only peer" />
+                <div className={`w-11 h-6 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${theme === 'light' ? 'bg-[#D4C5B8] peer-checked:bg-emerald-500' : 'bg-slate-600 peer-checked:bg-emerald-500'}`}></div>
+              </label>
+            </div>
+
+            {/* Input Harga Diskon */}
+            <div className="pt-2">
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Harga Diskon (Rp) <span className="text-slate-400 font-normal">- Opsional</span></label>
+              <input 
+                type="number" 
+                value={formData.discount_price} 
+                onChange={e => setFormData({...formData, discount_price: e.target.value})} 
+                className={`${inputClass} ${formData.discount_price ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 text-rose-600' : ''}`} 
+                placeholder="Kosongkan jika tidak ada diskon" 
+              />
             </div>
           </div>
         </div>

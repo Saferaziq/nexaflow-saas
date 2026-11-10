@@ -54,6 +54,14 @@ const getMenuStock = (menu) => {
   return { tracked, value, isOut, isLow };
 };
 
+// Helper untuk mendapatkan harga efektif (diskon atau normal)
+const getEffectivePrice = (menu) => {
+  if (menu.discount_price && Number(menu.discount_price) > 0) {
+    return Number(menu.discount_price);
+  }
+  return Number(menu.price);
+};
+
 function OrderContent() {
   const searchParams = useSearchParams();
   const tenantId = searchParams.get('tenant');
@@ -72,6 +80,7 @@ function OrderContent() {
 
   // 🔥 STATE UNTUK POPUP MENU
   const [selectedMenu, setSelectedMenu] = useState(null);
+  const [popupNote, setPopupNote] = useState('');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -291,7 +300,7 @@ function OrderContent() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const addToCart = (menu) => {
+  const addToCart = (menu, note = '') => {
     unlockAudio();
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -309,12 +318,18 @@ function OrderContent() {
       showToast(`Stok ${menu.name} tersisa ${stock.value}`);
       return;
     }
+
+    const effectivePrice = getEffectivePrice(menu);
+
     setCart(prev => {
       const ex = prev.find(i => i.id === menu.id);
-      if (ex) return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...menu, qty: 1, note: '' }];
+      if (ex) {
+        return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1, note: note || i.note } : i);
+      }
+      return [...prev, { ...menu, price: effectivePrice, qty: 1, note: note }];
     });
     showToast(`${menu.name} ditambah ✔`);
+    setPopupNote(''); // Reset note popup
   };
 
   const decCart = (id) => {
@@ -439,7 +454,7 @@ function OrderContent() {
     const slimItems = cart.map(i => ({
       id: i.id,
       name: i.name,
-      price: i.price,
+      price: i.price, // Harga ini sudah menggunakan effectivePrice (diskon) jika ada
       qty: i.qty,
       note: i.note || ''
     }));
@@ -510,6 +525,8 @@ function OrderContent() {
     const matchSearch = !searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
+
+  const featuredMenus = menus.filter(m => m.is_featured && !getMenuStock(m).isOut);
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
   const hasReadyOrder = myOrders.some(o => o.status === 'ready');
@@ -615,6 +632,45 @@ function OrderContent() {
       <div className="px-5 mt-6">
         {activeTab === 'menu' && (
           <>
+            {!searchQuery && category === 'all' && featuredMenus.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[var(--primary-color)]"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  <h2 className="font-black text-slate-900 text-lg">Rekomendasi Pilihan</h2>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-4 -mx-5 px-5 scrollbar-hide snap-x">
+                  {featuredMenus.map(menu => {
+                    const effectivePrice = getEffectivePrice(menu);
+                    const hasDiscount = menu.discount_price && Number(menu.discount_price) > 0;
+                    return (
+                      <div 
+                        key={menu.id} 
+                        onClick={() => setSelectedMenu(menu)}
+                        className="snap-start shrink-0 w-44 bg-white rounded-2xl border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col cursor-pointer active:scale-95 transition-transform"
+                      >
+                        <div className="relative h-32 w-full bg-slate-100">
+                          {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>}
+                          <div className="absolute top-2 left-2 flex flex-col gap-1">
+                            <span className="bg-[var(--primary-color)] text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center gap-1 shadow-sm border border-white/20">
+                              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                              Unggulan
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-3 flex flex-col justify-between flex-1">
+                          <h3 className="font-black text-slate-900 text-sm leading-tight line-clamp-1 mb-1">{menu.name}</h3>
+                          <div className="flex flex-col">
+                            {hasDiscount && <span className="text-[10px] text-slate-400 font-bold line-through">Rp {Number(menu.price).toLocaleString('id-ID')}</span>}
+                            <span className={`font-black text-sm ${hasDiscount ? 'text-rose-600' : 'text-[var(--primary-color)]'}`}>Rp {effectivePrice.toLocaleString('id-ID')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
               <button onClick={() => setCategory('all')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${category === 'all' ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>✨ Semua</button>
               {['makanan', 'minuman', 'cemilan'].map(cat => (
@@ -635,15 +691,34 @@ function OrderContent() {
                 const stock = getMenuStock(menu);
                 const isOut = stock.isOut;
                 const isLow = stock.isLow;
+                const effectivePrice = getEffectivePrice(menu);
+                const hasDiscount = menu.discount_price && Number(menu.discount_price) > 0;
+
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col border-2 border-slate-300 relative ${isOut ? 'opacity-70' : ''}`}>
                     
-                    {/* Gambar - aspect ratio asli 4/3 */}
                     <div onClick={() => setSelectedMenu(menu)} className="aspect-[4/3] bg-slate-100 relative w-full border-b-2 border-slate-200 cursor-pointer">
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>}
+                      
+                      <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                        {menu.is_featured && (
+                          <span className="bg-[var(--primary-color)] text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm border border-white/20">
+                            <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            Unggulan
+                          </span>
+                        )}
+                        {menu.is_new && (
+                          <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm border border-white/20">
+                            <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                            Baru
+                          </span>
+                        )}
+                      </div>
+
                       {cartItem && !isOut && <div className="absolute top-2 right-2 bg-[var(--primary-color)] text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">{cartItem.qty}</div>}
+                      
                       {isLow && !isOut && (
-                        <div className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
+                        <div className="absolute bottom-2 left-2 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-500 shadow-sm z-10">
                           Sisa {stock.value}
                         </div>
                       )}
@@ -654,13 +729,16 @@ function OrderContent() {
                       )}
                     </div>
 
-                    {/* Teks - Hanya Nama (1 baris), Harga, Tombol (Agar tinggi seragam) */}
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div onClick={() => setSelectedMenu(menu)} className="cursor-pointer">
                         <h3 className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1">{menu.name}</h3>
                       </div>
                       <div className="mt-2 flex flex-col gap-2">
-                        <span className="font-black text-[var(--primary-color)] text-sm">Rp {Number(menu.price).toLocaleString('id-ID')}</span>
+                        <div className="flex flex-col">
+                          {hasDiscount && <span className="text-[10px] text-slate-400 font-bold line-through leading-none mb-0.5">Rp {Number(menu.price).toLocaleString('id-ID')}</span>}
+                          <span className={`font-black text-sm leading-none ${hasDiscount ? 'text-rose-600' : 'text-[var(--primary-color)]'}`}>Rp {effectivePrice.toLocaleString('id-ID')}</span>
+                        </div>
+                        
                         {isOut ? (
                           <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-1.5 rounded-lg text-xs border-2 border-slate-300 cursor-not-allowed">Habis</button>
                         ) : cartItem ? (
@@ -918,59 +996,109 @@ function OrderContent() {
         </div>
       )}
 
-      {/* 🔥 MODAL POPUP DETAIL MENU (BARU) */}
+      {/* 🔥 MODAL POPUP DETAIL MENU PREMIUM */}
       {selectedMenu && (() => {
         const selectedStock = getMenuStock(selectedMenu);
         const selectedCartItem = cart.find(c => c.id === selectedMenu.id);
+        const effectivePrice = getEffectivePrice(selectedMenu);
+        const hasDiscount = selectedMenu.discount_price && Number(selectedMenu.discount_price) > 0;
+        
         return (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
+          <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
             <div 
-              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-0 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden border-t-4 sm:border-4 border-slate-800 flex flex-col max-h-[90vh]" 
+              className="bg-[#F4EFE9] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden flex flex-col max-h-[92vh]" 
               onClick={e => e.stopPropagation()}
             >
-              <div className="relative w-full h-64 sm:h-72 bg-slate-100 flex-shrink-0">
-                {selectedMenu.image_url ? (
-                  <img src={selectedMenu.image_url} alt={selectedMenu.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-6xl">🍽️</div>
-                )}
-                <button 
-                  onClick={() => setSelectedMenu(null)} 
-                  className="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center backdrop-blur-md border-2 border-white/30 transition-all active:scale-90"
-                >
-                  <span className="text-xl font-black leading-none mb-1">&times;</span>
-                </button>
-                {selectedStock.isLow && (
-                  <div className="absolute bottom-3 left-3 bg-amber-400 text-amber-900 text-xs font-black px-3 py-1.5 rounded-lg border-2 border-amber-500 shadow-sm">
-                    Sisa {selectedStock.value} Porsi
+              <div className="overflow-y-auto pb-[110px] relative">
+                <div className="relative w-full h-[300px] sm:h-[320px]">
+                  {selectedMenu.image_url ? (
+                    <img src={selectedMenu.image_url} alt={selectedMenu.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl bg-slate-200">🍽️</div>
+                  )}
+                  
+                  <div className="absolute top-5 left-5 flex flex-wrap gap-2 max-w-[70%]">
+                    {selectedMenu.is_featured && (
+                      <span className="bg-[var(--primary-color)] text-white text-[11px] font-black uppercase tracking-wide px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-lg border border-white/20 backdrop-blur-sm">
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        Unggulan
+                      </span>
+                    )}
+                    {selectedMenu.is_new && (
+                      <span className="bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wide px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-lg border border-white/20 backdrop-blur-sm">
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                        Baru
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
+                  
+                  <button 
+                    onClick={() => setSelectedMenu(null)} 
+                    className="absolute top-5 right-5 w-10 h-10 bg-white/95 hover:bg-white text-slate-900 rounded-full flex items-center justify-center shadow-xl backdrop-blur-md transition-all active:scale-90 border-none"
+                  >
+                    <span className="text-xl font-black leading-none mb-0.5">&times;</span>
+                  </button>
+                </div>
 
-              <div className="p-5 flex-1 overflow-y-auto flex flex-col">
-                <h2 className="text-2xl font-black text-slate-900 leading-tight mb-2">{selectedMenu.name}</h2>
-                <p className="text-xl font-black text-[var(--primary-color)] mb-4">Rp {Number(selectedMenu.price).toLocaleString('id-ID')}</p>
-                <div className="h-0.5 w-full bg-slate-200 mb-4 rounded-full"></div>
-                <div className="mb-6">
-                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Deskripsi</p>
-                  <p className="text-sm font-semibold text-slate-700 leading-relaxed whitespace-pre-line">
+                <div className="bg-[#F4EFE9] rounded-t-[32px] -mt-10 relative px-6 py-7">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-2xl font-black text-slate-900 leading-tight max-w-[60%] tracking-tight">{selectedMenu.name}</h2>
+                    
+                    <div className="flex flex-col items-end">
+                      {hasDiscount && <span className="text-sm text-slate-500 font-bold line-through mb-0.5">Rp {Number(selectedMenu.price).toLocaleString('id-ID')}</span>}
+                      <span className={`text-2xl font-black tracking-tighter ${hasDiscount ? 'text-slate-900' : 'text-slate-900'}`}>Rp {effectivePrice.toLocaleString('id-ID')}</span>
+                      
+                      {hasDiscount && (
+                        <span className="bg-rose-100 text-rose-600 text-[11px] font-black px-2.5 py-1 rounded-full mt-1.5 border border-rose-200 flex items-center gap-1">
+                          <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                          Hemat {Math.round(((Number(selectedMenu.price) - Number(selectedMenu.discount_price)) / Number(selectedMenu.price)) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-[15px] text-slate-600 leading-relaxed mb-6 font-medium">
                     {selectedMenu.description || 'Belum ada deskripsi untuk menu ini.'}
                   </p>
+
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-black text-slate-900 mb-2 uppercase tracking-wide">Catatan Khusus</label>
+                    <input 
+                      type="text" 
+                      value={popupNote}
+                      onChange={e => setPopupNote(e.target.value)}
+                      placeholder="Misal: Less sugar, extra ice..." 
+                      className="w-full bg-white border-2 border-slate-300 rounded-2xl px-4 py-4 text-[15px] font-semibold text-slate-900 outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/10 transition-all shadow-sm" 
+                    />
+                  </div>
+
+                  {selectedStock.isLow && (
+                    <div className="bg-amber-100 text-amber-800 text-xs font-black px-4 py-2 rounded-xl inline-flex items-center gap-2 border border-amber-300">
+                      ⚠️ Sisa {selectedStock.value} Porsi
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 border-t-2 border-slate-200">
+              <div className="absolute bottom-0 left-0 right-0 bg-white/85 backdrop-blur-xl border-t border-white/60 p-4 flex gap-4 items-center shadow-[0_-10px_30px_rgba(0,0,0,0.08)] z-10">
                 {selectedStock.isOut ? (
-                  <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-3.5 rounded-xl text-sm border-2 border-slate-300 cursor-not-allowed">Habis</button>
+                  <button disabled className="w-full bg-slate-200 text-slate-500 font-black py-4 rounded-2xl text-sm border-2 border-slate-300 cursor-not-allowed">Habis</button>
                 ) : selectedCartItem ? (
-                  <div className="flex items-center justify-between bg-white rounded-xl p-1.5 border-2 border-slate-300">
-                    <button onClick={() => decCart(selectedMenu.id)} className="w-10 h-10 bg-slate-100 border border-slate-300 rounded-lg shadow-sm font-black text-slate-700 flex items-center justify-center text-lg">-</button>
-                    <span className="font-black text-slate-900 text-lg">{selectedCartItem.qty}</span>
-                    <button onClick={() => addToCart(selectedMenu)} disabled={selectedStock.tracked && selectedCartItem.qty >= selectedStock.value} className="w-10 h-10 bg-[var(--primary-color)] text-white rounded-lg shadow-sm font-black flex items-center justify-center border border-[var(--primary-color)] disabled:opacity-40 disabled:cursor-not-allowed text-lg">+</button>
-                  </div>
+                  <>
+                    <div className="flex items-center bg-[#F4EFE9] rounded-2xl border-2 border-slate-200 overflow-hidden h-[56px]">
+                      <button onClick={() => decCart(selectedMenu.id)} className="w-12 h-full text-slate-900 text-2xl font-black flex items-center justify-center hover:bg-slate-200 transition-colors">−</button>
+                      <span className="w-8 text-center font-black text-slate-900 text-lg">{selectedCartItem.qty}</span>
+                      <button onClick={() => addToCart(selectedMenu, popupNote)} disabled={selectedStock.tracked && selectedCartItem.qty >= selectedStock.value} className="w-12 h-full text-slate-900 text-2xl font-black flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-40">+</button>
+                    </div>
+                    <button onClick={() => { addToCart(selectedMenu, popupNote); setSelectedMenu(null); }} className="flex-1 bg-slate-900 text-white font-black py-4 rounded-2xl text-[15px] shadow-lg active:scale-[0.98] transition-transform flex justify-between items-center px-6">
+                      <span>Tambah</span>
+                      <span>Rp {(effectivePrice * selectedCartItem.qty).toLocaleString('id-ID')}</span>
+                    </button>
+                  </>
                 ) : (
-                  <button onClick={() => addToCart(selectedMenu)} className="w-full bg-[var(--primary-color)] hover:opacity-90 text-white font-black py-3.5 rounded-xl text-sm shadow-md active:scale-95 transition-all border-2 border-[var(--primary-dark)]">
-                    + Tambah ke Keranjang
+                  <button onClick={() => { addToCart(selectedMenu, popupNote); setSelectedMenu(null); }} className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-[15px] shadow-lg active:scale-[0.98] transition-transform flex justify-between items-center px-6">
+                    <span>Tambah Pesanan</span>
+                    <span>Rp {effectivePrice.toLocaleString('id-ID')}</span>
                   </button>
                 )}
               </div>
