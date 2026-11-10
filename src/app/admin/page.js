@@ -267,7 +267,6 @@ export default function AdminDashboard() {
       if (!isMounted || !channel) return;
       try {
         const state = channel.presenceState();
-        console.log('[Admin Presence] Raw State:', state);
         const onlineMap = {};
         Object.keys(state).forEach((key) => {
           state[key].forEach((p) => {
@@ -291,7 +290,6 @@ export default function AdminDashboard() {
       .on('presence', { event: 'join' }, handlePresenceChange)
       .on('presence', { event: 'leave' }, handlePresenceChange)
       .subscribe(async (status) => {
-        console.log('[Admin Presence] Channel Status:', status);
         if (status === 'SUBSCRIBED') {
           await channel.track({ role: 'admin', online_at: new Date().toISOString() });
           handlePresenceChange();
