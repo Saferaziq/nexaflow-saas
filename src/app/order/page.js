@@ -454,7 +454,7 @@ function OrderContent() {
     const slimItems = cart.map(i => ({
       id: i.id,
       name: i.name,
-      price: i.price, // Harga ini sudah menggunakan effectivePrice (diskon) jika ada
+      price: i.price,
       qty: i.qty,
       note: i.note || ''
     }));
@@ -526,7 +526,8 @@ function OrderContent() {
     return matchCat && matchSearch;
   });
 
-  const featuredMenus = menus.filter(m => m.is_featured && !getMenuStock(m).isOut);
+  // 🔥 FILTER GABUNGAN: MENU UNGGULAN & MENU BARU
+  const recommendedMenus = menus.filter(m => (m.is_featured || m.is_new) && !getMenuStock(m).isOut);
 
   const categoryEmoji = { makanan: '🍽️', minuman: '🥤', cemilan: '🍿' };
   const hasReadyOrder = myOrders.some(o => o.status === 'ready');
@@ -632,14 +633,15 @@ function OrderContent() {
       <div className="px-5 mt-6">
         {activeTab === 'menu' && (
           <>
-            {!searchQuery && category === 'all' && featuredMenus.length > 0 && (
+            {/* SECTION REKOMENDASI PILIHAN (UNGULAN & BARU) */}
+            {!searchQuery && category === 'all' && recommendedMenus.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[var(--primary-color)]"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                   <h2 className="font-black text-slate-900 text-lg">Rekomendasi Pilihan</h2>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-4 -mx-5 px-5 scrollbar-hide snap-x">
-                  {featuredMenus.map(menu => {
+                  {recommendedMenus.map(menu => {
                     const effectivePrice = getEffectivePrice(menu);
                     const hasDiscount = menu.discount_price && Number(menu.discount_price) > 0;
                     return (
@@ -650,11 +652,21 @@ function OrderContent() {
                       >
                         <div className="relative h-32 w-full bg-slate-100">
                           {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>}
+                          
+                          {/* BADGE LOGIC: Bisa Menampilkan Unggulan & Baru sekaligus */}
                           <div className="absolute top-2 left-2 flex flex-col gap-1">
-                            <span className="bg-[var(--primary-color)] text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center gap-1 shadow-sm border border-white/20">
-                              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                              Unggulan
-                            </span>
+                            {menu.is_featured && (
+                              <span className="bg-[var(--primary-color)] text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center gap-1 shadow-sm border border-white/20">
+                                <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                Unggulan
+                              </span>
+                            )}
+                            {menu.is_new && (
+                              <span className="bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded-md flex items-center gap-1 shadow-sm border border-white/20">
+                                <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/></svg>
+                                Baru
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="p-3 flex flex-col justify-between flex-1">
