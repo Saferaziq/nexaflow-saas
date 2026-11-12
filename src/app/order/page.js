@@ -323,7 +323,7 @@ function OrderContent() {
     window.speechSynthesis.resume();
     window.speechSynthesis.cancel();
 
-    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, sudah siap silahkan ambil di kasir.`;
+    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, antrean nomor ${order.queue_number || ''}, sudah siap silahkan ambil di kasir.`;
     const utterance = new SpeechSynthesisUtterance(text);
     
     utterance.lang = 'id-ID';
@@ -460,6 +460,7 @@ function OrderContent() {
     }
   };
 
+  // 🔥 FITUR ANTI-PENIPUAN: Memanggil RPC create_checkout_order
   const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -471,108 +472,34 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    const menuIds = cart.map(i => i.id);
-    const [tenantRes, menuRes] = await Promise.all([
-      supabase.from('tenants').select('is_open, is_active').eq('id', tenantId).single(),
-      supabase.from('menus').select('id, name, stock, status').in('id', menuIds)
-    ]);
+    // Kirim HANYA menu_id dan qty. Server akan menghitung harga & pajak asli.
+    const payloadItems = cart.map(i => ({ menu_id: i.id, qty: i.qty, note: i.note || '' }));
 
-    if (tenantRes.data && tenantRes.data.is_active === false) {
-      showToast('Maaf, kafe sedang tidak aktif.');
-      setCafe(prev => ({ ...prev, is_active: false }));
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (tenantRes.data && tenantRes.data.is_open === false) {
-      showToast('Maaf, kafe baru saja tutup.');
-      setCafe(prev => ({ ...prev, is_open: false }));
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (menuRes.error) {
-      showToast('Gagal cek stok: ' + menuRes.error.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    const freshMenus = menuRes.data || [];
-    const freshMap = new Map(freshMenus.map(m => [m.id, m]));
-    const shortage = cart.find(item => {
-      const fm = freshMap.get(item.id);
-      if (!fm) return true;
-      if (fm.status !== 'available') return true;
-      const tracked = fm.stock !== null && fm.stock !== undefined;
-      if (tracked && Number(fm.stock) < item.qty) return true;
-      return false;
+    const { data: newOrder, error } = await supabase.rpc('create_checkout_order', {
+      p_tenant_id: tenantId,
+      p_table_number: tableNumber,
+      p_customer_name: customerName.trim(),
+      p_payment_method: method,
+      p_order_note: globalNote.trim(),
+      p_items: payloadItems
     });
-    if (shortage) {
-      const fm = freshMap.get(shortage.id);
-      const tracked = fm && fm.stock !== null && fm.stock !== undefined;
-      const avail = tracked ? Number(fm.stock) : 0;
-      showToast(fm && fm.status !== 'available' 
-        ? `${shortage.name} sedang habis` 
-        : `Stok ${shortage.name} tidak cukup (tersisa ${avail})`);
-      fetchAllMenus();
+
+    if (error) {
+      showToast(error.message); 
+      fetchAllMenus(); // Refresh stok jika error karena stok
       setIsSubmitting(false);
       return;
     }
 
+    // Jika Sukses
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
-    let finalStatus = 'pending';
-    let finalPaymentStatus = 'unpaid';
-    
-    if (cafe.is_pay_first) {
-      finalPaymentStatus = method === 'QRIS' ? 'WAITING_QRIS' : 'WAITING_CASH';
-    } else {
-      finalPaymentStatus = 'unpaid';
-    }
-
-    const slimItems = cart.map(i => ({
-      id: i.id,
-      name: i.name,
-      price: i.price,
-      qty: i.qty,
-      note: i.note || ''
-    }));
-
-    const orderData = { 
-      tenant_id: tenantId, 
-      table_number: tableNumber, 
-      customer_name: customerName.trim(),
-      order_note: globalNote.trim(),
-      items: slimItems,
-      subtotal: subtotal,
-      tax_amount: taxAmount,
-      total_price: totalPrice, 
-      status: finalStatus, 
-      payment_status: finalPaymentStatus, 
-      payment_method: method
-    };
-
-    const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
-    
-    if (error) { 
-      showToast('Gagal: ' + error.message); 
-      setIsSubmitting(false); 
-      return; 
-    }
-
-    supabase.rpc('decrement_menu_stock', {
-      p_tenant_id: tenantId,
-      p_items: cart.map(i => ({ id: i.id, qty: i.qty })),
-    }).then(({ error: decErr }) => {
-      if (decErr) console.error('Stock decrement error:', decErr);
-    });
-
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
-    const newIds = [...existingIds, data.id];
+    const newIds = [...existingIds, newOrder.id];
     localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
 
-    setMyOrders(prev => [data, ...prev]);
+    setMyOrders(prev => [newOrder, ...prev]);
     
     setCart([]); 
     setGlobalNote('');
@@ -892,7 +819,11 @@ function OrderContent() {
               <div key={o.id} className="bg-white rounded-[1.5rem] p-6 border-2 border-[#E0D6CC] shadow-sm">
                 <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F4EFE9]">
                   <div>
-                    <p className="text-[11px] text-[#8C7A6B] font-black tracking-wider uppercase">ORDER #{o.id.slice(0, 8).toUpperCase()}</p>
+                    <div className="mb-1">
+                      <span className="bg-[#1A1512] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
+                        Antrean #{o.queue_number || '-'}
+                      </span>
+                    </div>
                     <p className="text-xs text-[#5C4B3E] font-bold mt-1">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase text-white tracking-wider border border-black/10 shadow-sm ${
@@ -1127,6 +1058,11 @@ function OrderContent() {
             </div>
             
             <h2 className="text-2xl font-black text-[#1A1512] mb-2">Pesanan Siap!</h2>
+            <div className="mb-4">
+              <span className="bg-[#1A1512] text-white text-sm font-black px-4 py-1.5 rounded-lg tracking-widest uppercase">
+                Antrean #{readyOrder?.queue_number || '-'}
+              </span>
+            </div>
             <p className="text-sm font-bold text-[#5C4B3E] mb-8 leading-relaxed">
               Pesanan atas nama <strong className="text-[#1A1512]">{readyOrder?.customer_name}</strong>, meja <strong className="text-[#1A1512]">{readyOrder?.table_number}</strong>, sudah siap silahkan ambil di kasir.
             </p>

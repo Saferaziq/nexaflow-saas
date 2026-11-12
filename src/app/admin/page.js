@@ -25,7 +25,9 @@ const Icons = {
   Sort: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>,
   Users: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   UserPlus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
-  Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  MapPin: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  TrendingUp: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
 };
 
 const ADMIN_EMAIL = 'dinamis.id.shop@gmail.com';
@@ -83,7 +85,9 @@ export default function AdminDashboard() {
   const [appSettings, setAppSettings] = useState({ qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
-  const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
+  const [presenceStatus, setPresenceStatus] = useState('connecting');
+  const [recentActiveTenants, setRecentActiveTenants] = useState({});
+  const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0, netProfit: 0 });
   const [now, setNow] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [theme, setTheme] = useState('dark');
@@ -101,7 +105,7 @@ export default function AdminDashboard() {
   const [detailModal, setDetailModal] = useState({ open: false, tenant: null });
   const [pinModal, setPinModal] = useState({ open: false, tenant: null, pin: '', loading: false });
   
-  const [marketerModal, setMarketerModal] = useState({ open: false, name: '', wa: '', loading: false });
+  const [marketerModal, setMarketerModal] = useState({ open: false, name: '', wa: '', city: '', loading: false });
   const [marketerDetailModal, setMarketerDetailModal] = useState({ open: false, marketer: null });
   const [settingsModal, setSettingsModal] = useState({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   
@@ -183,7 +187,7 @@ export default function AdminDashboard() {
       setConfirmModal(EMPTY_CONFIRM);
       setDetailModal({ open: false, tenant: null });
       setPinModal({ open: false, tenant: null, pin: '', loading: false });
-      setMarketerModal({ open: false, name: '', wa: '', loading: false });
+      setMarketerModal({ open: false, name: '', wa: '', city: '', loading: false });
       setMarketerDetailModal({ open: false, marketer: null });
       setSettingsModal({ open: false, loading: false, qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
       setShowSortMenu(false);
@@ -235,12 +239,21 @@ export default function AdminDashboard() {
     }
   };
 
+  // 🔥 FIX v4: gabungkan realtime presence + fallback "order aktif 10 menit terakhir"
+  const effectiveOnline = useMemo(() => {
+    const merged = { ...onlineUsers };
+    Object.keys(recentActiveTenants).forEach((id) => {
+      if (!merged[id]) merged[id] = true;
+    });
+    return merged;
+  }, [onlineUsers, recentActiveTenants]);
+
   useEffect(() => {
-    calculateStats(tenants, onlineUsers);
-  }, [tenants, onlineUsers]);
+    calculateStats(tenants, effectiveOnline);
+  }, [tenants, effectiveOnline]);
 
   const calculateStats = (tenantData, onlineData) => {
-    let onlineCount = 0, warningCount = 0, totalRevenue = 0, totalCommission = 0;
+    let onlineCount = 0, warningCount = 0, totalRevenue = 0, totalCommission = 0, netProfit = 0;
     const currentTime = Date.now();
     tenantData.forEach(t => {
       if (onlineData[t.id]) onlineCount++;
@@ -248,20 +261,46 @@ export default function AdminDashboard() {
         const daysLeft = Math.max(0, Math.ceil((new Date(t.subscription_end_date).getTime() - currentTime) / (1000 * 60 * 60 * 24)));
         if (daysLeft <= 7) warningCount++;
         if (daysLeft > 0 && t.is_active !== false) {
-          const ratio = Math.min(daysLeft, 30) / 30;
-          totalRevenue += Math.round(getPrice(t) * ratio);
-          totalCommission += Math.round(getCommission(t) * ratio);
+          // 🔥 OPSI B: harga & komisi penuh, tanpa prorata
+          totalRevenue += getPrice(t);
+          totalCommission += getCommission(t);
         }
       }
     });
-    setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
+    netProfit = totalRevenue - totalCommission;
+    setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission, netProfit });
   };
 
-  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v3
+  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v4 (realtime + fallback + status badge + log)
   useEffect(() => {
     let channel = null;
     let pollInterval = null;
+    let activityInterval = null;
     let isMounted = true;
+    let lastCount = -1;
+
+    const checkRecentActivity = async () => {
+      if (!isMounted) return;
+      try {
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+          .from('orders')
+          .select('tenant_id')
+          .gte('created_at', tenMinAgo);
+        if (error) {
+          console.warn('[Admin Fallback] recentActivity query error:', error.message);
+          return;
+        }
+        const activeMap = {};
+        (data || []).forEach((o) => { if (o.tenant_id) activeMap[o.tenant_id] = true; });
+        if (isMounted) setRecentActiveTenants(activeMap);
+      } catch (err) {
+        console.warn('[Admin Fallback] recentActivity exception:', err);
+      }
+    };
+
+    checkRecentActivity();
+    activityInterval = setInterval(checkRecentActivity, 15000);
 
     const handlePresenceChange = () => {
       if (!isMounted || !channel) return;
@@ -273,6 +312,11 @@ export default function AdminDashboard() {
             if (p.tenant_id) onlineMap[p.tenant_id] = true;
           });
         });
+        const count = Object.keys(onlineMap).length;
+        if (count !== lastCount) {
+          console.log(`[Admin Presence] realtime online tenants: ${count}`, onlineMap);
+          lastCount = count;
+        }
         setOnlineUsers(onlineMap);
       } catch (err) {
         console.warn('[Admin Presence] presenceState error:', err);
@@ -290,21 +334,31 @@ export default function AdminDashboard() {
       .on('presence', { event: 'join' }, handlePresenceChange)
       .on('presence', { event: 'leave' }, handlePresenceChange)
       .subscribe(async (status) => {
+        console.log('[Admin Presence] subscribe status:', status);
         if (status === 'SUBSCRIBED') {
-          await channel.track({ role: 'admin', online_at: new Date().toISOString() });
+          setPresenceStatus('online');
+          try {
+            await channel.track({ role: 'admin', online_at: new Date().toISOString() });
+          } catch (err) {
+            console.warn('[Admin Presence] track error:', err);
+          }
           handlePresenceChange();
           if (!pollInterval) {
             pollInterval = setInterval(handlePresenceChange, 3000);
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setPresenceStatus('error');
           console.warn('[Admin Presence] Channel status:', status);
           if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        } else {
+          setPresenceStatus('connecting');
         }
       });
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         handlePresenceChange();
+        checkRecentActivity();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -313,6 +367,7 @@ export default function AdminDashboard() {
       isMounted = false;
       document.removeEventListener('visibilitychange', onVisibility);
       if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (activityInterval) { clearInterval(activityInterval); activityInterval = null; }
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
@@ -674,14 +729,14 @@ export default function AdminDashboard() {
     const activeList = statsData.activeTenants.map(t => `- ${t.name} (Komisi: Rp ${getCommission(t).toLocaleString('id-ID')})`).join('\n') || '- Tidak ada';
     const expiredList = statsData.expiredTenants.map(t => `- ${t.name} (Belum Bayar/Expired)`).join('\n') || '- Tidak ada';
 
-    const msg = `Halo *${marketer.name}*,\n\nBerikut rincian komisi (bagi hasil) Anda:\nTotal Kafe: *${statsData.count} Kafe*\nTotal Estimasi Komisi: *Rp ${statsData.commission.toLocaleString('id-ID')}*\n\n✅ *Kafe Aktif (Mendapat Komisi):*\n${activeList}\n\n⚠️ *Kafe Expired (Mohon di-follow up agar bayar):*\n${expiredList}\n\nLaporan detail (Excel/PDF) dapat Anda unduh melalui portal Admin. Terima kasih atas kerja kerasnya! 🚀`;
+    const msg = `Halo *${marketer.name}*${marketer.city ? ` (${marketer.city})` : ''},\n\nBerikut rincian komisi (bagi hasil) Anda:\nTotal Kafe: *${statsData.count} Kafe*\nTotal Estimasi Komisi: *Rp ${statsData.commission.toLocaleString('id-ID')}*\n\n✅ *Kafe Aktif (Mendapat Komisi):*\n${activeList}\n\n⚠️ *Kafe Expired (Mohon di-follow up agar bayar):*\n${expiredList}\n\nLaporan detail (Excel/PDF) dapat Anda unduh melalui portal Admin. Terima kasih atas kerja kerasnya! 🚀`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const saveMarketer = async (e) => {
     e.preventDefault();
     setMarketerModal(prev => ({ ...prev, loading: true }));
-    const payload = { name: marketerModal.name.trim(), wa_number: marketerModal.wa.trim() };
+    const payload = { name: marketerModal.name.trim(), wa_number: marketerModal.wa.trim(), city: marketerModal.city.trim() || null };
     const existing = marketers.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
     if (existing) {
       setMarketerModal(prev => ({ ...prev, loading: false }));
@@ -691,7 +746,7 @@ export default function AdminDashboard() {
     setMarketerModal(prev => ({ ...prev, loading: false }));
     if (error) return showToast('Gagal tambah marketing: ' + error.message, 'error');
     showToast('Marketing berhasil ditambahkan', 'success');
-    setMarketerModal({ open: false, name: '', wa: '', loading: false });
+    setMarketerModal({ open: false, name: '', wa: '', city: '', loading: false });
     fetchMarketers();
   };
 
@@ -710,10 +765,12 @@ export default function AdminDashboard() {
   };
 
   const handleExportMarketing = (m) => {
-    let csv = `Laporan Marketing: ${m.name}\n`;
+    let csv = `Laporan Marketing: ${m.name}${m.city ? ` (${m.city})` : ''}\n`;
     csv += `Tanggal Unduh: ${new Date().toLocaleDateString('id-ID')}\n`;
     csv += `Total Kafe: ${m.count}\n`;
-    csv += `Total Komisi: Rp ${m.commission.toLocaleString('id-ID')}\n\n`;
+    csv += `Total Omset: Rp ${m.revenue.toLocaleString('id-ID')}\n`;
+    csv += `Total Komisi: Rp ${m.commission.toLocaleString('id-ID')}\n`;
+    csv += `Net Profit: Rp ${(m.revenue - m.commission).toLocaleString('id-ID')}\n\n`;
     
     csv += `KAFE AKTIF (Mendapat Komisi)\n`;
     csv += `Nama Kafe,Harga Sewa,Komisi\n`;
@@ -749,9 +806,8 @@ export default function AdminDashboard() {
         const isActive = daysLeft > 0 && t.is_active !== false;
         
         if (isActive) {
-          const ratio = Math.min(daysLeft, 30) / 30;
-          revenue += Math.round(getPrice(t) * ratio);
-          commission += Math.round(getCommission(t) * ratio);
+          revenue += getPrice(t);
+          commission += getCommission(t);
           activeTenants.push(t);
         } else {
           expiredTenants.push(t);
@@ -763,6 +819,7 @@ export default function AdminDashboard() {
         count: myTenants.length, 
         revenue, 
         commission, 
+        netProfit: revenue - commission,
         activeTenants, 
         expiredTenants, 
         rawTenants: myTenants 
@@ -776,13 +833,13 @@ export default function AdminDashboard() {
       const matchSearch = !q || (t.name || '').toLowerCase().includes(q) || (t.referral_name || '').toLowerCase().includes(q) || (t.wa_number || '').toLowerCase().includes(q);
       const daysLeft = calculateDaysLeft(t.subscription_end_date);
       let matchStatus = true;
-      if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true && t.is_active !== false;
+      if (filterStatus === 'online') matchStatus = effectiveOnline[t.id] === true && t.is_active !== false;
       else if (filterStatus === 'expired') matchStatus = hasEndDate(t) && daysLeft <= 0 && t.is_active !== false;
       else if (filterStatus === 'suspended') matchStatus = t.is_active === false;
       else if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 7 && t.is_active !== false;
       return matchSearch && matchStatus;
     });
-  }, [tenants, searchQuery, filterStatus, onlineUsers, now]);
+  }, [tenants, searchQuery, filterStatus, effectiveOnline, now]);
 
   const sortedTenants = useMemo(() => {
     const arr = [...filteredTenants];
@@ -813,6 +870,9 @@ export default function AdminDashboard() {
   const modalShell = `border-2 rounded-xl w-full overflow-hidden ${theme === 'dark' ? 'bg-[#0a192f] border-slate-700 shadow-[6px_6px_0px_0px_#06b6d4]' : 'bg-white border-slate-900 shadow-[6px_6px_0px_0px_#000]'}`;
   const modalHeader = `p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`;
   const sortLabels = { newest: 'Terbaru', name: 'Nama A-Z', daysLeft: 'Sisa Hari', revenue: 'Omset Tertinggi' };
+
+  // Cek apakah referral value saat ini ada di marketers (untuk option tambahan legacy)
+  const currentReferralExists = financeModal.referral && marketers.some(m => m.name.toLowerCase() === financeModal.referral.toLowerCase());
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${bgMain} ${textMain}`}>
@@ -860,16 +920,46 @@ export default function AdminDashboard() {
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
               <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
               <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span></h3>
+              <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                presenceStatus === 'online' ? (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-700') :
+                presenceStatus === 'error' ? (theme === 'dark' ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' : 'bg-rose-50 border-rose-300 text-rose-700') :
+                (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700')
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  presenceStatus === 'online' ? 'bg-emerald-500 animate-pulse' :
+                  presenceStatus === 'error' ? 'bg-rose-500' :
+                  'bg-amber-500 animate-pulse'
+                }`}></span>
+                {presenceStatus === 'online' ? 'Realtime' : presenceStatus === 'error' ? 'Fallback' : 'Connecting'}
+              </div>
             </div>
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln</p>
               <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
             </div>
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Total)</p>
               <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
+            </div>
+          </div>
+        )}
+
+        {/* 🔥 NET PROFIT — Bar lebar di bawah 4 kartu (Opsi B) */}
+        {activeTab === 'tenants' && (
+          <div className={`rounded-xl p-5 relative overflow-hidden border-2 animate-in fade-in slide-in-from-bottom-4 ${
+            theme === 'dark'
+              ? 'bg-gradient-to-r from-[#0a192f] via-[#0d2137] to-[#0a192f] border-emerald-500/60 shadow-[4px_4px_0px_0px_#10b981]'
+              : 'bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-emerald-600 shadow-[4px_4px_0px_0px_#059669]'
+          }`}>
+            <div className={`absolute top-0 right-0 p-4 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.TrendingUp /></div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>💰 Net Profit (Total)</p>
+                <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>Rp {stats.netProfit.toLocaleString('id-ID')}</h3>
+                <p className={`text-[10px] font-bold mt-1 uppercase tracking-wider ${textSub}`}>Omset (Rp {stats.revenue.toLocaleString('id-ID')}) − Komisi (Rp {stats.commission.toLocaleString('id-ID')})</p>
+              </div>
             </div>
           </div>
         )}
@@ -910,7 +1000,7 @@ export default function AdminDashboard() {
                 <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
                   {sortedTenants.map((tenant) => {
                     const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-                    const isOnline = onlineUsers[tenant.id];
+                    const isOnline = effectiveOnline[tenant.id];
                     const isSuspended = tenant.is_active === false;
                     const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
                     const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
@@ -966,7 +1056,7 @@ export default function AdminDashboard() {
             <div className="lg:hidden space-y-5">
               {sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-                const isOnline = onlineUsers[tenant.id];
+                const isOnline = effectiveOnline[tenant.id];
                 const isSuspended = tenant.is_active === false;
                 const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
                 const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
@@ -1009,7 +1099,7 @@ export default function AdminDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-black uppercase tracking-wider">Tim Marketing & Bagi Hasil</h2>
-              <button onClick={() => setMarketerModal({ open: true, name: '', wa: '', loading: false })} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 px-4 py-2 rounded-lg text-xs`}>
+              <button onClick={() => setMarketerModal({ open: true, name: '', wa: '', city: '', loading: false })} className={`${btnBase} bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 px-4 py-2 rounded-lg text-xs`}>
                 <Icons.UserPlus /> Tambah Marketing
               </button>
             </div>
@@ -1022,7 +1112,10 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="font-black text-lg text-cyan-500">{m.name}</h3>
-                      <p className={`text-xs font-bold ${textSub}`}>{m.wa_number || 'Tanpa WA'}</p>
+                      <p className={`text-xs font-bold ${textSub} flex items-center gap-1 flex-wrap`}>
+                        <span>{m.wa_number || 'Tanpa WA'}</span>
+                        {m.city && (<><span className="opacity-50">•</span><span className="inline-flex items-center gap-0.5"><Icons.MapPin /><span className="text-[10px]">{m.city}</span></span></>)}
+                      </p>
                     </div>
                     <button onClick={() => requestDeleteMarketer(m)} className={`${btnBase} ${theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border-rose-500' : 'bg-rose-100 text-rose-600 border-rose-600'} p-2 rounded-lg`} title="Hapus Marketing"><Icons.Trash /></button>
                   </div>
@@ -1037,8 +1130,12 @@ export default function AdminDashboard() {
                       <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {m.revenue.toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi (Prorated)</p>
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p>
                       <span className={`text-sm font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {m.commission.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className={`flex justify-between items-center pt-2 border-t-2 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+                      <p className={`text-[10px] font-bold uppercase ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>Net Profit</p>
+                      <span className={`text-sm font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>Rp {m.netProfit.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
 
@@ -1102,7 +1199,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Finansial */}
+      {/* Modal Finansial — dengan DROPDOWN Sales */}
       {financeModal.open && financeModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -1113,8 +1210,27 @@ export default function AdminDashboard() {
             <form onSubmit={saveFinance} className="p-5 space-y-3">
               <h4 className={`font-black text-center text-base ${textMain}`}>{financeModal.tenant.name}</h4>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Harga Sewa / Bulan (Rp)</label><input type="number" required value={financeModal.price} onChange={e => setFinanceModal({ ...financeModal, price: e.target.value })} className={inputCls} /></div>
-              <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label><input type="text" placeholder="Nama Kafe Rekomendasi" value={financeModal.referral} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls} /></div>
+              <div>
+                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Sales / Referral</label>
+                <select value={financeModal.referral || ''} onChange={e => setFinanceModal({ ...financeModal, referral: e.target.value })} className={inputCls}>
+                  <option value="">— Tanpa Sales —</option>
+                  {marketers.map(m => (
+                    <option key={m.id} value={m.name}>{m.name}{m.city ? ` (${m.city})` : ''}</option>
+                  ))}
+                  {financeModal.referral && !currentReferralExists && (
+                    <option value={financeModal.referral}>{financeModal.referral} (Tidak Terdaftar)</option>
+                  )}
+                </select>
+                <p className={`text-[9px] mt-1 ${textSub}`}>Pilih dari daftar marketing yang sudah terdaftar. Tambah sales baru di tab "Tim Marketing".</p>
+              </div>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Bagi Hasil / Komisi Sales (Rp)</label><input type="number" value={financeModal.commission} onChange={e => setFinanceModal({ ...financeModal, commission: e.target.value })} className={inputCls} /></div>
+              {Number(financeModal.price) > 0 && (
+                <div className={`rounded-lg p-3 border-2 ${theme === 'dark' ? 'bg-[#050b14] border-emerald-500/40' : 'bg-emerald-50 border-emerald-300'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-wider mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>Net Profit Kafe Ini</p>
+                  <p className={`text-lg font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>Rp {(Number(financeModal.price) - Number(financeModal.commission || 0)).toLocaleString('id-ID')}</p>
+                  <p className={`text-[9px] ${textSub}`}>Omset − Komisi</p>
+                </div>
+              )}
               <button type="submit" disabled={financeModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{financeModal.loading ? 'Menyimpan...' : 'Simpan Finansial'}</button>
             </form>
           </div>
@@ -1192,24 +1308,29 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Tambah Marketing */}
+      {/* Modal Tambah Marketing — dengan KOTA */}
       {marketerModal.open && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
             <div className={modalHeader}>
               <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2"><Icons.UserPlus /> Tambah Marketing</h3>
-              <button onClick={() => setMarketerModal({ open: false, name: '', wa: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
+              <button onClick={() => setMarketerModal({ open: false, name: '', wa: '', city: '', loading: false })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <form onSubmit={saveMarketer} className="p-5 space-y-3">
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nama Marketing</label><input type="text" required placeholder="Cth: Budi Santoso" value={marketerModal.name} onChange={e => setMarketerModal({ ...marketerModal, name: e.target.value })} className={inputCls} /></div>
               <div><label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Nomor WhatsApp</label><input type="text" required placeholder="Cth: 08123456789" value={marketerModal.wa} onChange={e => setMarketerModal({ ...marketerModal, wa: e.target.value })} className={inputCls} /></div>
+              <div>
+                <label className={`block text-[10px] font-black uppercase tracking-wider mb-1 ${textSub}`}>Kota Asal <span className="opacity-60">(opsional)</span></label>
+                <input type="text" placeholder="Cth: Bandung, Surabaya, Jakarta" value={marketerModal.city} onChange={e => setMarketerModal({ ...marketerModal, city: e.target.value })} className={inputCls} />
+                <p className={`text-[9px] mt-1 ${textSub}`}>Memudahkan Admin membedakan sales antar kota.</p>
+              </div>
               <button type="submit" disabled={marketerModal.loading} className={`${btnBase} w-full py-2.5 bg-cyan-600 text-white border-cyan-900 shadow-[2px_2px_0px_0px_#164e63] hover:bg-cyan-500 mt-2 rounded-lg text-sm disabled:opacity-50`}>{marketerModal.loading ? 'Menyimpan...' : 'Simpan Marketing'}</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal Detail Marketing (Daftar Kafe) */}
+      {/* Modal Detail Marketing (Daftar Kafe) — dengan KOTA */}
       {marketerDetailModal.open && marketerDetailModal.marketer && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
@@ -1218,6 +1339,11 @@ export default function AdminDashboard() {
               <button onClick={() => setMarketerDetailModal({ open: false, marketer: null })} className={`p-1 border-2 rounded ${theme === 'dark' ? 'border-slate-500 hover:bg-slate-700' : 'border-slate-400 hover:bg-slate-200'}`}><Icons.X /></button>
             </div>
             <div className="p-5 max-h-[70vh] overflow-y-auto space-y-2">
+              {marketerDetailModal.marketer.city && (
+                <div className={`rounded-lg p-2 border-2 flex items-center gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                  <Icons.MapPin /><p className={`text-xs font-bold ${textSub}`}>Kota: <span className={textMain}>{marketerDetailModal.marketer.city}</span></p>
+                </div>
+              )}
               {marketerDetailModal.marketer.rawTenants.length === 0 ? (
                 <p className={`text-center text-sm font-bold ${textSub}`}>Belum ada kafe yang direferensikan.</p>
               ) : (
