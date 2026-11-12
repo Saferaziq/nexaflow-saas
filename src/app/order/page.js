@@ -163,7 +163,10 @@ function OrderContent() {
 
     const fetchData = async () => {
       const [cafeRes, menuRes] = await Promise.all([
-        supabase.from('tenants').select('*').eq('id', tenantId).single(),
+        // 🔥 PERBAIKAN: Hanya ambil kolom publik, jangan select('*')
+        supabase.from('tenants')
+          .select('name, logo_url, banner_url, address, wa_number, tax_percentage, notify_order_ready, is_open, is_active, is_pay_first, qris_string')
+          .eq('id', tenantId).single(),
         supabase.from('menus').select('*').eq('tenant_id', tenantId)
       ]);
       
@@ -195,8 +198,23 @@ function OrderContent() {
 
     const channel = supabase.channel('customer-realtime-' + Date.now())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
-        setCafe(prev => ({ ...prev, ...payload.new }));
-        if (payload.new.banner_url) extractDominantColor(payload.new.banner_url);
+        // 🔥 PERBAIKAN: Jangan spread semua payload, hanya ambil kolom publik
+        const pub = payload.new;
+        setCafe(prev => ({
+          ...prev,
+          name: pub.name || prev.name,
+          logo_url: pub.logo_url !== undefined ? pub.logo_url : prev.logo_url,
+          banner_url: pub.banner_url !== undefined ? pub.banner_url : prev.banner_url,
+          address: pub.address !== undefined ? pub.address : prev.address,
+          wa_number: pub.wa_number !== undefined ? pub.wa_number : prev.wa_number,
+          tax_percentage: pub.tax_percentage !== undefined ? pub.tax_percentage : prev.tax_percentage,
+          notify_order_ready: pub.notify_order_ready !== undefined ? pub.notify_order_ready : prev.notify_order_ready,
+          is_open: pub.is_open !== undefined ? pub.is_open : prev.is_open,
+          is_active: pub.is_active !== undefined ? pub.is_active : prev.is_active,
+          is_pay_first: pub.is_pay_first !== undefined ? pub.is_pay_first : prev.is_pay_first,
+          qris_string: pub.qris_string !== undefined ? pub.qris_string : prev.qris_string,
+        }));
+        if (pub.banner_url) extractDominantColor(pub.banner_url);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, () => {
         if (myOrderIdsRef.current.length > 0) fetchMyOrders(myOrderIdsRef.current);
