@@ -269,7 +269,7 @@ export function useDashboard() {
           tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
           notify_order_ready: userData.tenants.notify_order_ready !== false,
           is_pay_first: userData.tenants.is_pay_first !== false,
-          business_type: userData.tenants.business_type || 'kafe', // 🔥 TAMBAHAN
+          business_type: userData.tenants.business_type || 'kafe',
         });
 
         if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
@@ -291,7 +291,7 @@ export function useDashboard() {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
             if (payload.new.is_active !== undefined) setIsSuspended(payload.new.is_active === false);
-            if (payload.new.business_type !== undefined) setSettings(prev => ({ ...prev, business_type: payload.new.business_type })); // 🔥 TAMBAHAN
+            if (payload.new.business_type !== undefined) setSettings(prev => ({ ...prev, business_type: payload.new.business_type }));
           })
           .subscribe((s) => {
             if (s === 'SUBSCRIBED') setRealtimeStatus('online');
@@ -589,17 +589,25 @@ export function useDashboard() {
     const prevStatus = prevOrder.status;
     const prevPaymentStatus = prevOrder.payment_status;
 
+    // 🔥 PERBAIKAN: Tambahkan paid_at saat completed
+    const updatePayload = { status };
+    if (status === 'completed') {
+      updatePayload.payment_status = 'paid';
+      if (prevPaymentStatus !== 'PAID' && prevPaymentStatus !== 'paid') {
+        updatePayload.paid_at = new Date().toISOString();
+      }
+    }
+
     setOrders(prev => prev.map(o => 
-      o.id === id ? { ...o, status, ...(status === 'completed' ? { payment_status: 'paid' } : {}) } : o
+      o.id === id ? { ...o, ...updatePayload } : o
     ));
 
-    const u = { status };
-    if (status === 'completed') u.payment_status = 'paid';
-    const { error } = await supabase.from('orders').update(u).eq('id', id);
+    const { error } = await supabase.from('orders').update(updatePayload).eq('id', id);
     
     if (error) {
+      // Rollback state lokal jika error
       setOrders(prev => prev.map(o => 
-        o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus } : {}) } : o
+        o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus, paid_at: prevOrder.paid_at } : {}) } : o
       ));
       showToast('Gagal update status: ' + error.message, 'error');
     }
@@ -691,9 +699,15 @@ export function useDashboard() {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
     const prevMenus = menusRef.current;
     
-    setMenus(prev => prev.map(m => m.id === menuId ? { ...m, stock: newStock } : m));
+    // 🔥 PERBAIKAN: Jika restock dari 0 ke >0, otomatis kembalikan ke 'available'
+    let updatePayload = { stock: newStock };
+    if (Number(currentStock || 0) <= 0 && newStock > 0) {
+      updatePayload.status = 'available';
+    }
+
+    setMenus(prev => prev.map(m => m.id === menuId ? { ...m, ...updatePayload } : m));
     
-    const { error } = await supabase.from('menus').update({ stock: newStock }).eq('id', menuId);
+    const { error } = await supabase.from('menus').update(updatePayload).eq('id', menuId);
     
     if (error) {
       setMenus(prevMenus);
@@ -713,7 +727,7 @@ export function useDashboard() {
       qris_string: settings.qris_string,
       banner_url: settings.banner_url, 
       tax_percentage: settings.tax_percentage,
-      business_type: settings.business_type, // 🔥 TAMBAHAN
+      business_type: settings.business_type,
     }).eq('id', tenantId).select();
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
