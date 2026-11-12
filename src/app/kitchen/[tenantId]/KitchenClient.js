@@ -84,7 +84,6 @@ export default function KitchenClient({ tenantId }) {
   const [activeTab, setActiveTab] = useState('new');
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  // 🔥 THEME STATE (Default gelap untuk dapur, bisa diubah)
   const [theme, setTheme] = useState('dark');
 
   const [cancelBanner, setCancelBanner] = useState(null);
@@ -485,7 +484,6 @@ export default function KitchenClient({ tenantId }) {
     }
   };
 
-  // 🔥 FUNGSI CETAK PESANAN (DIPERBESAR & DIPERTEBAL)
   const handlePrintOrder = (order) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -503,13 +501,13 @@ export default function KitchenClient({ tenantId }) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print Order Meja ${order.table_number}</title>
+          <title>Print Order Antrean ${order.queue_number || '-'}</title>
           <style>
             @page { margin: 0; }
             body { font-family: 'Courier New', Courier, monospace; padding: 15px; margin: 0 auto; width: 80mm; color: #000; }
             .header { text-align: center; border-bottom: 3px dashed #000; padding-bottom: 15px; margin-bottom: 15px; }
-            h1 { font-size: 42px; margin: 0 0 5px 0; font-weight: 900; letter-spacing: 1px; }
-            h2 { font-size: 24px; margin: 0; font-weight: 900; }
+            h1 { font-size: 56px; margin: 0 0 5px 0; font-weight: 900; letter-spacing: 1px; }
+            h2 { font-size: 26px; margin: 0; font-weight: 900; }
             .meta { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
             .items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .notes { border: 3px solid #000; padding: 12px; font-size: 22px; font-weight: 900; margin-bottom: 20px; text-align: center; }
@@ -518,8 +516,9 @@ export default function KitchenClient({ tenantId }) {
         </head>
         <body>
           <div class="header">
-            <h1>MEJA ${order.table_number}</h1>
-            <h2>${order.customer_name || 'TAMU'}</h2>
+            <h1>ANTREAN #${order.queue_number || '-'}</h1>
+            <h2>MEJA ${order.table_number}</h2>
+            <h2 style="font-size: 20px; margin-top: 5px;">${order.customer_name || 'TAMU'}</h2>
           </div>
           <div class="meta">Waktu: ${new Date(order.created_at).toLocaleTimeString('id-ID')}</div>
           <div class="meta">Order ID: #${order.id.slice(0, 6).toUpperCase()}</div>
@@ -547,7 +546,6 @@ export default function KitchenClient({ tenantId }) {
     printWindow.document.close();
   };
 
-  // 🔥 FUNGSI CETAK LAPORAN DAPUR (BARU)
   const handlePrintReport = () => {
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today && ['ready', 'completed'].includes(o.status));
@@ -850,7 +848,6 @@ export default function KitchenClient({ tenantId }) {
             </span>
           </div>
 
-          {/* 🔥 TOMBOL CETAK LAPORAN BARU */}
           <button
             onClick={handlePrintReport}
             className={`p-2.5 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
@@ -859,7 +856,6 @@ export default function KitchenClient({ tenantId }) {
             <Icons.FileText />
           </button>
 
-          {/* 🔥 TOMBOL TEMA */}
           <button
             onClick={toggleTheme}
             className={`p-2.5 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
@@ -938,14 +934,18 @@ export default function KitchenClient({ tenantId }) {
                     : (theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-300')
                 }`}>
                   
-                  {/* Card Header */}
                   <div className={`px-5 py-4 flex items-center justify-between border-b-2 ${
                     isCooking 
                       ? (theme === 'dark' ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]/20' : 'bg-[var(--primary-light)] border-[var(--primary-color)]/30') 
                       : (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200')
                   }`}>
                     <div>
-                      <p className={`text-[11px] font-black uppercase tracking-widest ${isCooking ? 'text-[var(--primary-color)]' : 'text-amber-500'}`}>{isCooking ? 'Dimasak' : 'Baru'}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[11px] font-black px-2 py-0.5 rounded border-2 tracking-widest ${theme === 'dark' ? 'bg-slate-900 border-slate-600 text-white' : 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]'}`}>
+                          ANTREAN #{order.queue_number || '-'}
+                        </span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isCooking ? 'text-[var(--primary-color)]' : 'text-amber-500'}`}>{isCooking ? 'Dimasak' : 'Baru'}</span>
+                      </div>
                       <p className={`text-3xl font-black leading-tight tracking-tight ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>MEJA {order.table_number}</p>
                       <p className={`text-sm font-bold mt-1 truncate max-w-[140px] ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{order.customer_name || 'Tamu'}</p>
                       <p className={`text-xs font-bold mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{totalItems} ITEM</p>
@@ -975,7 +975,6 @@ export default function KitchenClient({ tenantId }) {
                     </div>
                   )}
 
-                  {/* List Items */}
                   <div className="flex-1 p-5 space-y-4">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
@@ -992,7 +991,6 @@ export default function KitchenClient({ tenantId }) {
                     ))}
                   </div>
 
-                  {/* Action Buttons */}
                   <div className={`p-4 pt-3 flex gap-2 border-t-2 ${theme === 'dark' ? 'border-slate-700/50' : 'border-slate-200'}`}>
                     <button onClick={() => handlePrintOrder(order)} className={`flex-1 font-black py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 active:scale-95 border-2 ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600' : 'bg-slate-200 border-slate-300 text-slate-700 hover:bg-slate-300'}`}>
                       <Icons.Printer /> CETAK

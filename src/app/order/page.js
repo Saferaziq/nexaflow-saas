@@ -323,7 +323,7 @@ function OrderContent() {
     window.speechSynthesis.resume();
     window.speechSynthesis.cancel();
 
-    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, sudah siap silahkan ambil di kasir.`;
+    const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, antrean nomor ${order.queue_number || ''}, sudah siap silahkan ambil di kasir.`;
     const utterance = new SpeechSynthesisUtterance(text);
     
     utterance.lang = 'id-ID';
@@ -892,7 +892,12 @@ function OrderContent() {
               <div key={o.id} className="bg-white rounded-[1.5rem] p-6 border-2 border-[#E0D6CC] shadow-sm">
                 <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F4EFE9]">
                   <div>
-                    <p className="text-[11px] text-[#8C7A6B] font-black tracking-wider uppercase">ORDER #{o.id.slice(0, 8).toUpperCase()}</p>
+                    {/* 🔥 TAMBAHAN: BADGE NOMOR ANTREAN PEMBELI 🔥 */}
+                    <div className="mb-1">
+                      <span className="bg-[#1A1512] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
+                        Antrean #{o.queue_number || '-'}
+                      </span>
+                    </div>
                     <p className="text-xs text-[#5C4B3E] font-bold mt-1">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase text-white tracking-wider border border-black/10 shadow-sm ${
@@ -1127,6 +1132,12 @@ function OrderContent() {
             </div>
             
             <h2 className="text-2xl font-black text-[#1A1512] mb-2">Pesanan Siap!</h2>
+            {/* 🔥 TAMBAHAN NOMOR ANTREAN DI POPUP PEMBELI 🔥 */}
+            <div className="mb-4">
+              <span className="bg-[#1A1512] text-white text-sm font-black px-4 py-1.5 rounded-lg tracking-widest uppercase">
+                Antrean #{readyOrder?.queue_number || '-'}
+              </span>
+            </div>
             <p className="text-sm font-bold text-[#5C4B3E] mb-8 leading-relaxed">
               Pesanan atas nama <strong className="text-[#1A1512]">{readyOrder?.customer_name}</strong>, meja <strong className="text-[#1A1512]">{readyOrder?.table_number}</strong>, sudah siap silahkan ambil di kasir.
             </p>

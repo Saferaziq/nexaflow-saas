@@ -75,6 +75,12 @@ export default function TabQueue({
 
                 <div className="flex justify-between items-start mb-4 mt-2">
                   <div>
+                    {/* 🔥 TAMBAHAN: BADGE NOMOR ANTREAN 🔥 */}
+                    <div className="mb-1">
+                      <span className="bg-[#3A2A20] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
+                        Antrean #{order.queue_number || '-'}
+                      </span>
+                    </div>
                     <h3 className={`font-black text-2xl ${textMainClass}`}>Meja {order.table_number}</h3>
                     <p className="text-sm font-bold text-slate-500">
                       {order.customer_name || 'Tanpa Nama'}
