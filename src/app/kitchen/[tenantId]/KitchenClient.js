@@ -182,6 +182,48 @@ export default function KitchenClient({ tenantId }) {
     return () => clearInterval(poll);
   }, [authMode, tenantId]);
 
+  // 🔥 PRESENCE DAPUR v1 — track ke channel 'online-rooms' agar Admin mendeteksi dapur online
+  useEffect(() => {
+    if (authMode !== 'ready' || !tenantId) return;
+
+    let isMounted = true;
+    const presenceChannel = supabase.channel('online-rooms');
+
+    presenceChannel.subscribe(async (status) => {
+      if (!isMounted) return;
+      if (status === 'SUBSCRIBED') {
+        try {
+          await presenceChannel.track({
+            tenant_id: tenantId,
+            role: 'kitchen',
+            online_at: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn('[Kitchen Presence] Track Error:', err);
+        }
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.warn('[Kitchen Presence] Channel status:', status);
+      }
+    });
+
+    const onVisibilityPresence = () => {
+      if (document.visibilityState === 'visible' && isMounted) {
+        presenceChannel.track({
+          tenant_id: tenantId,
+          role: 'kitchen',
+          online_at: new Date().toISOString()
+        }).catch(err => console.warn('[Kitchen Presence] Re-track Error:', err));
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityPresence);
+
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', onVisibilityPresence);
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [authMode, tenantId]);
+
   const playBeep = (force = false) => {
     if (!force && !soundEnabledRef.current) return;
     if (!audioCtxRef.current) return;
