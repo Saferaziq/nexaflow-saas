@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
 import { generateDynamicQRIS } from '../dashboard/helpers/qris';
 
-// Mengimpor font
 const fontImport = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
   .font-serif { font-family: 'Playfair Display', serif; }
@@ -79,6 +78,8 @@ const Icons = {
   Book: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
   Speaker: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  Refresh: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>,
 };
 
 function OrderContent() {
@@ -116,6 +117,35 @@ function OrderContent() {
   myOrdersRef.current = myOrders;
   const prevReadyRef = useRef(false);
   const spokenReadyOrderIdRef = useRef(null);
+
+  // 🔥 FITUR BARU: Session Timer & Auto-Lock
+  const [isLocked, setIsLocked] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 600 detik = 10 menit
+
+  useEffect(() => {
+    if (isLocked) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsLocked(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isLocked]);
+
+  useEffect(() => {
+    // Jika ada pesanan, dan semua pesanan sudah completed/cancelled, lock layar
+    if (myOrders.length > 0) {
+      const allDone = myOrders.every(o => o.status === 'completed' || o.status === 'cancelled' || o.payment_status === 'CANCELLED');
+      if (allDone) {
+        setIsLocked(true);
+      }
+    }
+  }, [myOrders]);
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -163,7 +193,6 @@ function OrderContent() {
 
     const fetchData = async () => {
       const [cafeRes, menuRes] = await Promise.all([
-        // 🔥 PERBAIKAN: Hanya ambil kolom publik, jangan select('*')
         supabase.from('tenants')
           .select('name, logo_url, banner_url, address, wa_number, tax_percentage, notify_order_ready, is_open, is_active, is_pay_first, qris_string')
           .eq('id', tenantId).single(),
@@ -198,7 +227,6 @@ function OrderContent() {
 
     const channel = supabase.channel('customer-realtime-' + Date.now())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantId}` }, (payload) => {
-        // 🔥 PERBAIKAN: Jangan spread semua payload, hanya ambil kolom publik
         const pub = payload.new;
         setCafe(prev => ({
           ...prev,
@@ -478,7 +506,6 @@ function OrderContent() {
     }
   };
 
-  // 🔥 FITUR ANTI-PENIPUAN: Memanggil RPC create_checkout_order
   const handleCheckout = async (method) => {
     if (cafe.is_open === false) {
       showToast('Kafe sedang tutup, tidak bisa memesan');
@@ -490,7 +517,6 @@ function OrderContent() {
     }
     setIsSubmitting(true);
 
-    // Kirim HANYA menu_id dan qty. Server akan menghitung harga & pajak asli.
     const payloadItems = cart.map(i => ({ menu_id: i.id, qty: i.qty, note: i.note || '' }));
 
     const { data: newOrder, error } = await supabase.rpc('create_checkout_order', {
@@ -504,12 +530,11 @@ function OrderContent() {
 
     if (error) {
       showToast(error.message); 
-      fetchAllMenus(); // Refresh stok jika error karena stok
+      fetchAllMenus();
       setIsSubmitting(false);
       return;
     }
 
-    // Jika Sukses
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
     const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
@@ -526,6 +551,7 @@ function OrderContent() {
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
+    setTimeLeft(600); // Reset timer setiap kali pesan baru masuk
     
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir');
@@ -535,6 +561,7 @@ function OrderContent() {
   };
 
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-[#1A1512]">QR Code tidak valid.</div>;
+  
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9]">
       <div className="text-center">
@@ -543,6 +570,39 @@ function OrderContent() {
       </div>
     </div>
   );
+
+  // 🔥 TAMPILAN LOCK SCREEN JIKA WAKTU HABIS / PESANAN SELESAI
+  if (isLocked) {
+    return (
+      <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-6 relative overflow-hidden font-sans">
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(#2A1F17 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
+        <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border-4 border-[#E0D6CC] relative z-10 animate-in zoom-in-95 duration-500">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 bg-rose-100 rounded-full animate-ping opacity-20"></div>
+            <div className="w-full h-full bg-rose-50 rounded-full flex items-center justify-center relative z-10 shadow-inner text-rose-500 border-2 border-rose-200">
+              <Icons.Lock />
+            </div>
+          </div>
+          <h1 className="text-2xl font-black text-[#1A1512] mb-2 uppercase tracking-wide">Sesi Anda Berakhir</h1>
+          <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-6">
+            <p className="text-sm font-bold text-[#5C4B3E] leading-relaxed">
+              Waktu pesanan <strong className="text-[#1A1512]">10 Menit</strong> telah habis, atau semua pesanan Anda telah <strong className="text-[#1A1512]">Selesai</strong>.
+            </p>
+          </div>
+          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-8">
+            Silakan Scan Ulang Barcode<br/>QR Code di Meja Anda untuk Memesan Kembali
+          </p>
+          <button disabled className="w-full bg-[#E0D6CC] text-[#8C7A6B] font-black py-4 rounded-xl text-sm cursor-not-allowed border-2 border-[#D3C8BB] uppercase tracking-wider flex items-center justify-center gap-2">
+            <Icons.Refresh />
+            Menunggu Scan Ulang
+          </button>
+          <div className="mt-6 pt-4 border-t-2 border-[#F4EFE9]">
+            <p className="text-[10px] font-bold text-[#A69B91]">Powered by <span className="text-[#1A1512] font-black">NexaFlow</span></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filteredMenus = menus.filter(m => {
     const matchCat = category === 'all' || m.category === category;
@@ -570,7 +630,12 @@ function OrderContent() {
           <a href="/" className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#1A1512] border border-white shadow-sm">
             <Icons.Back />
           </a>
-          <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-white shadow-sm">
+          
+          {/* Timer indikator di pojok kanan atas */}
+          <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-3 border border-white shadow-sm">
+             <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+             </span>
             <span className={`w-2.5 h-2.5 rounded-full ${cafe.is_open === false ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`}></span>
             <span className="text-[11px] font-black uppercase tracking-widest text-[#1A1512]">Meja {tableNumber}</span>
           </div>
