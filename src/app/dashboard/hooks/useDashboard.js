@@ -589,10 +589,10 @@ export function useDashboard() {
     const prevStatus = prevOrder.status;
     const prevPaymentStatus = prevOrder.payment_status;
 
-    // 🔥 PERBAIKAN: Tambahkan paid_at saat completed
+    // 🔥 PERBAIKAN: Menggunakan 'PAID' (huruf besar) agar sesuai constraint database
     const updatePayload = { status };
     if (status === 'completed') {
-      updatePayload.payment_status = 'paid';
+      updatePayload.payment_status = 'PAID'; 
       if (prevPaymentStatus !== 'PAID' && prevPaymentStatus !== 'paid') {
         updatePayload.paid_at = new Date().toISOString();
       }
