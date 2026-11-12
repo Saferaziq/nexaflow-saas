@@ -259,9 +259,9 @@ export default function AdminDashboard() {
         const daysLeft = Math.max(0, Math.ceil((new Date(t.subscription_end_date).getTime() - currentTime) / (1000 * 60 * 60 * 24)));
         if (daysLeft <= 7) warningCount++;
         if (daysLeft > 0 && t.is_active !== false) {
-          const ratio = Math.min(daysLeft, 30) / 30;
-          totalRevenue += Math.round(getPrice(t) * ratio);
-          totalCommission += Math.round(getCommission(t) * ratio);
+          // 🔥 OPSI B: harga & komisi penuh, tanpa prorata
+          totalRevenue += getPrice(t);
+          totalCommission += getCommission(t);
         }
       }
     });
@@ -803,9 +803,9 @@ export default function AdminDashboard() {
         const isActive = daysLeft > 0 && t.is_active !== false;
         
         if (isActive) {
-          const ratio = Math.min(daysLeft, 30) / 30;
-          revenue += Math.round(getPrice(t) * ratio);
-          commission += Math.round(getCommission(t) * ratio);
+          // 🔥 OPSI B: harga & komisi penuh, tanpa prorata
+          revenue += getPrice(t);
+          commission += getCommission(t);
           activeTenants.push(t);
         } else {
           expiredTenants.push(t);
@@ -929,12 +929,12 @@ export default function AdminDashboard() {
             </div>
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln (Prorated)</p>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Omset / Bln</p>
               <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {stats.revenue.toLocaleString('id-ID')}</h3>
             </div>
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}><Icons.BarChart /></div>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Prorated)</p>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Komisi Sales (Total)</p>
               <h3 className={`text-xl font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {stats.commission.toLocaleString('id-ID')}</h3>
             </div>
           </div>
@@ -1103,7 +1103,7 @@ export default function AdminDashboard() {
                       <span className={`text-xs font-black ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {m.revenue.toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi (Prorated)</p>
+                      <p className={`text-[10px] font-bold uppercase ${textSub}`}>Komisi</p>
                       <span className={`text-sm font-black ${theme === 'dark' ? 'text-violet-400' : 'text-violet-600'}`}>Rp {m.commission.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
