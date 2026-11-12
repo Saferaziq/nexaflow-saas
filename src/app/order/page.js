@@ -66,7 +66,6 @@ const getEffectivePrice = (menu) => {
   return Number(menu.price);
 };
 
-// 🔥 FUNGSI UNTUK MENDAPATKAN / MEMBUAT DEVICE ID
 const getDeviceId = () => {
   if (typeof window === 'undefined') return null;
   let id = localStorage.getItem('nexaflow_device_id');
@@ -131,6 +130,15 @@ function OrderContent() {
 
   const [isLocked, setIsLocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); 
+  const isNewScanRef = useRef(false);
+
+  useEffect(() => {
+    const visited = sessionStorage.getItem('nexaflow_visited_' + tenantId + '_' + tableNumber);
+    if (!visited) {
+      isNewScanRef.current = true;
+      sessionStorage.setItem('nexaflow_visited_' + tenantId + '_' + tableNumber, 'true');
+    }
+  }, [tenantId, tableNumber]);
 
   useEffect(() => {
     if (myOrders.length === 0) {
@@ -239,7 +247,23 @@ function OrderContent() {
 
       setLoading(false);
 
-      if (existingIds.length > 0) fetchMyOrders(existingIds);
+      if (existingIds.length > 0) {
+        const { data: fetchedOrders } = await supabase.rpc('get_customer_orders', { p_order_ids: existingIds });
+        if (fetchedOrders) {
+          const hasActive = fetchedOrders.some(o => ['pending', 'cooking', 'ready', 'WAITING_CASH', 'WAITING_QRIS'].includes(o.status));
+          
+          if (isNewScanRef.current && !hasActive) {
+            // Scan baru tapi tidak ada pesanan aktif, mulai sesi baru
+            localStorage.removeItem('my_order_ids_' + tableNumber);
+            myOrderIdsRef.current = [];
+            setMyOrders([]);
+          } else {
+            setMyOrders(fetchedOrders);
+          }
+        }
+      } else {
+        setMyOrders([]);
+      }
     };
     fetchData();
 
@@ -579,6 +603,15 @@ function OrderContent() {
     }
   };
 
+  const startNewSession = () => {
+    localStorage.removeItem('my_order_ids_' + tableNumber);
+    myOrderIdsRef.current = [];
+    setMyOrders([]);
+    setTimeLeft(600);
+    setIsLocked(false);
+    setActiveTab('menu');
+  };
+
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-[#1A1512]">QR Code tidak valid.</div>;
   
   if (loading) return (
@@ -607,14 +640,14 @@ function OrderContent() {
               Waktu pesanan <strong className="text-[#1A1512]">10 Menit</strong> telah habis, atau semua pesanan Anda telah <strong className="text-[#1A1512]">Selesai</strong>.
             </p>
           </div>
-          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-8">
+          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-6">
             Silakan Scan Ulang Barcode<br/>QR Code di Meja Anda untuk Memesan Kembali
           </p>
-          <button disabled className="w-full bg-[#E0D6CC] text-[#8C7A6B] font-black py-4 rounded-xl text-sm cursor-not-allowed border-2 border-[#D3C8BB] uppercase tracking-wider flex items-center justify-center gap-2">
+          <button onClick={startNewSession} className="w-full bg-[#2A1F17] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider flex items-center justify-center gap-2 mb-3">
             <Icons.Refresh />
-            Menunggu Scan Ulang
+            Mulai Pesanan Baru
           </button>
-          <div className="mt-6 pt-4 border-t-2 border-[#F4EFE9]">
+          <div className="mt-4 pt-4 border-t-2 border-[#F4EFE9]">
             <p className="text-[10px] font-bold text-[#A69B91]">Powered by <span className="text-[#1A1512] font-black">NexaFlow</span></p>
           </div>
         </div>
