@@ -1,22 +1,21 @@
+import { Inter } from 'next/font/google';
 import './globals.css';
-import RegisterSW from '@/components/RegisterSW';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'NexaFlow — Kasir Restoran',
-  description: 'Sistem Kasir & Manajemen Restoran NexaFlow',
+  title: 'NexaFlow Kasir - Restoran Modern',
+  description: 'Sistem kasir modern untuk caffe & restoran Indonesia.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'NexaFlow',
   },
-  icons: {
-    apple: '/icons/icon-192.png',
-  },
 };
 
 export const viewport = {
-  themeColor: '#F4EFE9', 
+  themeColor: '#1A2A3A',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -26,9 +25,29 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <body>
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
+      <body className={inter.className}>
         {children}
-        <RegisterSW />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('Service Worker registered:', registration.scope);
+                    },
+                    function(err) {
+                      console.log('Service Worker registration failed:', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
