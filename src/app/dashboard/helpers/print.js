@@ -5,17 +5,69 @@ export const printHTML = (htmlContent) => {
   // 🔥 CEK MODE PRINTER DARI LOCALSTORAGE
   const mode = typeof window !== 'undefined' ? (localStorage.getItem('nexaflow_printer_mode') || 'browser') : 'browser';
 
-  // 🔥 1. ANDROID (RawBT) & IPAD (BR RawPrinter) - SILENT PRINT
+  // ==========================================
+  // FALLBACK: BROWSER DEFAULT (Jika QZ Tray/App gagal)
+  // ==========================================
+  const fallbackPrint = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    const triggerPrint = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { 
+          if (document.body.contains(iframe)) document.body.removeChild(iframe); 
+        }, 10000);
+      }, 500);
+    };
+
+    const images = iframe.contentWindow.document.images;
+    if (images.length === 0) {
+      triggerPrint();
+      return;
+    }
+
+    let loadedCount = 0;
+    const totalImages = images.length;
+
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= totalImages) {
+        triggerPrint();
+      }
+    };
+
+    for (let i = 0; i < totalImages; i++) {
+      if (images[i].complete) {
+        checkAllLoaded();
+      } else {
+        images[i].addEventListener('load', checkAllLoaded);
+        images[i].addEventListener('error', checkAllLoaded);
+      }
+    }
+  };
+
+  // ==========================================
+  // 1. ANDROID (RawBT) & IPAD (BR RawPrinter) - SILENT PRINT
+  // ==========================================
   if (mode === 'rawbt' || mode === 'brraw') {
     try {
-      // Konversi HTML ke Base64 (mendukung karakter khusus/emoji)
       const base64Html = window.btoa(unescape(encodeURIComponent(htmlContent)));
-      
-      // Tentukan skema URL berdasarkan aplikasi
       const scheme = mode === 'rawbt' ? 'rawbt' : 'rawprinter';
       const url = `${scheme}:data:text/html;base64,${base64Html}`;
       
-      // Trigger URL menggunakan iframe tersembunyi (tidak merusak halaman)
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
@@ -32,62 +84,73 @@ export const printHTML = (htmlContent) => {
         }
       }, 3000);
       
-      return; // Hentikan eksekusi, jangan tampilkan window.print()
+      return;
     } catch (err) {
       console.error('Gagal mencetak via RawBT/RawPrinter:', err);
-      // Jika gagal, biarkan jatuh ke fallback browser di bawah
+      fallbackPrint();
+      return;
     }
   }
 
-  // 🔥 2. BROWSER DEFAULT / QZ TRAY (Fallback Standar)
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  document.body.appendChild(iframe);
-  
-  const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(htmlContent);
-  doc.close();
+  // ==========================================
+  // 2. WINDOWS PC (QZ Tray) - SILENT PRINT
+  // ==========================================
+  if (mode === 'qztray') {
+    const connectAndPrint = () => {
+      if (typeof qz === 'undefined') {
+        // Load QZ Tray library secara dinamis
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js';
+        script.onload = () => executeQzPrint();
+        script.onerror = () => {
+          console.error('Gagal memuat library QZ Tray dari CDN.');
+          alert('Gagal memuat library QZ Tray. Sistem akan menggunakan cetak browser biasa.');
+          fallbackPrint();
+        };
+        document.head.appendChild(script);
+      } else {
+        executeQzPrint();
+      }
+    };
 
-  const triggerPrint = () => {
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => { 
-        if (document.body.contains(iframe)) document.body.removeChild(iframe); 
-      }, 10000);
-    }, 500);
-  };
+    const executeQzPrint = () => {
+      // Coba connect ke QZ Tray
+      if (!qz.websocket.isActive()) {
+        qz.websocket.connect().then(() => {
+          sendToQz();
+        }).catch((err) => {
+          console.error('Koneksi QZ Tray gagal:', err);
+          alert('Gagal terhubung ke QZ Tray. Pastikan aplikasi QZ Tray sudah terbuka di PC Anda.');
+          fallbackPrint();
+        });
+      } else {
+        sendToQz();
+      }
+    };
 
-  const images = iframe.contentWindow.document.images;
-  if (images.length === 0) {
-    triggerPrint();
+    const sendToQz = () => {
+      qz.printers.getDefault().then((defaultPrinter) => {
+        const config = qz.configs.create(defaultPrinter);
+        // QZ Tray mendukung HTML secara native
+        const data = [{ type: 'html', data: htmlContent }];
+        return qz.print(config, data);
+      }).then(() => {
+        console.log('Cetak QZ Tray Berhasil');
+      }).catch((err) => {
+        console.error('Cetak QZ Tray gagal:', err);
+        alert('Gagal mencetak via QZ Tray: ' + err.message);
+        fallbackPrint();
+      });
+    };
+
+    connectAndPrint();
     return;
   }
 
-  let loadedCount = 0;
-  const totalImages = images.length;
-
-  const checkAllLoaded = () => {
-    loadedCount++;
-    if (loadedCount >= totalImages) {
-      triggerPrint();
-    }
-  };
-
-  for (let i = 0; i < totalImages; i++) {
-    if (images[i].complete) {
-      checkAllLoaded();
-    } else {
-      images[i].addEventListener('load', checkAllLoaded);
-      images[i].addEventListener('error', checkAllLoaded);
-    }
-  }
+  // ==========================================
+  // 3. BROWSER DEFAULT (Fallback)
+  // ==========================================
+  fallbackPrint();
 };
 
 const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
