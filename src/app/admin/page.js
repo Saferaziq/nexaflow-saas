@@ -83,6 +83,8 @@ export default function AdminDashboard() {
   const [appSettings, setAppSettings] = useState({ qris_string: '', bank_name: '', bank_account: '', bank_holder: '' });
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState({});
+  const [presenceStatus, setPresenceStatus] = useState('connecting');
+  const [recentActiveTenants, setRecentActiveTenants] = useState({});
   const [stats, setStats] = useState({ total: 0, online: 0, warning: 0, revenue: 0, commission: 0 });
   const [now, setNow] = useState(null);
   const [toasts, setToasts] = useState([]);
@@ -235,9 +237,18 @@ export default function AdminDashboard() {
     }
   };
 
+  // 🔥 FIX v4: gabungkan realtime presence + fallback "order aktif 10 menit terakhir"
+  const effectiveOnline = useMemo(() => {
+    const merged = { ...onlineUsers };
+    Object.keys(recentActiveTenants).forEach((id) => {
+      if (!merged[id]) merged[id] = true;
+    });
+    return merged;
+  }, [onlineUsers, recentActiveTenants]);
+
   useEffect(() => {
-    calculateStats(tenants, onlineUsers);
-  }, [tenants, onlineUsers]);
+    calculateStats(tenants, effectiveOnline);
+  }, [tenants, effectiveOnline]);
 
   const calculateStats = (tenantData, onlineData) => {
     let onlineCount = 0, warningCount = 0, totalRevenue = 0, totalCommission = 0;
@@ -257,11 +268,38 @@ export default function AdminDashboard() {
     setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission });
   };
 
-  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v3
+  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v4 (realtime + fallback + status badge + log)
   useEffect(() => {
     let channel = null;
     let pollInterval = null;
+    let activityInterval = null;
     let isMounted = true;
+    let lastCount = -1;
+
+    // Fallback: tenant dianggap online jika ada order baru 10 menit terakhir
+    const checkRecentActivity = async () => {
+      if (!isMounted) return;
+      try {
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+          .from('orders')
+          .select('tenant_id')
+          .gte('created_at', tenMinAgo);
+        if (error) {
+          console.warn('[Admin Fallback] recentActivity query error:', error.message);
+          return;
+        }
+        const activeMap = {};
+        (data || []).forEach((o) => { if (o.tenant_id) activeMap[o.tenant_id] = true; });
+        if (isMounted) setRecentActiveTenants(activeMap);
+      } catch (err) {
+        console.warn('[Admin Fallback] recentActivity exception:', err);
+      }
+    };
+
+    // Jalankan fallback independen dari presence (bisa jalan walau realtime gagal)
+    checkRecentActivity();
+    activityInterval = setInterval(checkRecentActivity, 15000);
 
     const handlePresenceChange = () => {
       if (!isMounted || !channel) return;
@@ -273,6 +311,11 @@ export default function AdminDashboard() {
             if (p.tenant_id) onlineMap[p.tenant_id] = true;
           });
         });
+        const count = Object.keys(onlineMap).length;
+        if (count !== lastCount) {
+          console.log(`[Admin Presence] realtime online tenants: ${count}`, onlineMap);
+          lastCount = count;
+        }
         setOnlineUsers(onlineMap);
       } catch (err) {
         console.warn('[Admin Presence] presenceState error:', err);
@@ -290,21 +333,31 @@ export default function AdminDashboard() {
       .on('presence', { event: 'join' }, handlePresenceChange)
       .on('presence', { event: 'leave' }, handlePresenceChange)
       .subscribe(async (status) => {
+        console.log('[Admin Presence] subscribe status:', status);
         if (status === 'SUBSCRIBED') {
-          await channel.track({ role: 'admin', online_at: new Date().toISOString() });
+          setPresenceStatus('online');
+          try {
+            await channel.track({ role: 'admin', online_at: new Date().toISOString() });
+          } catch (err) {
+            console.warn('[Admin Presence] track error:', err);
+          }
           handlePresenceChange();
           if (!pollInterval) {
             pollInterval = setInterval(handlePresenceChange, 3000);
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setPresenceStatus('error');
           console.warn('[Admin Presence] Channel status:', status);
           if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        } else {
+          setPresenceStatus('connecting');
         }
       });
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         handlePresenceChange();
+        checkRecentActivity();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -313,6 +366,7 @@ export default function AdminDashboard() {
       isMounted = false;
       document.removeEventListener('visibilitychange', onVisibility);
       if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (activityInterval) { clearInterval(activityInterval); activityInterval = null; }
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
@@ -776,13 +830,13 @@ export default function AdminDashboard() {
       const matchSearch = !q || (t.name || '').toLowerCase().includes(q) || (t.referral_name || '').toLowerCase().includes(q) || (t.wa_number || '').toLowerCase().includes(q);
       const daysLeft = calculateDaysLeft(t.subscription_end_date);
       let matchStatus = true;
-      if (filterStatus === 'online') matchStatus = onlineUsers[t.id] === true && t.is_active !== false;
+      if (filterStatus === 'online') matchStatus = effectiveOnline[t.id] === true && t.is_active !== false;
       else if (filterStatus === 'expired') matchStatus = hasEndDate(t) && daysLeft <= 0 && t.is_active !== false;
       else if (filterStatus === 'suspended') matchStatus = t.is_active === false;
       else if (filterStatus === 'warning') matchStatus = daysLeft > 0 && daysLeft <= 7 && t.is_active !== false;
       return matchSearch && matchStatus;
     });
-  }, [tenants, searchQuery, filterStatus, onlineUsers, now]);
+  }, [tenants, searchQuery, filterStatus, effectiveOnline, now]);
 
   const sortedTenants = useMemo(() => {
     const arr = [...filteredTenants];
@@ -860,6 +914,18 @@ export default function AdminDashboard() {
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}><Icons.Activity /></div>
               <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>Kafe Online</p>
               <h3 className={`text-4xl font-black ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.online} <span className={`text-lg ${textSub}`}>/ {stats.total}</span></h3>
+              <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                presenceStatus === 'online' ? (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-700') :
+                presenceStatus === 'error' ? (theme === 'dark' ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' : 'bg-rose-50 border-rose-300 text-rose-700') :
+                (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700')
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  presenceStatus === 'online' ? 'bg-emerald-500 animate-pulse' :
+                  presenceStatus === 'error' ? 'bg-rose-500' :
+                  'bg-amber-500 animate-pulse'
+                }`}></span>
+                {presenceStatus === 'online' ? 'Realtime' : presenceStatus === 'error' ? 'Fallback' : 'Connecting'}
+              </div>
             </div>
             <div className={`${cardClass} rounded-xl p-5 relative overflow-hidden`}>
               <div className={`absolute top-0 right-0 p-3 opacity-10 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}><Icons.Dollar /></div>
@@ -910,7 +976,7 @@ export default function AdminDashboard() {
                 <tbody className={`divide-y-2 ${theme === 'dark' ? 'divide-slate-800 bg-[#0a192f]' : 'divide-slate-200 bg-white'}`}>
                   {sortedTenants.map((tenant) => {
                     const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-                    const isOnline = onlineUsers[tenant.id];
+                    const isOnline = effectiveOnline[tenant.id];
                     const isSuspended = tenant.is_active === false;
                     const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
                     const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
@@ -966,7 +1032,7 @@ export default function AdminDashboard() {
             <div className="lg:hidden space-y-5">
               {sortedTenants.map((tenant) => {
                 const daysLeft = calculateDaysLeft(tenant.subscription_end_date);
-                const isOnline = onlineUsers[tenant.id];
+                const isOnline = effectiveOnline[tenant.id];
                 const isSuspended = tenant.is_active === false;
                 const isExpired = hasEndDate(tenant) && daysLeft <= 0 && !isSuspended;
                 const isWarning = hasEndDate(tenant) && daysLeft > 0 && daysLeft <= 7 && !isSuspended;
