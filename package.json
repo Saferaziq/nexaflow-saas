@@ -2,6 +2,12 @@
   "name": "nexaflow-saas",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "chrome 111",
+    "edge 111",
+    "firefox 111",
+    "safari 15"
+  ],
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -9,7 +15,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/supabase-js": "2.45.4",
+    "core-js": "^3.38.1",
     "dotenv": "^18.0.9",
     "next": "16.4.2",
     "react": "19.3.0",

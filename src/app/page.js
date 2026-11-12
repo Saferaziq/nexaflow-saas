@@ -24,6 +24,10 @@ const Icons = {
   Zap: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   ShieldCheck: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
   HeartHandshake: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+  Volume2: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
+  Printer: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+  Store: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  XCircle: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-rose-500"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
 };
 
 const features = [
@@ -31,6 +35,10 @@ const features = [
   { Icon: Icons.Chef, title: 'Kitchen Display System', desc: 'Layar khusus dapur yang menampilkan antrean pesanan secara real-time. Mencegah kertas pesanan hilang.' },
   { Icon: Icons.Wallet, title: 'QRIS Dinamis', desc: 'Cetak struk dengan QRIS yang nominalnya sudah terisi otomatis. Pelanggan tinggal scan dan bayar.' },
   { Icon: Icons.Chart, title: 'Laporan Instan', desc: 'Pantau omset harian, menu terlaris, dan performa Kafe/Resto Anda. Ekspor laporan ke CSV untuk pembukuan.' },
+  { Icon: Icons.Sparkles, title: 'Promo & Diskon Menu', desc: 'Atur menu Unggulan, Baru, dan Diskon (harga coret) otomatis tampil mencolok di HP pelanggan.' },
+  { Icon: Icons.Volume2, title: 'Panggilan Suara (TTS)', desc: 'HP pelanggan akan bergetar dan memanggil nama mereka saat pesanan sudah siap di kasir.' },
+  { Icon: Icons.Printer, title: 'Cetak Bluetooth (RawBT)', desc: 'Cetak struk thermal langsung dari HP/Tablet kasir tanpa perlu PC tambahan. Sangat praktis.' },
+  { Icon: Icons.Store, title: 'Multi-Tenant Admin', desc: 'Sistem admin terpusat. Pantau status online/offline semua cabang kafe Anda dari satu layar.' },
 ];
 
 const whyUs = [
@@ -48,9 +56,20 @@ const steps = [
 
 const faqs = [
   { q: 'Apakah bisa menggunakan QRIS Kafe/Resto saya sendiri?', a: 'Ya. Anda hanya perlu memasukkan string QRIS statis milik Kafe/Resto Anda di menu Pengaturan. Sistem NexaFlow akan mengubahnya menjadi QRIS dinamis dengan nominal tagihan yang sesuai pesanan.' },
-  { q: 'Apakah butuh perangkat keras (hardware) khusus?', a: 'Tidak. NexaFlow berbasis cloud (web). Anda bisa mengakses Dashboard Kasir dan Dapur melalui browser di Laptop, PC, Tablet, maupun Smartphone.' },
+  { q: 'Apakah fitur Panggilan Suara berbayar tambahan?', a: 'Tidak. Fitur panggilan suara (TTS) dan getar menggunakan teknologi bawaan browser HP pelanggan (Web Speech API), sehingga 100% gratis dan tidak memotong biaya langganan Anda.' },
+  { q: 'Apakah butuh perangkat keras (hardware) khusus?', a: 'Tidak. NexaFlow berbasis cloud (web). Anda bisa mengakses Dashboard Kasir dan Dapur melalui browser di Laptop, PC, Tablet, maupun Smartphone. Untuk cetak struk, cukup gunakan Printer Thermal Bluetooth murah yang mendukung RawBT.' },
   { q: 'Berapa lama proses setup-nya?', a: 'Sangat cepat. Rata-rata pemilik Kafe/Resto hanya butuh 10-15 menit untuk memasukkan menu, mencetak QR, dan siap menerima pesanan pertama.' },
   { q: 'Apakah ada biaya tersembunyi atau komisi?', a: 'Tidak ada. Biaya langganan bersifat flat per bulan. Kami tidak memotong komisi dari setiap transaksi penjualan Anda.' },
+];
+
+const comparisons = [
+  { feature: 'Pesan Mandiri via QR (Tanpa Antre)', manual: false, competitor: true, nexa: true },
+  { feature: 'Kitchen Display System (Tanpa Kertas)', manual: false, competitor: false, nexa: true },
+  { feature: 'Promo Diskon & Label Unggulan', manual: false, competitor: false, nexa: true },
+  { feature: 'Panggilan Suara & Getar (TTS)', manual: false, competitor: false, nexa: true },
+  { feature: 'Cetak Struk Bluetooth di HP', manual: false, competitor: true, nexa: true },
+  { feature: 'Sistem Multi-Cabang (Admin)', manual: false, competitor: false, nexa: true },
+  { feature: 'Biaya Langganan Flat (Tanpa Komisi)', manual: true, competitor: false, nexa: true },
 ];
 
 export default function LandingPage() {
@@ -137,6 +156,7 @@ export default function LandingPage() {
             <nav className="hidden md:flex items-center gap-2 relative z-10">
               <button onClick={() => scrollTo('fitur')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Fitur</button>
               <button onClick={() => scrollTo('tampilan')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Pratinjau</button>
+              <button onClick={() => scrollTo('bandingkan')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Bandingkan</button>
               <button onClick={() => scrollTo('harga')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">Harga</button>
               <button onClick={() => scrollTo('faq')} className="px-4 py-2 text-sm font-bold text-[#7A6A5F] hover:text-[#3A2A20] transition-colors">FAQ</button>
             </nav>
@@ -155,6 +175,7 @@ export default function LandingPage() {
           <div className="md:hidden absolute top-20 left-0 right-0 bg-[#F4EFE9] border-b border-[#E3DCD1] shadow-xl p-4 flex flex-col gap-2 z-40">
             <button onClick={() => scrollTo('fitur')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">Fitur</button>
             <button onClick={() => scrollTo('tampilan')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">Pratinjau</button>
+            <button onClick={() => scrollTo('bandingkan')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">Bandingkan</button>
             <button onClick={() => scrollTo('harga')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">Harga</button>
             <button onClick={() => scrollTo('faq')} className="text-left px-4 py-3 text-sm font-bold text-[#7A6A5F] hover:bg-[#E3DCD1]/50 rounded-xl">FAQ</button>
             <hr className="border-[#E3DCD1] my-2" />
@@ -172,7 +193,7 @@ export default function LandingPage() {
               
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-[#3A2A20] leading-[1.05] tracking-tight">Ubah Cara Kafe & Resto<br /><span className="text-[#8C7A6B]">Bekerja Hari Ini.</span></h1>
               
-              <p className="mt-5 sm:mt-6 text-base sm:text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, meningkatkan pendapatan, dan memberikan pengalaman terbaik bagi pelanggan.</p>
+              <p className="mt-5 sm:mt-6 text-base sm:text-lg text-[#7A6A5F] leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">Bergabunglah dengan ekosistem digital yang membantu Anda mengelola pesanan lebih cerdas, memberikan pengalaman terbaik bagi pelanggan, dan dilengkapi fitur panggilan suara inovatif.</p>
               
               <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-[#3A2A20] text-[#F4EFE9] font-black text-sm sm:text-base shadow-xl shadow-[#3A2A20]/20 hover:shadow-[#3A2A20]/40 hover:-translate-y-0.5 transition-all">Mulai Gratis 7 Hari <Icons.ArrowRight /></Link>
@@ -197,56 +218,130 @@ export default function LandingPage() {
       {/* SECTION PRATINJAU */}
       <section id="tampilan" className="px-4 sm:px-6 lg:px-8 py-20 sm:py-24 relative z-10 bg-white/40 border-y border-[#E3DCD1] backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16"><h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Desain Presisi untuk <span className="text-[#8C7A6B]">Setiap Peran</span></h2><p className="text-[#7A6A5F] text-base sm:text-lg font-medium">Antarmuka yang bersih, cepat, dan sangat mudah digunakan oleh siapa saja.</p></div>
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16"><h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Desain Presisi untuk <span className="text-[#8C7A6B]">Setiap Peran</span></h2><p className="text-[#7A6A5F] text-base sm:text-lg font-medium">Antarmuka premium yang memanjakan pelanggan dan memudahkan staf Anda.</p></div>
           <div className="space-y-16 sm:space-y-20">
             
             {/* 1. Tampilan Pelanggan (Mobile) */}
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="order-2 md:order-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-5">Pelanggan</div>
-                <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Pengalaman Pesan Mandiri (Self-Order)</h3><p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Pelanggan hanya perlu memindai QR Code di meja. Tampilan mobile-first memudahkan mereka memilih menu, menambahkan catatan, dan melihat total pembayaran secara transparan.</p>
-                <ul className="space-y-3">{['Keranjang melayang (Sticky Cart)', 'Perhitungan PPN otomatis', 'Konfirmasi pesanan 1 klik'].map((item, i) => (<li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>))}</ul>
-              </div>
-              <div className="order-1 md:order-2 flex justify-center">
-                <div className="w-full max-w-[280px] sm:max-w-[300px] h-[550px] sm:h-[600px] bg-white rounded-[2.5rem] sm:rounded-[3rem] border-[6px] sm:border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative"><div className="absolute top-0 w-full h-6 sm:h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-12 sm:w-16 h-1 bg-white/30 rounded-full"></div></div><div className="p-4 sm:p-5 pt-8 sm:pt-10 h-full flex flex-col"><div className="flex justify-between items-center mb-4 sm:mb-6"><div><p className="text-[9px] sm:text-[10px] font-bold text-[#8C7A6B] uppercase">Meja 04</p><h4 className="text-lg sm:text-xl font-black text-[#3A2A20]">Kafe Premium</h4></div><div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#F4EFE9] border border-[#E3DCD1] flex items-center justify-center"><Icons.Menu/></div></div><div className="flex-1 space-y-3 sm:space-y-4"><div className="flex gap-2 sm:gap-3 bg-white border border-[#E3DCD1] rounded-xl p-2.5 sm:p-3 shadow-sm"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-xs sm:text-sm text-[#3A2A20]">Es Kopi Susu</p><p className="text-[9px] sm:text-[10px] text-[#8C7A6B]">Kopi</p><p className="font-black text-xs sm:text-sm text-[#3A2A20] mt-1">Rp 22.000</p></div></div><div className="flex gap-2 sm:gap-3 bg-white border border-[#E3DCD1] rounded-xl p-2.5 sm:p-3 shadow-sm"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#F4EFE9] border border-[#E3DCD1] flex-shrink-0"></div><div><p className="font-bold text-xs sm:text-sm text-[#3A2A20]">Croissant Butter</p><p className="text-[9px] sm:text-[10px] text-[#8C7A6B]">Cemilan</p><p className="font-black text-xs sm:text-sm text-[#3A2A20] mt-1">Rp 18.000</p></div></div></div><div className="bg-[#3A2A20] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white mt-4 shadow-lg"><div className="flex justify-between items-center mb-1.5 sm:mb-2"><span className="text-[10px] sm:text-xs font-bold text-[#D3C8BB]">2 Item</span><span className="text-xs sm:text-sm font-black">Rp 40.000</span></div><div className="bg-white/10 text-center py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold">Pesan Sekarang</div></div></div></div>
-              </div>
-            </div>
-
-            {/* 2. Tampilan Dapur (KDS) */}
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-              <div className="flex justify-center order-1 md:order-2"><div className="w-full max-w-lg bg-[#1A1A1A] rounded-2xl border border-[#333] shadow-2xl overflow-hidden"><div className="bg-[#222] px-3 sm:px-4 py-2 sm:py-3 border-b border-[#333] flex justify-between items-center"><div className="flex items-center gap-2"><Icons.Chef className="text-white w-5 h-5 sm:w-6 sm:h-6"/><span className="text-white font-bold text-xs sm:text-sm">Kitchen Display (KDS)</span></div><span className="text-[9px] sm:text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Live</span></div><div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"><div className="bg-[#2A2A2A] rounded-xl p-3 sm:p-4 border-l-4 border-amber-500"><div className="flex justify-between items-start mb-2"><span className="text-white font-black text-base sm:text-lg">Meja 04</span><span className="text-[9px] sm:text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded">DIMASAK</span></div><p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">Budi · 10:45</p><ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-white font-medium"><li className="flex justify-between"><span>1x Es Kopi Susu</span></li><li className="flex justify-between"><span>1x Croissant</span></li></ul></div><div className="bg-[#2A2A2A] rounded-xl p-3 sm:p-4 border-l-4 border-emerald-500 opacity-60"><div className="flex justify-between items-start mb-2"><span className="text-white font-black text-base sm:text-lg">Meja 09</span><span className="text-[9px] sm:text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">SIAP</span></div><p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">Sinta · 10:50</p><ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-300 font-medium line-through"><li className="flex justify-between"><span>2x Matcha Latte</span></li></ul></div></div></div></div>
-              <div className="order-2 md:order-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-5">Koki / Dapur</div><h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Layar Dapur Real-Time (KDS)</h3><p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Hilangkan kebisingan suara teriakan pesanan atau kertas struk yang hilang. Koki melihat daftar pesanan masuk langsung di layar TV atau Tablet.</p>
-                <ul className="space-y-3">{['Tema Gelap (Dark Mode) nyaman untuk mata', 'Notifikasi suara otomatis saat order masuk', 'Tombol Undo jika salah klik'].map((item, i) => (<li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>))}</ul>
-              </div>
-            </div>
-
-            {/* 3. Tampilan Laporan Kasir */}
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-              <div className="order-2 md:order-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-5">Pemilik / Manajer</div>
-                <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Laporan Penjualan yang Akurat</h3>
-                <p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Tidak perlu lagi menghitung manual di buku. Sistem mencatat setiap transaksi, menghitung omset, dan menemukan menu terlaris Anda secara otomatis.</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Menu Premium & Panggilan Suara</h3>
+                <p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Pelanggan memindai QR, melihat promo diskon (harga coret), dan memesan langsung. Saat pesanan siap, HP mereka akan <strong>bergetar dan memanggil nama mereka</strong> secara otomatis.</p>
                 <ul className="space-y-3">
-                  {['Filter laporan harian, bulanan, & custom', 'Grafik omset 7 hari terakhir', 'Ekspor ke CSV (Excel) sekali klik'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> {item}</li>
-                  ))}
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-rose-500"><Icons.Check/></span> Badge Unggulan & Harga Coret (Diskon)</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Getar & Suara Panggilan (TTS)</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-cyan-600"><Icons.Check/></span> Keranjang Melayang (Sticky Cart)</li>
                 </ul>
               </div>
-              <div className="order-1 md:order-2 flex justify-center">
-                <div className="w-full max-w-lg bg-white rounded-2xl border border-[#E3DCD1] shadow-2xl overflow-hidden">
-                  <div className="bg-[#F4EFE9] px-3 sm:px-4 py-2 sm:py-3 border-b border-[#E3DCD1] flex items-center justify-between">
-                    <div className="flex items-center gap-2"><Icons.Chart className="text-[#3A2A20] w-5 h-5 sm:w-6 sm:h-6"/><span className="text-[#3A2A20] font-bold text-xs sm:text-sm">Laporan Penjualan</span></div>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-[#8C7A6B] bg-white border border-[#E3DCD1] px-2 py-1 rounded">Bulan Ini</span>
-                  </div>
-                  <div className="p-4 sm:p-5 space-y-3 sm:space-y-4">
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      <div className="bg-[#F4EFE9] rounded-xl p-3 sm:p-4 border border-[#E3DCD1]"><p className="text-[9px] sm:text-[10px] font-bold text-[#8C7A6B] uppercase mb-1">Total Omset</p><p className="text-base sm:text-xl font-black text-[#3A2A20]">Rp 12.450.000</p></div>
-                      <div className="bg-[#3A2A20] rounded-xl p-3 sm:p-4 shadow-md"><p className="text-[9px] sm:text-[10px] font-bold text-[#D3C8BB] uppercase mb-1">Total Pesanan</p><p className="text-base sm:text-xl font-black text-white">342</p></div>
+              <div className="order-1 md:order-2 flex justify-center relative">
+                <div className="w-full max-w-[280px] sm:max-w-[300px] h-[550px] sm:h-[600px] bg-white rounded-[2.5rem] sm:rounded-[3rem] border-[6px] sm:border-[8px] border-[#3A2A20] shadow-2xl overflow-hidden relative">
+                  <div className="absolute top-0 w-full h-6 sm:h-7 bg-[#3A2A20] rounded-b-3xl flex justify-center items-end pb-1"><div className="w-12 sm:w-16 h-1 bg-white/30 rounded-full"></div></div>
+                  <div className="p-4 sm:p-5 pt-8 sm:pt-10 h-full flex flex-col bg-[#F4EFE9]">
+                    <div className="flex justify-between items-center mb-4">
+                      <div><p className="text-[9px] font-bold text-[#8C7A6B] uppercase">Meja 10</p><h4 className="text-lg font-black text-[#3A2A20]">Nexa Kafe</h4></div>
                     </div>
-                    <div className="bg-[#F4EFE9] rounded-xl p-3 sm:p-4 border border-[#E3DCD1]">
-                      <p className="text-[9px] sm:text-[10px] font-bold text-[#8C7A6B] uppercase mb-2 sm:mb-3">Grafik 7 Hari Terakhir</p>
-                      <div className="flex items-end gap-1.5 sm:gap-2 h-16 sm:h-20">{[40, 60, 30, 80, 50, 90, 70].map((h, i) => (<div key={i} className="flex-1 bg-gradient-to-t from-[#8C7A6B] to-[#D3C8BB] rounded-t-sm" style={{ height: `${h}%` }}></div>))}</div>
+                    
+                    <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm mb-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 bg-[#06b6d4] text-white text-[8px] font-bold px-2 py-1 rounded-br-lg z-10">⭐ Unggulan</div>
+                      <div className="w-14 h-14 rounded-lg bg-gray-200 flex-shrink-0 mt-2"></div>
+                      <div className="pt-2">
+                        <p className="font-bold text-xs text-[#3A2A20]">Iced Matcha Latte</p>
+                        <p className="text-[9px] text-[#8C7A6B] line-through mt-1">Rp 28.000</p>
+                        <p className="font-black text-sm text-rose-600">Rp 22.000</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-3 bg-white border border-[#E3DCD1] rounded-xl p-3 shadow-sm">
+                      <div className="w-14 h-14 rounded-lg bg-gray-200 flex-shrink-0"></div>
+                      <div>
+                        <p className="font-bold text-xs text-[#3A2A20]">Croissant Butter</p>
+                        <p className="font-black text-sm text-[#3A2A20] mt-2">Rp 18.000</p>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 rounded-[2rem]">
+                      <div className="bg-[#F4EFE9] w-full rounded-2xl p-4 text-center border-2 border-emerald-500 shadow-xl">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
+                          <span className="text-2xl">🔊</span>
+                        </div>
+                        <h4 className="font-black text-slate-900 text-sm">Pesanan Siap!</h4>
+                        <p className="text-[10px] text-slate-600 font-bold mt-1 mb-2">Budi, meja 10, silakan ambil di kasir.</p>
+                        <div className="bg-emerald-500 text-white text-[9px] font-bold py-1.5 rounded-lg">Sedang Memanggil...</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Tampilan Kasir */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              <div className="flex justify-center order-1 md:order-2">
+                <div className="w-full max-w-lg bg-white rounded-2xl border border-[#E3DCD1] shadow-2xl overflow-hidden">
+                  <div className="bg-[#F4EFE9] px-4 py-3 border-b border-[#E3DCD1] flex items-center justify-between">
+                    <div className="flex items-center gap-2"><Icons.Chart className="text-[#3A2A20] w-5 h-5"/><span className="text-[#3A2A20] font-bold text-sm">Dashboard Kasir</span></div>
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <Icons.Printer />
+                      <span className="text-[10px] font-bold">BT Printer Ready</span>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="bg-[#F4EFE9] rounded-xl p-3 border-l-4 border-amber-500 flex justify-between items-center">
+                      <div>
+                        <p className="font-black text-sm text-[#3A2A20]">Meja 04 <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded ml-2">Menunggu Bayar</span></p>
+                        <p className="text-xs text-[#8C7A6B] font-bold mt-1">Budi · 2 Item · Rp 40.000</p>
+                      </div>
+                      <button className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg">Konfirmasi</button>
+                    </div>
+                    <div className="bg-[#F4EFE9] rounded-xl p-3 border-l-4 border-blue-500 flex justify-between items-center">
+                      <div>
+                        <p className="font-black text-sm text-[#3A2A20]">Meja 09 <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-2">Sedang Dimasak</span></p>
+                        <p className="text-xs text-[#8C7A6B] font-bold mt-1">Sinta · 3 Item · Rp 65.000</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="order-2 md:order-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-5">Kasir</div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Kontrol Antrean & Cetak Bluetooth</h3>
+                <p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Kasir dapat melihat antrean masuk, mengonfirmasi pembayaran, dan mencetak struk langsung ke printer thermal bluetooth (RawBT) tanpa perlu PC tambahan.</p>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Konfirmasi Pembayaran & Cancel Order</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Cetak Struk via Bluetooth Thermal</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Support QRIS Dinamis & Cash</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 3. Tampilan Dapur (KDS) */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              <div className="order-2 md:order-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E3DCD1] text-[#3A2A20] text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-5">Koki / Dapur</div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#3A2A20] mb-3 sm:mb-4">Layar Dapur Real-Time (KDS)</h3>
+                <p className="text-[#7A6A5F] text-base sm:text-lg leading-relaxed mb-5 sm:mb-6 font-medium">Hilangkan kebisingan suara teriakan pesanan atau kertas struk yang hilang. Koki melihat daftar pesanan masuk langsung di layar TV atau Tablet.</p>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Tema Gelap Nyaman di Mata</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Notifikasi Suara Otomatis</li>
+                  <li className="flex items-center gap-3 text-sm font-bold text-[#3A2A20]"><span className="text-emerald-600"><Icons.Check/></span> Tombol Undo Salah Klik</li>
+                </ul>
+              </div>
+              <div className="flex justify-center order-1 md:order-2">
+                <div className="w-full max-w-lg bg-[#1A1A1A] rounded-2xl border border-[#333] shadow-2xl overflow-hidden">
+                  <div className="bg-[#222] px-3 sm:px-4 py-2 sm:py-3 border-b border-[#333] flex justify-between items-center">
+                    <div className="flex items-center gap-2"><Icons.Chef className="text-white w-5 h-5"/><span className="text-white font-bold text-xs sm:text-sm">Kitchen Display (KDS)</span></div>
+                    <span className="text-[9px] sm:text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Live</span>
+                  </div>
+                  <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="bg-[#2A2A2A] rounded-xl p-3 sm:p-4 border-l-4 border-amber-500">
+                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-base sm:text-lg">Meja 04</span><span className="text-[9px] sm:text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded">DIMASAK</span></div>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">Budi · 10:45</p>
+                      <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-white font-medium"><li className="flex justify-between"><span>1x Es Kopi Susu</span></li><li className="flex justify-between"><span>1x Croissant</span></li></ul>
+                    </div>
+                    <div className="bg-[#2A2A2A] rounded-xl p-3 sm:p-4 border-l-4 border-emerald-500 opacity-60">
+                      <div className="flex justify-between items-start mb-2"><span className="text-white font-black text-base sm:text-lg">Meja 09</span><span className="text-[9px] sm:text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">SIAP</span></div>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">Sinta · 10:50</p>
+                      <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-300 font-medium line-through"><li className="flex justify-between"><span>2x Matcha Latte</span></li></ul>
                     </div>
                   </div>
                 </div>
@@ -260,8 +355,8 @@ export default function LandingPage() {
       {/* SECTION FITUR */}
       <section id="fitur" className="px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16"><h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Semua yang Kafe & Resto Anda Butuhkan,<br className="hidden sm:block" /><span className="text-[#8C7A6B]">dalam Satu Platform</span></h2><p className="text-[#7A6A5F] text-base sm:text-lg font-medium">Dirancang khusus untuk operasional yang cepat dan rapi.</p></div>
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16"><h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Fitur Terlengkap<br className="hidden sm:block" /><span className="text-[#8C7A6B]">untuk Kafe Modern</span></h2><p className="text-[#7A6A5F] text-base sm:text-lg font-medium">Tidak ada lagi operasional yang ribet. Semua serba otomatis.</p></div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {features.map((f, i) => (
               <div key={i} className="group relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 bg-white/80 backdrop-blur-sm border border-[#E3DCD1] shadow-sm hover:shadow-xl hover:border-[#D3C8BB] transition-all duration-300 hover:-translate-y-1"><div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#F4EFE9] border border-[#E3DCD1] mb-4 sm:mb-6 group-hover:scale-110 transition-transform text-[#3A2A20]"><f.Icon /></div><h3 className="text-lg sm:text-xl font-black text-[#3A2A20] mb-2 sm:mb-3">{f.title}</h3><p className="text-xs sm:text-sm text-[#7A6A5F] leading-relaxed font-medium">{f.desc}</p></div>
             ))}
@@ -288,8 +383,34 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* SECTION PERBANDINGAN (BARU) */}
+      <section id="bandingkan" className="px-4 sm:px-6 lg:px-8 py-20 sm:py-24 relative z-10">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">NexaFlow vs <span className="text-[#8C7A6B]">Lainnya</span></h2>
+            <p className="text-[#7A6A5F] text-base sm:text-lg font-medium">Lihat sendiri mengapa NexaFlow adalah investasi terbaik untuk kafe Anda.</p>
+          </div>
+          <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-[#E3DCD1] shadow-xl overflow-hidden">
+            <div className="grid grid-cols-4 bg-[#3A2A20] text-[#F4EFE9] text-center text-[10px] sm:text-sm font-black uppercase tracking-wider">
+              <div className="p-3 sm:p-5 text-left border-r border-[#5A4A3F]">Fitur</div>
+              <div className="p-3 sm:p-5 border-r border-[#5A4A3F]">Manual / Buku</div>
+              <div className="p-3 sm:p-5 border-r border-[#5A4A3F]">Aplikasi Kasir Biasa</div>
+              <div className="p-3 sm:p-5 bg-[#06b6d4] text-white">NexaFlow</div>
+            </div>
+            {comparisons.map((row, i) => (
+              <div key={i} className={`grid grid-cols-4 text-center text-xs sm:text-sm font-bold ${i % 2 === 0 ? 'bg-white/50' : 'bg-[#F4EFE9]/50'} border-t border-[#E3DCD1]`}>
+                <div className="p-3 sm:p-5 text-left text-[#3A2A20] border-r border-[#E3DCD1]">{row.feature}</div>
+                <div className="p-3 sm:p-5 border-r border-[#E3DCD1] flex justify-center items-center">{row.manual ? <Icons.Check className="text-emerald-500" /> : <Icons.XCircle />}</div>
+                <div className="p-3 sm:p-5 border-r border-[#E3DCD1] flex justify-center items-center">{row.competitor ? <Icons.Check className="text-emerald-500" /> : <Icons.XCircle />}</div>
+                <div className="p-3 sm:p-5 bg-[#06b6d4]/10 flex justify-center items-center">{row.nexa ? <Icons.Check className="text-[#06b6d4]" /> : <Icons.XCircle />}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* SECTION CARA KERJA */}
-      <section id="cara-kerja" className="px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative z-10">
+      <section id="cara-kerja" className="px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative z-10 bg-white/40 border-y border-[#E3DCD1]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16"><h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#3A2A20] tracking-tight leading-tight mb-4">Mulai Beroperasi dalam <span className="text-[#8C7A6B]">3 Langkah</span></h2></div>
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6 relative">
