@@ -120,22 +120,33 @@ function OrderContent() {
 
   // 🔥 FITUR BARU: Session Timer & Auto-Lock
   const [isLocked, setIsLocked] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600); // 600 detik = 10 menit
+  const [timeLeft, setTimeLeft] = useState(600); 
 
+  // Hitung timer berdasarkan pesanan PERTAMA (bukan reset)
   useEffect(() => {
-    if (isLocked) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setIsLocked(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isLocked]);
+    if (myOrders.length === 0) {
+      setTimeLeft(600);
+      return;
+    }
+
+    // myOrders diurutkan dari yang terbaru, jadi pesanan pertama ada di index terakhir
+    const oldestOrder = myOrders[myOrders.length - 1];
+    const startTime = new Date(oldestOrder.created_at).getTime();
+    const expireTime = startTime + 10 * 60 * 1000; // 10 Menit
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((expireTime - now) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setIsLocked(true);
+      }
+    };
+
+    updateTimer(); // Jalankan langsung saat itu juga
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [myOrders]);
 
   useEffect(() => {
     // Jika ada pesanan, dan semua pesanan sudah completed/cancelled, lock layar
@@ -551,7 +562,7 @@ function OrderContent() {
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
-    setTimeLeft(600); // Reset timer setiap kali pesan baru masuk
+    // 🔥 Dihapus: setTimeLeft(600); agar timer tidak reset saat add-on
     
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir');
