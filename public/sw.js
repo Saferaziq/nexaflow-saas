@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexaflow-cache-v99'; // Versi v99 memaksa browser hapus cache lama
+const CACHE_NAME = 'nexaflow-cache-v100-rotation'; // ✅ Versi dinaikkan agar cache lama terhapus
 const urlsToCache = [
   '/'
 ];
@@ -13,11 +13,18 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  // JANGAN SIMPAN file Javascript/_next di cache. Selalu ambil dari internet.
-  if (event.request.url.includes('/_next/') || event.request.url.includes('js')) {
+  
+  // ✅ JANGAN SIMPAN file JS, _next, dan manifest.json di cache.
+  // Selalu ambil versi terbaru dari internet agar rotasi langsung aktif.
+  if (
+    event.request.url.includes('/_next/') || 
+    event.request.url.includes('js') || 
+    event.request.url.includes('manifest.json')
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }
+  
   event.respondWith(
     fetch(event.request)
       .then(response => {
