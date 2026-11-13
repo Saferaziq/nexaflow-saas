@@ -97,6 +97,7 @@ const Icons = {
   Speaker: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  Refresh: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
 };
 
@@ -113,6 +114,7 @@ function OrderContent() {
   const [activeTab, setActiveTab] = useState('menu');
   const [category, setCategory] = useState('all');
   const [myOrders, setMyOrders] = useState([]);
+  const [pastOrders, setPastOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
 
@@ -141,22 +143,41 @@ function OrderContent() {
   const [sessionReady, setSessionReady] = useState(false);
 
   // 🔥 SESSION INIT — deteksi new scan vs refresh, anti-bypass lock
+  // ✅ FIX: reset my_order_ids & history saat new scan, load history saat refresh
   useEffect(() => {
     if (!tenantId || !tableNumber) return;
 
     const visitKey = `nexaflow_visited_${tenantId}_${tableNumber}`;
     const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
     const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
+    const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
+    const historyKey = `nexaflow_history_${tenantId}_${tableNumber}`;
+    const legacyOrderIdsKey = `my_order_ids_${tableNumber}`;
+
+    // Migrasi key lama (my_order_ids_<table>) ke key baru (per tenant+table)
+    const legacyVal = localStorage.getItem(legacyOrderIdsKey);
+    if (legacyVal) {
+      if (!localStorage.getItem(orderIdsKey)) {
+        localStorage.setItem(orderIdsKey, legacyVal);
+      }
+      localStorage.removeItem(legacyOrderIdsKey);
+    }
 
     const visited = sessionStorage.getItem(visitKey);
 
     if (!visited) {
-      // New scan (fresh tab, physical QR scan, or bookmark open)
+      // ✅ New scan (fresh tab, QR fisik, bookmark baru)
       sessionStorage.setItem(visitKey, 'true');
       sessionStorage.setItem(startKey, Date.now().toString());
       localStorage.removeItem(lockKey);
+      localStorage.removeItem(orderIdsKey);
+      localStorage.removeItem(historyKey);
+      myOrderIdsRef.current = [];
+      setMyOrders([]);
+      setPastOrders([]);
       setIsLocked(false);
       setTimeLeft(600);
+      setActiveTab('menu');
     } else {
       // Refresh / internal navigation
       const isLockedStored = localStorage.getItem(lockKey) === 'true';
@@ -164,6 +185,11 @@ function OrderContent() {
         setIsLocked(true);
         setTimeLeft(0);
       }
+      // Load riwayat pesanan
+      try {
+        const hist = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        if (Array.isArray(hist)) setPastOrders(hist);
+      } catch (e) {}
     }
 
     setSessionReady(true);
@@ -202,7 +228,9 @@ function OrderContent() {
     return () => clearInterval(interval);
   }, [sessionReady, isLocked, myOrders, tenantId, tableNumber]);
 
-  // 🔥 LOCK jika semua pesanan sudah selesai / ditolak
+  // 🔥 LOCK jika semua pesanan SESI INI sudah selesai / ditolak
+  // ✅ FIX: delay 2 detik agar user sempat lihat status "Selesai"
+  // ✅ FIX: hanya cek myOrders (sesi aktif), bukan pastOrders
   useEffect(() => {
     if (!sessionReady) return;
     if (isLocked) return;
@@ -216,11 +244,47 @@ function OrderContent() {
     );
 
     if (allDone) {
-      setIsLocked(true);
-      setTimeLeft(0);
-      localStorage.setItem(`nexaflow_locked_${tenantId}_${tableNumber}`, 'true');
+      const timer = setTimeout(() => {
+        setIsLocked(true);
+        setTimeLeft(0);
+        localStorage.setItem(`nexaflow_locked_${tenantId}_${tableNumber}`, 'true');
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [myOrders, sessionReady, isLocked, tenantId, tableNumber]);
+
+  // ✅ Handle "Pesan Lagi" — dari layar lock kembali ke menu
+  const handleOrderAgain = () => {
+    const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
+    const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
+    const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
+    const historyKey = `nexaflow_history_${tenantId}_${tableNumber}`;
+
+    // Simpan order sesi saat ini ke riwayat
+    try {
+      const existing = JSON.parse(localStorage.getItem(historyKey) || '[]');
+      const merged = [...(Array.isArray(existing) ? existing : []), ...myOrders];
+      const seen = new Set();
+      const deduped = merged.filter(o => {
+        if (!o || !o.id) return false;
+        if (seen.has(o.id)) return false;
+        seen.add(o.id);
+        return true;
+      });
+      localStorage.setItem(historyKey, JSON.stringify(deduped));
+      setPastOrders(deduped);
+    } catch (e) {}
+
+    // Reset untuk sesi baru
+    sessionStorage.setItem(startKey, Date.now().toString());
+    localStorage.removeItem(lockKey);
+    localStorage.removeItem(orderIdsKey);
+    myOrderIdsRef.current = [];
+    setMyOrders([]);
+    setIsLocked(false);
+    setTimeLeft(600);
+    setActiveTab('menu');
+  };
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -263,7 +327,9 @@ function OrderContent() {
 
     if (!tenantId) return;
 
-    const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
+    // ✅ FIX: pakai key baru per tenant+table
+    const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
+    const existingIds = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
     myOrderIdsRef.current = existingIds;
 
     const fetchData = async () => {
@@ -616,9 +682,11 @@ function OrderContent() {
 
     localStorage.setItem('nexaflow_customer_name', customerName.trim());
 
-    const existingIds = JSON.parse(localStorage.getItem('my_order_ids_' + tableNumber) || '[]');
+    // ✅ FIX: pakai key baru per tenant+table
+    const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
+    const existingIds = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
     const newIds = [...existingIds, newOrder.id];
-    localStorage.setItem('my_order_ids_' + tableNumber, JSON.stringify(newIds));
+    localStorage.setItem(orderIdsKey, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
 
     setMyOrders(prev => [newOrder, ...prev]);
@@ -690,11 +758,13 @@ function OrderContent() {
     );
   }
 
-  // 🔥 LAYAR SESI BERAKHIR (DENGAN RIWAYAT PESANAN)
+  // 🔥 LAYAR SESI BERAKHIR (DENGAN RIWAYAT + TOMBOL "PESAN LAGI")
   if (isLocked) {
-    // Urutkan pesanan dari yang terbaru ke terlama
-    const sortedOrders = [...myOrders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const historyOrders = sortedOrders.slice(0, 3); // Tampilkan maksimal 3 pesanan terakhir
+    // ✅ FIX: gabung pastOrders + myOrders untuk riwayat lengkap
+    const allHist = [...(pastOrders || []), ...myOrders];
+    const deduped = allHist.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
+    const sortedOrders = deduped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const historyOrders = sortedOrders.slice(0, 3);
 
     return (
       <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-6 relative overflow-hidden font-sans">
@@ -713,7 +783,7 @@ function OrderContent() {
 
           {/* 📋 RIWAYAT PESANAN */}
           {historyOrders.length > 0 && (
-            <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-6 text-left">
+            <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-5 text-left">
               <p className="text-[10px] font-black text-[#8C7A6B] uppercase tracking-wider mb-3 border-b border-[#E0D6CC] pb-2">Riwayat Pesanan</p>
               <div className="space-y-3">
                 {historyOrders.map(o => {
@@ -744,12 +814,21 @@ function OrderContent() {
             </div>
           )}
 
-          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-5">
-            Silakan Scan QR Code fisik<br/>di meja Anda untuk memesan kembali
+          {/* ✅ TOMBOL PESAN LAGI (PRIMARY) */}
+          <button
+            onClick={handleOrderAgain}
+            className="w-full bg-[#2A1F17] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider hover:bg-[#1A1512] mb-3 flex items-center justify-center gap-2"
+          >
+            <span className="w-4 h-4"><Icons.Refresh /></span>
+            Pesan Lagi
+          </button>
+
+          <p className="text-[10px] font-black text-[#A69B91] uppercase tracking-widest mb-4">
+            Atau scan QR fisik di meja untuk sesi baru
           </p>
 
           {cafe.wa_number && (
-            <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center gap-2 bg-[#2A1F17] text-white font-black py-3.5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider hover:bg-[#1A1512] mb-4">
+            <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center gap-2 bg-[#FAF6F2] text-[#1A1512] font-black py-3 rounded-xl text-xs shadow-sm active:scale-95 transition-transform border-2 border-[#E0D6CC] uppercase tracking-wider hover:bg-[#F4EFE9] mb-4">
               <Icons.WhatsApp />
               Hubungi Kasir
             </a>
@@ -772,7 +851,14 @@ function OrderContent() {
   });
 
   const recommendedMenus = menus.filter(m => (m.is_featured || m.is_new) && !getMenuStock(m).isOut);
-  const hasWaitingOrder = myOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
+
+  // ✅ FIX: gabung pastOrders + myOrders untuk tab Status
+  const displayOrders = (() => {
+    const all = [...(pastOrders || []), ...myOrders];
+    const deduped = all.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
+    return deduped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  })();
+  const hasWaitingOrder = displayOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
 
   return (
     <div className="min-h-screen bg-[#F4EFE9] text-[#1A1512] font-sans pb-32 selection:bg-[#2A1F17] selection:text-white">
@@ -1046,13 +1132,13 @@ function OrderContent() {
             </div>
           )}
 
-          {myOrders.length === 0 ? (
+          {displayOrders.length === 0 ? (
             <div className="bg-white rounded-[1.5rem] p-10 text-center shadow-sm border-2 border-[#E0D6CC]">
               <div className="text-[#A69B91] mb-4 flex justify-center"><Icons.Book /></div>
               <p className="text-[#1A1512] font-black text-xl mb-2">Belum ada pesanan</p>
               <p className="text-xs text-[#5C4B3E] font-bold">Silakan pesan menu terlebih dahulu.</p>
             </div>
-          ) : myOrders.map(o => {
+          ) : displayOrders.map(o => {
             const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
             const isWaitingCash = o.payment_status === 'WAITING_CASH';
             const isWaitingQris = o.payment_status === 'WAITING_QRIS';
