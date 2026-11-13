@@ -76,6 +76,14 @@ const getDeviceId = () => {
   return id;
 };
 
+// 🔥 HELPER: Ekstrak alasan penolakan dari order_note
+const getRejectionReason = (order) => {
+  if (!order || !order.order_note) return 'Ditolak oleh kasir';
+  const match = order.order_note.match(/\[DITOLAK:\s*(.*?)\]/i);
+  if (match && match[1]) return match[1].trim();
+  return 'Ditolak oleh kasir';
+};
+
 const Icons = {
   Star: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   Coffee: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
@@ -89,7 +97,6 @@ const Icons = {
   Speaker: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  Refresh: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>,
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
 };
 
@@ -631,27 +638,6 @@ function OrderContent() {
     }
   };
 
-  // 🔥 RESCAN — reset sesi baru
-  const handleRescan = () => {
-    if (!tenantId || !tableNumber) return;
-
-    const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
-    const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
-    const idsKey = `my_order_ids_${tableNumber}`;
-
-    localStorage.removeItem(lockKey);
-    localStorage.removeItem(idsKey);
-    sessionStorage.setItem(startKey, Date.now().toString());
-
-    myOrderIdsRef.current = [];
-    setMyOrders([]);
-    setTimeLeft(600);
-    setIsLocked(false);
-    setActiveTab('menu');
-    setCart([]);
-    setGlobalNote('');
-  };
-
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-[#1A1512]">QR Code tidak valid.</div>;
   
   if (loading || !sessionReady) return (
@@ -704,31 +690,72 @@ function OrderContent() {
     );
   }
 
+  // 🔥 LAYAR SESI BERAKHIR (DENGAN RIWAYAT PESANAN)
   if (isLocked) {
+    // Urutkan pesanan dari yang terbaru ke terlama
+    const sortedOrders = [...myOrders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const historyOrders = sortedOrders.slice(0, 3); // Tampilkan maksimal 3 pesanan terakhir
+
     return (
       <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-6 relative overflow-hidden font-sans">
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(#2A1F17 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
-        <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border-4 border-[#E0D6CC] relative z-10 animate-in zoom-in-95 duration-500">
-          <div className="relative w-24 h-24 mx-auto mb-6">
+        <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-6 sm:p-8 text-center shadow-2xl border-4 border-[#E0D6CC] relative z-10 animate-in zoom-in-95 duration-500">
+          <div className="relative w-20 h-20 mx-auto mb-4">
             <div className="absolute inset-0 bg-rose-100 rounded-full animate-ping opacity-20"></div>
             <div className="w-full h-full bg-rose-50 rounded-full flex items-center justify-center relative z-10 shadow-inner text-rose-500 border-2 border-rose-200">
               <Icons.Lock />
             </div>
           </div>
-          <h1 className="text-2xl font-black text-[#1A1512] mb-2 uppercase tracking-wide">Sesi Anda Berakhir</h1>
-          <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-6">
-            <p className="text-sm font-bold text-[#5C4B3E] leading-relaxed">
-              Waktu pesanan <strong className="text-[#1A1512]">10 Menit</strong> telah habis, atau semua pesanan Anda telah <strong className="text-[#1A1512]">Selesai</strong>.
-            </p>
-          </div>
-          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-6">
-            Silakan Scan Ulang Barcode<br/>QR Code di Meja Anda untuk Memesan Kembali
+          <h1 className="text-xl font-black text-[#1A1512] mb-1 uppercase tracking-wide">Sesi Anda Berakhir</h1>
+          <p className="text-xs font-bold text-[#5C4B3E] mb-5 leading-relaxed">
+            Waktu 10 menit habis, atau pesanan Anda telah selesai.
           </p>
-          <button onClick={handleRescan} className="w-full bg-[#2A1F17] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider flex items-center justify-center gap-2 mb-3">
-            <Icons.Refresh />
-            Mulai Pesanan Baru
-          </button>
-          <div className="mt-4 pt-4 border-t-2 border-[#F4EFE9]">
+
+          {/* 📋 RIWAYAT PESANAN */}
+          {historyOrders.length > 0 && (
+            <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-6 text-left">
+              <p className="text-[10px] font-black text-[#8C7A6B] uppercase tracking-wider mb-3 border-b border-[#E0D6CC] pb-2">Riwayat Pesanan</p>
+              <div className="space-y-3">
+                {historyOrders.map(o => {
+                  const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
+                  const reason = isCancelled ? getRejectionReason(o) : 'Pesanan Selesai';
+                  return (
+                    <div key={o.id} className="border-l-4 pl-3 py-1" style={{ borderColor: isCancelled ? '#e11d48' : '#10b981' }}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-xs font-black text-[#1A1512]">Antrean #{o.queue_number || '-'}</p>
+                          <p className="text-[10px] font-bold text-[#5C4B3E] mt-1 line-clamp-1">
+                            {o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                          </p>
+                        </div>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${isCancelled ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {isCancelled ? 'Ditolak' : 'Selesai'}
+                        </span>
+                      </div>
+                      {isCancelled && (
+                        <p className="text-[10px] font-bold text-rose-600 mt-1">
+                          Alasan: {reason}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-5">
+            Silakan Scan QR Code fisik<br/>di meja Anda untuk memesan kembali
+          </p>
+
+          {cafe.wa_number && (
+            <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center gap-2 bg-[#2A1F17] text-white font-black py-3.5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider hover:bg-[#1A1512] mb-4">
+              <Icons.WhatsApp />
+              Hubungi Kasir
+            </a>
+          )}
+
+          <div className="mt-2 pt-4 border-t-2 border-[#F4EFE9]">
             <p className="text-[10px] font-bold text-[#8C7A6B]">
               Powered by <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="text-[#1A1512] font-black hover:text-cyan-600 transition-colors underline decoration-cyan-400/50 underline-offset-2">NexaFlow</a>
             </p>
@@ -1026,7 +1053,7 @@ function OrderContent() {
               <p className="text-xs text-[#5C4B3E] font-bold">Silakan pesan menu terlebih dahulu.</p>
             </div>
           ) : myOrders.map(o => {
-            const isCancelled = o.payment_status === 'CANCELLED';
+            const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
             const isWaitingCash = o.payment_status === 'WAITING_CASH';
             const isWaitingQris = o.payment_status === 'WAITING_QRIS';
             
@@ -1069,7 +1096,7 @@ function OrderContent() {
                 {isCancelled && (
                   <div className="bg-rose-50 border-2 border-rose-200 p-4 rounded-xl text-center">
                     <p className="text-rose-800 font-black text-sm">Pesanan Ditolak</p>
-                    <p className="text-rose-600 text-xs font-bold mt-1">Pembayaran tidak ditemukan. Silakan pesan ulang.</p>
+                    <p className="text-rose-600 text-xs font-bold mt-1">Alasan: {getRejectionReason(o)}</p>
                   </div>
                 )}
 
