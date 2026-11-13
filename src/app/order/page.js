@@ -130,42 +130,59 @@ function OrderContent() {
   const spokenReadyOrderIdRef = useRef(null);
 
   const [isLocked, setIsLocked] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600); 
+  const [timeLeft, setTimeLeft] = useState(600);
+  const [sessionReady, setSessionReady] = useState(false);
 
+  // 🔥 SESSION INIT — deteksi new scan vs refresh, anti-bypass lock
   useEffect(() => {
-    if (myOrders.length === 0) {
-      setTimeLeft(600);
+    if (!tenantId || !tableNumber) return;
+
+    const visitKey = `nexaflow_visited_${tenantId}_${tableNumber}`;
+    const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
+    const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
+
+    const visited = sessionStorage.getItem(visitKey);
+
+    if (!visited) {
+      // New scan (fresh tab, physical QR scan, or bookmark open)
+      sessionStorage.setItem(visitKey, 'true');
+      sessionStorage.setItem(startKey, Date.now().toString());
+      localStorage.removeItem(lockKey);
       setIsLocked(false);
-      return;
+      setTimeLeft(600);
+    } else {
+      // Refresh / internal navigation
+      const isLockedStored = localStorage.getItem(lockKey) === 'true';
+      if (isLockedStored) {
+        setIsLocked(true);
+        setTimeLeft(0);
+      }
     }
 
-    const allDone = myOrders.every(o => 
-      o.status === 'completed' || 
-      o.status === 'cancelled' || 
-      o.payment_status === 'CANCELLED'
-    );
+    setSessionReady(true);
+  }, [tenantId, tableNumber]);
 
-    if (allDone) {
-      setIsLocked(true);
-      setTimeLeft(0);
-      return;
-    }
+  // 🔥 TIMER — hanya berjalan di pra-order (belum ada pesanan)
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (isLocked) return;
+    if (myOrders.length > 0) return; // timer hanya untuk pra-order
+    if (!tenantId || !tableNumber) return;
 
-    const oldestOrder = myOrders[myOrders.length - 1];
-    const startTime = new Date(oldestOrder.created_at).getTime();
-    const expireTime = startTime + 10 * 60 * 1000;
+    const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
+    const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
+    const startTime = parseInt(sessionStorage.getItem(startKey) || Date.now().toString());
+    const expireAt = startTime + 600 * 1000;
 
     const tick = () => {
       const now = Date.now();
-      const remaining = Math.max(0, Math.floor((expireTime - now) / 1000));
+      const remaining = Math.max(0, Math.floor((expireAt - now) / 1000));
       setTimeLeft(remaining);
-      
       if (remaining <= 0) {
         setIsLocked(true);
+        localStorage.setItem(lockKey, 'true');
         return true;
       }
-      
-      setIsLocked(false);
       return false;
     };
 
@@ -176,7 +193,27 @@ function OrderContent() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [myOrders]);
+  }, [sessionReady, isLocked, myOrders, tenantId, tableNumber]);
+
+  // 🔥 LOCK jika semua pesanan sudah selesai / ditolak
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (isLocked) return;
+    if (myOrders.length === 0) return;
+    if (!tenantId || !tableNumber) return;
+
+    const allDone = myOrders.every(o =>
+      o.status === 'completed' ||
+      o.status === 'cancelled' ||
+      o.payment_status === 'CANCELLED'
+    );
+
+    if (allDone) {
+      setIsLocked(true);
+      setTimeLeft(0);
+      localStorage.setItem(`nexaflow_locked_${tenantId}_${tableNumber}`, 'true');
+    }
+  }, [myOrders, sessionReady, isLocked, tenantId, tableNumber]);
 
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
@@ -594,20 +631,30 @@ function OrderContent() {
     }
   };
 
-  const startNewSession = () => {
-    localStorage.removeItem('my_order_ids_' + tableNumber);
+  // 🔥 RESCAN — reset sesi baru
+  const handleRescan = () => {
+    if (!tenantId || !tableNumber) return;
+
+    const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
+    const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
+    const idsKey = `my_order_ids_${tableNumber}`;
+
+    localStorage.removeItem(lockKey);
+    localStorage.removeItem(idsKey);
+    sessionStorage.setItem(startKey, Date.now().toString());
+
     myOrderIdsRef.current = [];
     setMyOrders([]);
     setTimeLeft(600);
     setIsLocked(false);
     setActiveTab('menu');
     setCart([]);
-    sessionStorage.removeItem('nexaflow_visited_' + tenantId + '_' + tableNumber);
+    setGlobalNote('');
   };
 
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-[#1A1512]">QR Code tidak valid.</div>;
   
-  if (loading) return (
+  if (loading || !sessionReady) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9]">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-[#D3C8BB] rounded-full animate-spin mx-auto border-t-[#2A1F17]"></div>
@@ -647,26 +694,10 @@ function OrderContent() {
               Hubungi Kasir
             </a>
           )}
-          
-          {/* IKLAN NEXAFLOW */}
-          <div className="mt-8">
-            <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="group block bg-gradient-to-r from-[#2A1F17] to-[#1A1512] rounded-xl p-3 shadow-md hover:shadow-lg transition-all border border-[#3A2A20] active:scale-[0.98]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center shadow flex-shrink-0 group-hover:rotate-6 transition-transform">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1512" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">Powered by</p>
-                  <p className="text-white font-black text-xs">NexaFlow Kasir</p>
-                </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                  <polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </div>
-            </a>
+          <div className="mt-6 pt-4 border-t-2 border-[#F4EFE9]">
+            <p className="text-[10px] font-bold text-[#8C7A6B]">
+              Powered by <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="text-[#1A1512] font-black hover:text-cyan-600 transition-colors underline decoration-cyan-400/50 underline-offset-2">NexaFlow</a>
+            </p>
           </div>
         </div>
       </div>
@@ -693,30 +724,14 @@ function OrderContent() {
           <p className="text-xs font-black text-[#A69B91] uppercase tracking-widest mb-6">
             Silakan Scan Ulang Barcode<br/>QR Code di Meja Anda untuk Memesan Kembali
           </p>
-          <button onClick={startNewSession} className="w-full bg-[#2A1F17] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2-[#1A1512] uppercase tracking-wider flex items-center justify-center gap-2 mb-3">
+          <button onClick={handleRescan} className="w-full bg-[#2A1F17] text-white font-black py-4 rounded-xl text-sm shadow-lg active:scale-95 transition-transform border-2 border-[#1A1512] uppercase tracking-wider flex items-center justify-center gap-2 mb-3">
             <Icons.Refresh />
             Mulai Pesanan Baru
           </button>
-          
-          {/* IKLAN NEXAFLOW */}
-          <div className="mt-4">
-            <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="group block bg-gradient-to-r from-[#2A1F17] to-[#1A1512] rounded-xl p-3 shadow-md hover:shadow-lg transition-all border border-[#3A2A20] active:scale-[0.98]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center shadow flex-shrink-0 group-hover:rotate-6 transition-transform">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1512" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">Powered by</p>
-                  <p className="text-white font-black text-xs">NexaFlow Kasir</p>
-                </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                  <polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </div>
-            </a>
+          <div className="mt-4 pt-4 border-t-2 border-[#F4EFE9]">
+            <p className="text-[10px] font-bold text-[#8C7A6B]">
+              Powered by <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="text-[#1A1512] font-black hover:text-cyan-600 transition-colors underline decoration-cyan-400/50 underline-offset-2">NexaFlow</a>
+            </p>
           </div>
         </div>
       </div>
@@ -751,9 +766,12 @@ function OrderContent() {
           </a>
           
           <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-3 border border-white shadow-sm">
-             <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-             </span>
+            {/* 🔥 Timer hanya tampil di STATE A (pra-order) */}
+            {myOrders.length === 0 && timeLeft > 0 && (
+              <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </span>
+            )}
             <span className={`w-2.5 h-2.5 rounded-full ${cafe.is_open === false ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`}></span>
             <span className="text-[11px] font-black uppercase tracking-widest text-[#1A1512]">Meja {tableNumber}</span>
           </div>
@@ -1085,49 +1103,16 @@ function OrderContent() {
         </div>
       )}
 
-      {/* FOOTER INFO + IKLAN NEXAFLOW */}
-      <div className="mt-12 pb-32 space-y-4">
-        <div className="text-center">
-          {cafe.wa_number && (
-            <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[11px] font-black text-[#1A1512] bg-white border-2 border-[#E0D6CC] px-5 py-2.5 rounded-full shadow-sm transition-all hover:bg-[#FAF6F2] uppercase tracking-wider">
-              Hubungi Kasir
-            </a>
-          )}
-        </div>
-
-        {/* 🔥 IKLAN GRATIS NEXAFLOW */}
-        <div className="px-6">
-          <a 
-            href="https://nexaflowkasir.it.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group block max-w-sm mx-auto bg-gradient-to-br from-[#2A1F17] to-[#1A1512] rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all border-2 border-[#3A2A20] active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-cyan-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0 group-hover:rotate-6 transition-transform">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#1A1512" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Powered by</p>
-                <p className="text-white font-black text-base leading-tight">NexaFlow Kasir</p>
-                <p className="text-[#D3C8BB] text-[10px] font-bold">Sistem Kasir Restoran Modern</p>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </div>
-            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-center">
-              <span className="text-cyan-400 text-[9px] font-black uppercase tracking-widest">Buat Sistem Kasir Anda →</span>
-            </div>
+      {/* FOOTER INFO */}
+      <div className="text-center mt-12 pb-32 space-y-4">
+        {cafe.wa_number && (
+          <a href={`https://wa.me/${cafe.wa_number.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[11px] font-black text-[#1A1512] bg-white border-2 border-[#E0D6CC] px-5 py-2.5 rounded-full shadow-sm transition-all hover:bg-[#FAF6F2] uppercase tracking-wider">
+            Hubungi Kasir
           </a>
-        </div>
-
-        <div className="text-center pt-2">
+        )}
+        <div className="pt-2 flex flex-col items-center justify-center gap-1.5">
           <p className="text-[10px] font-bold text-[#8C7A6B]">
-            © {new Date().getFullYear()} NexaFlow. All rights reserved.
+            Powered by <a href="https://nexaflowkasir.it.com" target="_blank" rel="noopener noreferrer" className="text-[#1A1512] font-black hover:text-cyan-600 transition-colors underline decoration-cyan-400/50 underline-offset-2">NexaFlow</a>
           </p>
         </div>
       </div>
