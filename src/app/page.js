@@ -2,6 +2,15 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
+// ============ LOGO COMPONENT (DIKEMBALIKAN) ============
+const LogoImg = ({ className = "w-10 h-10" }) => (
+  <img 
+    src="/logo-nexaflow.png" 
+    alt="NexaFlow Logo" 
+    className={`${className} object-contain mix-blend-multiply`} 
+  />
+);
+
 // ============ MODERN SVG ICON LIBRARY ============
 const Icons = {
   qr: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M18 18h3v3h-3z"/><path d="M14 19h2"/><path d="M19 14v2"/></svg>,
@@ -198,11 +207,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <a href="#top" className="flex items-center gap-3 relative z-10 group">
-              <div className="w-10 h-10 rounded-xl bg-[#3A2A20] flex items-center justify-center text-[#F4EFE9] shadow-md shadow-[#3A2A20]/15 group-hover:scale-105 transition-transform">
-                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 19V5l12 14V5"/>
-                </svg>
-              </div>
+              {/* LOGO DIKEMBALIKAN */}
+              <LogoImg className="w-10 h-10 group-hover:scale-105 transition-transform" />
               <div>
                 <p className="text-xl font-black text-[#3A2A20] tracking-tight leading-none uppercase">NEXAFLOW</p>
                 <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">FULL-STACK RESTAURANT SYSTEM</p>
@@ -945,9 +951,8 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 mb-10 sm:mb-12">
             <div className="sm:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl bg-[#3A2A20] flex items-center justify-center text-[#F4EFE9]">
-                  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 19V5l12 14V5"/></svg>
-                </div>
+                {/* LOGO DIKEMBALIKAN DI FOOTER */}
+                <LogoImg className="w-11 h-11" />
                 <div>
                   <p className="text-lg font-black text-[#3A2A20] leading-none uppercase">NEXAFLOW</p>
                   <p className="text-[10px] font-bold text-[#7A6A5F] tracking-[0.2em] uppercase mt-0.5">FULL-STACK RESTAURANT SYSTEM</p>
