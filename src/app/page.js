@@ -2,6 +2,15 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
+// ============ KOMPONEN LOGO BARU ============
+const LogoImg = ({ className = "w-10 h-10" }) => (
+  <img 
+    src="/logo-nexaflow-3d.png" 
+    alt="NexaFlow Logo" 
+    className={`${className} object-contain`} 
+  />
+);
+
 // ============ DATA ============
 const internalSolutions = [
   { icon: 'users', metric: '0 Menit Antre', before: 'Antrean Menumpuk di Depan Kasir', title: 'Pelanggan Langsung Duduk & Pesan dari Meja', desc: 'Tidak ada lagi kerumunan orang berdiri mengantre di depan kasir saat jam sibuk. Pelanggan duduk nyaman, scan QR meja dari HP, dan kasir bekerja tenang.' },
@@ -91,28 +100,6 @@ const Icons = {
   x: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>,
 };
-
-// NF Monogram Logo
-const NFLogo = ({ className = "w-10 h-10" }) => (
-  <svg viewBox="0 0 120 100" fill="none" className={className}>
-    <defs>
-      <linearGradient id="nfBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#76B4FA" /><stop offset="40%" stopColor="#2D68B8" />
-        <stop offset="85%" stopColor="#15376B" /><stop offset="100%" stopColor="#0C2144" />
-      </linearGradient>
-      <linearGradient id="nfBlueStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#BFDBFE" /><stop offset="50%" stopColor="#3B82F6" /><stop offset="100%" stopColor="#1E3A8A" />
-      </linearGradient>
-      <linearGradient id="nfCopperGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#9A3412" /><stop offset="45%" stopColor="#EA8B42" /><stop offset="100%" stopColor="#FDE68A" />
-      </linearGradient>
-    </defs>
-    <path d="M12 77 C15 71 19 69 25 69 C29 69 31 66 31 60 V33 C31 14 50 10 59 27 L73 53 V31 C73 18 81 13 94 13 H114 C111 21 106 23 96 23 H85 C81 23 80 26 80 31 V67 C80 83 64 87 54 70 L41 44 V65 C41 80 33 85 19 85 H7 C8 80 10 77 12 77 Z" fill="url(#nfBlueGrad)" stroke="url(#nfBlueStroke)" strokeWidth="1.6" strokeLinejoin="round"/>
-    <path d="M85 30 H106 C104 37 99 39 91 39 H85 V30 Z" fill="url(#nfBlueGrad)" stroke="url(#nfBlueStroke)" strokeWidth="1.3"/>
-    <path d="M77 55 C83 45 92 44 100 46 C106 47 110 45 114 39 C112 49 104 53 96 51 C89 50 83 52 77 59 Z" fill="url(#nfCopperGrad)"/>
-    <path d="M74 64 C80 54 90 53 98 55 C104 56 108 54 112 49 C110 58 102 61 94 60 C87 59 81 61 75 68 Z" fill="url(#nfCopperGrad)"/>
-  </svg>
-);
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0);
@@ -222,8 +209,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center gap-3.5 relative z-10 group">
-              <div className="w-11 h-11 rounded-2xl bg-[#04060B] border border-slate-700/80 flex items-center justify-center shadow-lg shadow-blue-950/60 group-hover:border-blue-500/50 transition-all overflow-hidden p-1.5">
-                <NFLogo className="w-full h-full" />
+              <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-blue-950/60 group-hover:border-blue-500/50 transition-all overflow-hidden p-1">
+                <LogoImg className="w-full h-full" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -342,8 +329,8 @@ export default function LandingPage() {
                   <div className="p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#04060B] border border-slate-700 flex items-center justify-center p-1.5">
-                          <NFLogo className="w-full h-full" />
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5">
+                          <LogoImg className="w-full h-full" />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-[#EA8B42] uppercase tracking-widest">Layar iPad / PC Kasir</p>
@@ -578,7 +565,7 @@ export default function LandingPage() {
                 <div className="bg-white rounded-[1.35rem] overflow-hidden border border-slate-200">
                   <div className="bg-slate-50 px-4 sm:px-5 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#070B14] text-white flex items-center justify-center p-1"><NFLogo className="w-full h-full" /></div>
+                      <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm"><LogoImg className="w-full h-full" /></div>
                       <div>
                         <p className="text-xs font-black text-[#0B172A] leading-none">Dashboard Kasir · Layar iPad / PC</p>
                         <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Tanpa menu rumit · Fokus konfirmasi & cetak struk</p>
@@ -1012,8 +999,8 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 mb-10 sm:mb-12">
             <div className="sm:col-span-2">
               <div className="flex items-center gap-3.5 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#090F1D] border border-slate-700/80 flex items-center justify-center p-1.5 shadow-lg">
-                  <NFLogo className="w-full h-full" />
+                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1.5 shadow-lg">
+                  <LogoImg className="w-full h-full" />
                 </div>
                 <div>
                   <p className="text-lg font-black text-white leading-none uppercase font-display">NEXA<span className="text-sky-400">FLOW</span></p>
