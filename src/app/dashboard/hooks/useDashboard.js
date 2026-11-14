@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { extractDominantColor } from '../helpers/color';
 
 export function useDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const overrideTenantId = searchParams.get('tenant_id');
   const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
 
   const [cafeName, setCafeName] = useState('Memuat...');
@@ -245,35 +247,47 @@ export function useDashboard() {
         return router.push('/login');
       }
 
-      if (userData.tenants.subscription_end_date) {
-        if (new Date(userData.tenants.subscription_end_date) < now) setIsExpired(true);
+      // 🔥 FITUR BUKA KASIR: Owner bisa memantau cabang lain via URL param
+      let activeTenantData = userData.tenants;
+      let activeTenantId = userData.tenant_id;
+
+      if (overrideTenantId) {
+        const { data: overrideData } = await supabase.from('tenants').select('*').eq('id', overrideTenantId).single();
+        if (overrideData) {
+          activeTenantData = overrideData;
+          activeTenantId = overrideTenantId;
+        }
       }
 
-      if (userData.tenants.is_active === false) {
+      if (activeTenantData.subscription_end_date) {
+        if (new Date(activeTenantData.subscription_end_date) < now) setIsExpired(true);
+      }
+
+      if (activeTenantData.is_active === false) {
         setIsSuspended(true);
         return;
       }
 
-      if (userData && userData.tenants && isMounted) {
-        const tId = userData.tenant_id;
+      if (activeTenantData && isMounted) {
+        const tId = activeTenantId;
         setTenantId(tId);
-        setCafeName(userData.tenants.name);
-        setIsOpen(userData.tenants.is_open !== false);
+        setCafeName(activeTenantData.name);
+        setIsOpen(activeTenantData.is_open !== false);
         setSettings({
-          name: userData.tenants.name,
-          wa: userData.tenants.wa_number || '',
-          address: userData.tenants.address || '',
-          logo_url: userData.tenants.logo_url || '',
-          qris_string: userData.tenants.qris_string || '',
-          banner_url: userData.tenants.banner_url || '',
-          tax_percentage: userData.tenants.tax_percentage !== null ? userData.tenants.tax_percentage : 11,
-          notify_order_ready: userData.tenants.notify_order_ready !== false,
-          is_pay_first: userData.tenants.is_pay_first !== false,
-          business_type: userData.tenants.business_type || 'kafe',
+          name: activeTenantData.name,
+          wa: activeTenantData.wa_number || '',
+          address: activeTenantData.address || '',
+          logo_url: activeTenantData.logo_url || '',
+          qris_string: activeTenantData.qris_string || '',
+          banner_url: activeTenantData.banner_url || '',
+          tax_percentage: activeTenantData.tax_percentage !== null ? activeTenantData.tax_percentage : 11,
+          notify_order_ready: activeTenantData.notify_order_ready !== false,
+          is_pay_first: activeTenantData.is_pay_first !== false,
+          business_type: activeTenantData.business_type || 'kafe',
         });
 
-        if (userData.tenants.banner_url) extractDominantColor(userData.tenants.banner_url);
-        else if (userData.tenants.logo_url) extractDominantColor(userData.tenants.logo_url);
+        if (activeTenantData.banner_url) extractDominantColor(activeTenantData.banner_url);
+        else if (activeTenantData.logo_url) extractDominantColor(activeTenantData.logo_url);
 
         await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
 
@@ -329,7 +343,7 @@ export function useDashboard() {
       if (channel) supabase.removeChannel(channel);
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
-  }, [router]);
+  }, [router, overrideTenantId]);
 
   const handleToggleCafeStatus = async () => {
     const newStatus = !isOpen;
@@ -589,7 +603,6 @@ export function useDashboard() {
     const prevStatus = prevOrder.status;
     const prevPaymentStatus = prevOrder.payment_status;
 
-    // 🔥 PERBAIKAN: Menggunakan 'PAID' (huruf besar) agar sesuai constraint database
     const updatePayload = { status };
     if (status === 'completed') {
       updatePayload.payment_status = 'PAID'; 
@@ -605,7 +618,6 @@ export function useDashboard() {
     const { error } = await supabase.from('orders').update(updatePayload).eq('id', id);
     
     if (error) {
-      // Rollback state lokal jika error
       setOrders(prev => prev.map(o => 
         o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus, paid_at: prevOrder.paid_at } : {}) } : o
       ));
@@ -699,7 +711,6 @@ export function useDashboard() {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
     const prevMenus = menusRef.current;
     
-    // 🔥 PERBAIKAN: Jika restock dari 0 ke >0, otomatis kembalikan ke 'available'
     let updatePayload = { stock: newStock };
     if (Number(currentStock || 0) <= 0 && newStock > 0) {
       updatePayload.status = 'available';
