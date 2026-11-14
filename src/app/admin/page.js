@@ -239,7 +239,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 🔥 FIX v4: gabungkan realtime presence + fallback "order aktif 10 menit terakhir"
   const effectiveOnline = useMemo(() => {
     const merged = { ...onlineUsers };
     Object.keys(recentActiveTenants).forEach((id) => {
@@ -261,7 +260,6 @@ export default function AdminDashboard() {
         const daysLeft = Math.max(0, Math.ceil((new Date(t.subscription_end_date).getTime() - currentTime) / (1000 * 60 * 60 * 24)));
         if (daysLeft <= 7) warningCount++;
         if (daysLeft > 0 && t.is_active !== false) {
-          // 🔥 OPSI B: harga & komisi penuh, tanpa prorata
           totalRevenue += getPrice(t);
           totalCommission += getCommission(t);
         }
@@ -271,7 +269,6 @@ export default function AdminDashboard() {
     setStats({ total: tenantData.length, online: onlineCount, warning: warningCount, revenue: totalRevenue, commission: totalCommission, netProfit });
   };
 
-  // 🔥 PERBAIKAN BUG PRESENCE (ADMIN) — v4 (realtime + fallback + status badge + log)
   useEffect(() => {
     let channel = null;
     let pollInterval = null;
@@ -871,7 +868,6 @@ export default function AdminDashboard() {
   const modalHeader = `p-4 border-b-2 flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-900 bg-slate-100'}`;
   const sortLabels = { newest: 'Terbaru', name: 'Nama A-Z', daysLeft: 'Sisa Hari', revenue: 'Omset Tertinggi' };
 
-  // Cek apakah referral value saat ini ada di marketers (untuk option tambahan legacy)
   const currentReferralExists = financeModal.referral && marketers.some(m => m.name.toLowerCase() === financeModal.referral.toLowerCase());
 
   return (
@@ -946,7 +942,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* 🔥 NET PROFIT — Bar lebar di bawah 4 kartu (Opsi B) */}
         {activeTab === 'tenants' && (
           <div className={`rounded-xl p-5 relative overflow-hidden border-2 animate-in fade-in slide-in-from-bottom-4 ${
             theme === 'dark'
@@ -1199,7 +1194,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Finansial — dengan DROPDOWN Sales */}
+      {/* Modal Finansial */}
       {financeModal.open && financeModal.tenant && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -1275,7 +1270,7 @@ export default function AdminDashboard() {
             <div className="p-5 space-y-2 max-h-[70vh] overflow-y-auto">
               <h4 className={`text-lg font-black mb-3 ${textMain}`}>{detailModal.tenant.name}</h4>
               {[
-                ['Tenant ID', detailModal.tenant.id, true], ['No. WhatsApp', detailModal.tenant.wa_number || '—', false], ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false], ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false], ['QRIS', detailModal.tenant.qris_string || '—', true], ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false], ['Banner URL', detailModal.tenant.banner_url || '—', true], ['Logo URL', detailModal.tenant.logo_url || '—', true], ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
+                ['Tenant ID', detailModal.tenant.id, true], ['Email Manager', detailModal.tenant.manager_email || '—', true], ['No. WhatsApp', detailModal.tenant.wa_number || '—', false], ['Status Buka Kafe', detailModal.tenant.is_open ? '🟢 Buka' : '🔴 Tutup', false], ['Status Akun', detailModal.tenant.is_active === false ? '🔴 Suspended' : '🟢 Aktif', false], ['QRIS', detailModal.tenant.qris_string || '—', true], ['Pajak (%)', detailModal.tenant.tax_percentage != null ? `${detailModal.tenant.tax_percentage}%` : '—', false], ['Banner URL', detailModal.tenant.banner_url || '—', true], ['Logo URL', detailModal.tenant.logo_url || '—', true], ['Dibuat', detailModal.tenant.created_at ? new Date(detailModal.tenant.created_at).toLocaleString('id-ID') : '—', false],
               ].map(([label, value, copyable]) => (
                 <div key={label} className={`rounded-lg p-2 border-2 flex justify-between items-start gap-2 ${theme === 'dark' ? 'bg-[#050b14] border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
                   <div className="min-w-0 flex-1"><p className={`text-[9px] font-black uppercase tracking-wider ${textSub}`}>{label}</p><p className={`text-xs font-bold break-all ${textMain}`}>{value}</p></div>
@@ -1308,7 +1303,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Tambah Marketing — dengan KOTA */}
+      {/* Modal Tambah Marketing */}
       {marketerModal.open && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-sm`}>
@@ -1330,7 +1325,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Detail Marketing (Daftar Kafe) — dengan KOTA */}
+      {/* Modal Detail Marketing */}
       {marketerDetailModal.open && marketerDetailModal.marketer && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className={`${modalShell} max-w-md`}>
