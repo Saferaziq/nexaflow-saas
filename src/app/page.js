@@ -2,7 +2,12 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-// ============ KOMPONEN LOGO BARU ============
+// ============ KONFIGURASI WHATSAPP ============
+const WA_NUMBER = '6281389744957';
+const WA_MESSAGE = 'Halo NexaFlow, saya tertarik dengan sistem kasir kafe/resto Anda. Bisa info lebih lanjut?';
+const waLink = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;
+
+// ============ KOMPONEN LOGO ============
 const LogoImg = ({ className = "w-10 h-10" }) => (
   <img 
     src="/logo-nexaflow-3d.png" 
@@ -103,11 +108,9 @@ const Icons = {
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0);
-  const [modalMode, setModalMode] = useState(null);
   const [phoneAlertOpen, setPhoneAlertOpen] = useState(true);
   const [demoOrderConfirmed, setDemoOrderConfirmed] = useState(false);
   const [simStage, setSimStage] = useState(1);
-  const [modalFeedback, setModalFeedback] = useState('');
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -167,13 +170,6 @@ export default function LandingPage() {
 
   const confirmDemoOrder = () => {
     setDemoOrderConfirmed(!demoOrderConfirmed);
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    const cafe = e.target.inputCafeName?.value || '';
-    const contact = e.target.inputContact.value;
-    setModalFeedback(cafe ? `Terima kasih! Permintaan setup gratis untuk "${cafe}" (${contact}) telah dicatat. Tim NexaFlow segera menghubungi Anda.` : `Permintaan akses untuk ${contact} telah diterima.`);
   };
 
   return (
@@ -953,10 +949,10 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => setModalMode('consult')} className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl btn-sapphire text-white font-black text-sm sm:text-base hover:-translate-y-0.5 transition-all">
+                <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl btn-sapphire text-white font-black text-sm sm:text-base hover:-translate-y-0.5 transition-all">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[#FBBF24]"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                   <span>Konsultasi & Klaim Setup Gratis</span>
-                </button>
+                </a>
                 <p className="text-center text-[10px] sm:text-[11px] font-bold text-slate-500 mt-4 leading-relaxed">
                   Didampingi langsung oleh tim mitra resmi NexaFlow<br />
                   Tanpa DP di awal · Bebas ribet · Langsung siap operasional
@@ -1023,10 +1019,10 @@ export default function LandingPage() {
               <p className="text-[10px] sm:text-xs font-black text-white uppercase tracking-widest mb-3">Hubungi Kami</p>
               <ul className="space-y-2.5 text-xs sm:text-sm">
                 <li>
-                  <button type="button" onClick={() => setModalMode('consult')} className="inline-flex items-center gap-2 text-slate-400 hover:text-white font-semibold transition-colors">
+                  <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-slate-400 hover:text-white font-semibold transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[#EA8B42]"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                     <span>WhatsApp Konsultasi</span>
-                  </button>
+                  </a>
                 </li>
                 <li>
                   <a href="mailto:nexaflow@nexaflowkasir.it.com" className="inline-flex items-center gap-2 text-slate-400 hover:text-white font-semibold transition-colors">
@@ -1045,40 +1041,10 @@ export default function LandingPage() {
       </footer>
 
       {/* FLOATING WA */}
-      <button type="button" onClick={() => setModalMode('consult')} className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl btn-sapphire text-white flex items-center justify-center shadow-2xl hover:scale-105 transition-transform border border-sky-400/40" aria-label="Chat WhatsApp">
+      <a href={waLink} target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl btn-sapphire text-white flex items-center justify-center shadow-2xl hover:scale-105 transition-transform border border-sky-400/40" aria-label="Chat WhatsApp">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#EA8B42] rounded-full border-2 border-[#060911]"></span>
-      </button>
-
-      {/* MODAL */}
-      {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#04060B]/80 backdrop-blur-md">
-          <div className="bg-white text-[#0B172A] border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
-            <button type="button" onClick={() => setModalMode(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 hover:text-[#0B172A]" aria-label="Tutup">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-[#1E4E8C] text-[10px] font-black uppercase tracking-widest mb-3">Konsultasi Tim & Mitra</div>
-            <h3 className="text-2xl font-black text-[#0B172A] mb-2 font-display">Jadwalkan Demo & Setup Gratis</h3>
-            <p className="text-xs sm:text-sm text-slate-600 font-medium mb-5">Isi nama kafe dan nomor WhatsApp Anda. Tim mitra kami akan memandu setup menu & QR meja hingga siap dipakai.</p>
-            <form onSubmit={handleFormSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-[#0B172A] mb-1">Nama Kafe / Resto</label>
-                <input type="text" name="inputCafeName" required placeholder="Contoh: Kopi Senja Bogor" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-[#0B172A] focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#0B172A] mb-1">Nomor WhatsApp Aktif</label>
-                <input type="text" name="inputContact" required placeholder="Contoh: 081234567890" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-[#0B172A] focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <button type="submit" className="w-full py-3.5 rounded-xl btn-sapphire text-white font-black text-sm shadow-lg transition-all">
-                Kirim & Jadwalkan Setup Gratis
-              </button>
-              {modalFeedback && (
-                <p className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">{modalFeedback}</p>
-              )}
-            </form>
-          </div>
-        </div>
-      )}
+      </a>
 
     </div>
   );
