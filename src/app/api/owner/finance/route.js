@@ -11,7 +11,6 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Ambil tenant milik manager ini
     const { data: tenants } = await supabaseAdmin.from('tenants').select('id').eq('manager_email', manager_email);
     if (!tenants || tenants.length === 0) throw new Error('Tenant tidak ditemukan');
     const tenantIds = tenants.map(t => t.id);

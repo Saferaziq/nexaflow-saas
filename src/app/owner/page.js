@@ -5,17 +5,26 @@ import Link from 'next/link';
 import Chart from 'chart.js/auto';
 import { supabase } from '@/lib/supabase';
 
+const Icons = {
+  Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  Activity: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  Power: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>,
+  Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+};
+
 export default function OwnerDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editModal, setEditModal] = useState({ open: false, branch: null });
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  const [isDarkMode, setIsDarkMode] = useState(false); // DEFAULT TERANG
 
-  // State Data
   const [userEmail, setUserEmail] = useState('');
-  const [period, setPeriod] = useState('daily'); // Default Harian
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default Hari Ini
+  const [period, setPeriod] = useState('daily'); 
+  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); 
   
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -26,17 +35,14 @@ export default function OwnerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Form State
   const [linkBranchName, setLinkBranchName] = useState('');
   const [linkBranchEmail, setLinkBranchEmail] = useState('');
   const [editName, setEditName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // UI State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
-  // 1. Efek Tema
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -47,7 +53,6 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // 2. Fetch Data (Termasuk Tanggal)
   const fetchAllData = async (email, currentPeriod = period, currentDate = selectedDate) => {
     try {
       const [tenantsRes, statsRes, actRes] = await Promise.all([
@@ -95,21 +100,31 @@ export default function OwnerDashboard() {
       await fetchAllData(email, period, selectedDate);
       setIsLoading(false);
 
-      // Auto-refresh aktivitas & statistik (HANYA jika tanggal yg dipilih adalah hari ini)
-      const todayStr = new Date().toISOString().split('T')[0];
+      // 🔥 PERBAIKAN ERROR AWAIT DI DALAM CALLBACK 🔥
       const interval = setInterval(async () => {
+        const todayStr = new Date().toLocaleDateString('en-CA');
         if (selectedDate === todayStr) {
           const [statsRes, actRes] = await Promise.all([
             fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}&selected_date=${selectedDate}`),
             fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
           ]);
+          
           if (statsRes.ok) {
             const statData = await statsRes.json();
-            setStats(prev => ({ ...prev, ...statData }));
+            setStats({
+              totalRevenue: statData.totalRevenue,
+              totalTransactions: statData.totalTransactions,
+              activeBranches: statData.activeBranches,
+              chartData: statData.chartData,
+              labels: statData.labels,
+              branchStats: statData.branchStats || {},
+              totalExpense: statData.totalExpense || 0,
+              netProfit: statData.netProfit || 0
+            });
           }
+          
           if (actRes.ok) setActivities(await actRes.json());
         } else {
-           // Jika melihat masa lalu, cukup update aktivitasnya saja (opsional)
            const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
            if (actRes.ok) setActivities(await actRes.json());
         }
@@ -121,23 +136,25 @@ export default function OwnerDashboard() {
     getSessionAndFetch();
   }, [period, selectedDate]);
 
-  // 3. Chart.js
   useEffect(() => {
     if (!chartRef.current || isLoading) return;
-    const ctx = chartRef.current.getContext('2d');
     
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+
+    const ctx = chartRef.current.getContext('2d');
     let gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, isDarkMode ? 'rgba(37, 99, 235, 0.4)' : 'rgba(37, 99, 235, 0.2)');
     gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-
-    if (chartInstance.current) chartInstance.current.destroy();
 
     chartInstance.current = new Chart(ctx, {
       type: 'line',
       data: {
         labels: stats.labels,
         datasets: [{
-          label: 'Pendapatan (Juta)',
+          label: 'Pendapatan',
           data: stats.chartData,
           borderColor: '#2563EB',
           backgroundColor: gradient,
@@ -161,7 +178,13 @@ export default function OwnerDashboard() {
         }
       }
     });
-    return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+        chartInstance.current = null;
+      }
+    };
   }, [isDarkMode, stats.chartData, stats.labels, isLoading]);
 
   const handlePeriodChange = (newPeriod) => {
@@ -177,7 +200,6 @@ export default function OwnerDashboard() {
     fetchAllData(userEmail, period, newDate).finally(() => setIsLoading(false));
   };
 
-  // 4. Submit Tambah Cabang Baru
   const handleCreateBranch = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -187,11 +209,7 @@ export default function OwnerDashboard() {
       const res = await fetch('/api/owner/create-branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: linkBranchName,
-          email: linkBranchEmail, 
-          manager_email: userEmail 
-        })
+        body: JSON.stringify({ name: linkBranchName, email: linkBranchEmail, manager_email: userEmail })
       });
       
       const data = await res.json();
@@ -209,7 +227,6 @@ export default function OwnerDashboard() {
     }
   };
 
-  // 5. Submit Edit Cabang
   const handleEditBranch = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -235,7 +252,6 @@ export default function OwnerDashboard() {
     }
   };
 
-  // 6. Toggle Suspend
   const handleToggleActive = (branch) => {
     setConfirmModal({
       open: true,
@@ -274,12 +290,11 @@ export default function OwnerDashboard() {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
+    <div className="bg-[#F8FAFC] text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0"></div>
       <div className="fixed bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-[#D97736]/10 dark:bg-[#D97736]/10 blur-[150px] pointer-events-none z-0"></div>
 
       <div className="flex h-screen relative z-10">
-        {/* SIDEBAR */}
         <aside className="group w-[80px] hover:w-64 transition-all duration-300 ease-in-out bg-white/70 dark:bg-[#060911]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 h-full shrink-0">
           <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800/80 overflow-hidden shrink-0">
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-lg overflow-hidden p-1">
@@ -298,25 +313,17 @@ export default function OwnerDashboard() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Overview</span>
             </Link>
-            
-            {/* 🔥 MENU KEUANGAN DITAMBAHKAN DI SINI 🔥 */}
             <Link href="/owner/finance" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Keuangan</span>
             </Link>
-
             <Link href="/owner/reports" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
             </Link>
-            <Link href="/owner/settings" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Pengaturan</span>
-            </Link>
           </nav>
         </aside>
 
-        {/* MAIN CONTENT */}
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
           <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
             <div>
@@ -324,8 +331,6 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Pantau seluruh ekosistem NexaFlow Anda</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
-              
-              {/* 🔥 DATE PICKER & FILTER DITAMBAHKAN DI SINI 🔥 */}
               <div className="flex items-center gap-2">
                 <input 
                   type="date" 
@@ -341,21 +346,16 @@ export default function OwnerDashboard() {
               </div>
 
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 hover:bg-slate-200 transition-colors border border-slate-200 dark:border-slate-800 shadow-sm">
-                {isDarkMode ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                )}
+                {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
               </button>
               <button onClick={() => setIsModalOpen(true)} className="bg-gradient-to-r from-[#1E4E8C] to-[#2563EB] hover:from-[#2563EB] hover:to-[#3B82F6] text-white font-bold px-4 py-2.5 rounded-xl text-xs md:text-sm flex items-center gap-2 shadow-[0_8px_24px_-6px_rgba(37,99,235,0.5)] transition-all transform hover:-translate-y-0.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-amber-300"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Icons.Plus />
                 <span className="hidden sm:inline">Tambah Cabang</span>
               </button>
             </div>
           </header>
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
-            {/* STATS ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all relative">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pendapatan</p>
@@ -365,15 +365,12 @@ export default function OwnerDashboard() {
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pengeluaran</p>
                 <h3 className="text-2xl font-black text-rose-500 font-display">{isLoading ? '...' : formatRp(stats.totalExpense)}</h3>
               </div>
-              
-              {/* 🔥 KARTU LABA BERSIH 🔥 */}
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Laba Bersih (Net Profit)</p>
                 <h3 className={`text-2xl font-black font-display ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-rose-600'}`}>
                   {isLoading ? '...' : formatRp(stats.netProfit)}
                 </h3>
               </div>
-
               <div className="bg-gradient-to-br from-[#0F172A] to-[#04060B] border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-2 relative z-10">
                   <p className="text-xs font-bold text-slate-400">Status Sistem</p>
@@ -383,7 +380,6 @@ export default function OwnerDashboard() {
               </div>
             </div>
 
-            {/* BENTO GRID (Chart & Live Activity) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2 bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-sm">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight mb-4">Tren Pendapatan</h2>
@@ -392,7 +388,6 @@ export default function OwnerDashboard() {
                 </div>
               </div>
 
-              {/* LIVE ACTIVITY */}
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm flex flex-col">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white font-display mb-4">Aktivitas Terbaru</h2>
                 <div className="flex-1 overflow-y-auto pr-2 space-y-4">
@@ -401,7 +396,7 @@ export default function OwnerDashboard() {
                   ) : activities.map((act, i) => (
                     <div key={i} className="flex gap-3">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <Icons.Activity />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-slate-900 dark:text-white">Pesanan Masuk</p>
@@ -414,7 +409,6 @@ export default function OwnerDashboard() {
               </div>
             </div>
 
-            {/* TABEL CABANG */}
             <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/50 dark:bg-[#0A0F1C]">
                 <h3 className="text-lg font-black text-slate-900 dark:text-white font-display">Daftar Cabang Anda</h3>
@@ -464,10 +458,10 @@ export default function OwnerDashboard() {
                           </td>
                           <td className="p-4 pr-6 text-right flex justify-end gap-2">
                             <button onClick={() => handleToggleActive(branch)} title={branch.is_active ? 'Suspend' : 'Aktifkan'} className={`p-2 rounded-lg border transition-all ${branch.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'}`}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                              <Icons.Power />
                             </button>
                             <button onClick={() => { setEditModal({ open: true, branch }); setEditName(branch.name); }} title="Edit" className="p-2 rounded-lg bg-slate-100 dark:bg-[#111C33] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              <Icons.Edit />
                             </button>
                             <button onClick={() => window.location.href = `/dashboard?tenant_id=${branch.id}`} className="bg-slate-100 dark:bg-[#111C33] hover:bg-[#2563EB] text-slate-700 dark:text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700">
                               Buka Kasir
@@ -484,11 +478,9 @@ export default function OwnerDashboard() {
         </main>
       </div>
 
-      {/* MODAL TAMBAH CABANG BARU */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-[#2563EB]/10 dark:bg-[#2563EB]/20 rounded-full blur-[60px] pointer-events-none"></div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display mb-2 relative z-10">Tambah Cabang Baru</h3>
             <p className="text-xs text-slate-500 mb-6 relative z-10">Sistem akan membuat akun kasir baru dan menghubungkannya ke dashboard Anda.</p>
             
@@ -514,7 +506,6 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* MODAL EDIT CABANG */}
       {editModal.open && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
@@ -533,7 +524,6 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* CUSTOM CONFIRM MODAL */}
       {confirmModal.open && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
@@ -562,7 +552,6 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* TOAST NOTIFICATION */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
