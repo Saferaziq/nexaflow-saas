@@ -26,7 +26,6 @@ export default function OwnerDashboard() {
   const [userEmail, setUserEmail] = useState('');
   const [period, setPeriod] = useState('daily'); 
   
-  // State untuk filter tanggal
   const [dateDaily, setDateDaily] = useState(new Date().toLocaleDateString('en-CA'));
   const [dateWeekly, setDateWeekly] = useState(() => {
     const now = new Date();
@@ -69,7 +68,7 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  const fetchAllData = async (email, currentPeriod = period, currentDateStr = getActiveDateStr()) => {
+  const fetchAllData = async (email, currentPeriod, currentDateStr) => {
     try {
       const [tenantsRes, statsRes, actRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
@@ -104,6 +103,7 @@ export default function OwnerDashboard() {
   };
 
   useEffect(() => {
+    let interval;
     const getSessionAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -113,15 +113,18 @@ export default function OwnerDashboard() {
       const email = session.user.email;
       setUserEmail(email);
       
+      setIsLoading(true);
       await fetchAllData(email, period, getActiveDateStr());
       setIsLoading(false);
 
-      // 🔥 MATIKAN POLLING JIKA BUKAN HARI INI 🔥
-      const interval = setInterval(async () => {
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const isToday = (period === 'daily' && dateDaily === todayStr);
-        
-        if (isToday) {
+      // 🔥 HANYA JALANKAN POLLING JIKA TANGGAL ADALAH HARI INI 🔥
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      const isToday = (period === 'daily' && dateDaily === todayStr) || 
+                      (period === 'weekly' && dateWeekly === getActiveWeekStr()) ||
+                      (period === 'monthly' && dateMonthly === getActiveMonthStr());
+
+      if (isToday) {
+        interval = setInterval(async () => {
           const [statsRes, actRes] = await Promise.all([
             fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}&date_str=${getActiveDateStr()}`),
             fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
@@ -141,20 +144,25 @@ export default function OwnerDashboard() {
             });
           }
           if (actRes.ok) setActivities(await actRes.json());
-        } else {
-           // Hanya update aktivitas jika melihat masa lalu
-           const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
-           if (actRes.ok) setActivities(await actRes.json());
-        }
-      }, 10000);
-
-      return () => clearInterval(interval);
+        }, 10000);
+      }
     };
 
     getSessionAndFetch();
+    return () => { if (interval) clearInterval(interval); };
   }, [period, dateDaily, dateWeekly, dateMonthly]);
 
-  // 🔥 PERBAIKAN ERROR GRAFIK BERKERAK 🔥
+  const getActiveWeekStr = () => {
+    const now = new Date();
+    const onejan = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${week.toString().padStart(2, '0')}`;
+  };
+
+  const getActiveMonthStr = () => {
+    return new Date().toISOString().slice(0, 7);
+  };
+
   useEffect(() => {
     if (!chartRef.current || isLoading) return;
     
@@ -190,7 +198,7 @@ export default function OwnerDashboard() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 0 }, // Matikan animasi agar tidak "bergerak"
+        animation: { duration: 0 },
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false, drawBorder: false }, ticks: { color: isDarkMode ? '#64748B' : '#94A3B8', font: { family: 'Inter', size: 11, weight: 'bold' } } },
@@ -209,8 +217,6 @@ export default function OwnerDashboard() {
 
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
-    setIsLoading(true);
-    fetchAllData(userEmail, newPeriod, getActiveDateStr()).finally(() => setIsLoading(false));
   };
 
   const handleDateChange = (e, type) => {
@@ -218,9 +224,7 @@ export default function OwnerDashboard() {
     if (type === 'daily') setDateDaily(val);
     if (type === 'weekly') setDateWeekly(val);
     if (type === 'monthly') setDateMonthly(val);
-    
-    setIsLoading(true);
-    fetchAllData(userEmail, period, val).finally(() => setIsLoading(false));
+    // Hapus fetchAllData di sini agar useEffect yang menangani
   };
 
   const handleLogout = async () => {
@@ -365,7 +369,6 @@ export default function OwnerDashboard() {
             </div>
             <div className="flex items-center gap-3 md:gap-4">
               
-              {/* 🔥 FILTER WAKTU YANG TEPAT 🔥 */}
               <div className="flex items-center gap-2">
                 {period === 'daily' && (
                   <input type="date" value={dateDaily} onChange={(e) => handleDateChange(e, 'daily')} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none" />

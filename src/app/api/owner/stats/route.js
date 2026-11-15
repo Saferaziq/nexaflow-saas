@@ -28,34 +28,40 @@ export async function GET(request) {
 
     const tenantIds = tenants.map(t => t.id);
 
-    // Tentukan Start Date & End Date
     let startDate = new Date();
     let endDate = new Date();
     let labels = [];
 
-    if (period === 'daily') {
-      startDate = new Date(dateStr); startDate.setHours(0,0,0,0);
-      endDate = new Date(dateStr); endDate.setHours(23,59,59,999);
-      labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
-    } else if (period === 'monthly') {
-      const [year, month] = dateStr.split('-');
-      startDate = new Date(year, month - 1, 1);
-      endDate = new Date(year, month, 0, 23, 59, 59);
-      labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
-    } else if (period === 'weekly') {
-      // Format dateStr: YYYY-Www (contoh: 2024-W20)
-      const [year, week] = dateStr.split('-W');
-      const simple = new Date(year, 0, 1 + (week - 1) * 7);
-      const dow = simple.getDay();
-      startDate = new Date(simple);
-      if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
-      else startDate.setDate(simple.getDate() + 8 - simple.getDay());
-      startDate.setHours(0,0,0,0);
-      
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6);
-      endDate.setHours(23,59,59,999);
-      labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    // 🔥 PENGAMANAN PARSING TANGGAL 🔥
+    try {
+      if (period === 'daily') {
+        const safeDate = dateStr ? dateStr : new Date().toLocaleDateString('en-CA');
+        startDate = new Date(safeDate); startDate.setHours(0,0,0,0);
+        endDate = new Date(safeDate); endDate.setHours(23,59,59,999);
+        labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+      } else if (period === 'monthly') {
+        const [year, month] = (dateStr || new Date().toISOString().slice(0,7)).split('-');
+        startDate = new Date(year, parseInt(month) - 1, 1);
+        endDate = new Date(year, parseInt(month), 0, 23, 59, 59);
+        labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
+      } else if (period === 'weekly') {
+        const [year, week] = (dateStr || '2024-W01').split('-W');
+        const simple = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
+        const dow = simple.getDay();
+        startDate = new Date(simple);
+        if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
+        else startDate.setDate(simple.getDate() + 8 - simple.getDay());
+        startDate.setHours(0,0,0,0);
+        
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23,59,59,999);
+        labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      }
+    } catch (e) {
+      console.log("Fallback date parsing error", e);
+      startDate = new Date(); startDate.setHours(0,0,0,0);
+      endDate = new Date(); endDate.setHours(23,59,59,999);
     }
 
     const [orderRes, expenseRes, empTransRes, empRes] = await Promise.all([
@@ -74,12 +80,11 @@ export async function GET(request) {
     const totalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0) + empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
     const netProfit = totalRevenue - totalExpense;
 
-    let chartData = [0, 0, 0, 0, 0, 0, 0, 0]; 
+    let chartData = [];
+    if (period === 'daily') chartData = [0, 0, 0, 0, 0, 0, 0, 0];
     if (period === 'monthly') chartData = [0, 0, 0, 0, 0];
     if (period === 'weekly') chartData = [0, 0, 0, 0, 0, 0, 0];
-    if (period === 'daily') chartData = [0, 0, 0, 0, 0, 0, 0, 0];
     
-    // Branch Stats
     const branchStats = {};
     tenantIds.forEach(id => { 
       branchStats[id] = { 
