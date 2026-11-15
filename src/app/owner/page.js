@@ -14,22 +14,23 @@ export default function OwnerDashboard() {
 
   // State Data
   const [userEmail, setUserEmail] = useState('');
+  const [period, setPeriod] = useState('weekly'); // daily, weekly, monthly
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
   const [stats, setStats] = useState({ 
     totalRevenue: 0, totalTransactions: 0, activeBranches: 0, 
-    chartData: [0,0,0,0,0,0,0], branchStats: {} 
+    chartData: [], labels: [], branchStats: {} 
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Form State (Tambah & Edit)
+  // Form State
   const [linkBranchName, setLinkBranchName] = useState('');
   const [linkBranchEmail, setLinkBranchEmail] = useState('');
   const [editName, setEditName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // UI State (Toast & Confirmation)
+  // UI State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
@@ -44,12 +45,12 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // 2. Fungsi Fetch Data (Menggunakan Promise.all agar Paralel & Cepat)
-  const fetchAllData = async (email) => {
+  // 2. Fungsi Fetch Data (Optimasi Promise.all)
+  const fetchAllData = async (email, currentPeriod = period) => {
     try {
       const [tenantsRes, statsRes, actRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}`),
         fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
       ]);
 
@@ -62,6 +63,7 @@ export default function OwnerDashboard() {
           totalTransactions: statData.totalTransactions,
           activeBranches: statData.activeBranches,
           chartData: statData.chartData,
+          labels: statData.labels,
           branchStats: statData.branchStats || {}
         });
       }
@@ -86,15 +88,12 @@ export default function OwnerDashboard() {
       const email = session.user.email;
       setUserEmail(email);
       
-      // Fetch awal
-      await fetchAllData(email);
+      await fetchAllData(email, period);
       setIsLoading(false);
 
-      // Setup interval untuk auto-refresh aktivitas & statistik tiap 10 detik
       const interval = setInterval(async () => {
-        // Fetch hanya statistik dan aktivitas untuk update live (tanpa reload tabel cabang)
         const [statsRes, actRes] = await Promise.all([
-          fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`),
+          fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}`),
           fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
         ]);
         
@@ -106,6 +105,7 @@ export default function OwnerDashboard() {
             totalTransactions: statData.totalTransactions,
             activeBranches: statData.activeBranches,
             chartData: statData.chartData,
+            labels: statData.labels,
             branchStats: statData.branchStats || {}
           }));
         }
@@ -120,7 +120,7 @@ export default function OwnerDashboard() {
     };
 
     getSessionAndFetch();
-  }, []);
+  }, [period]); // Re-run when period changes
 
   // 3. Chart.js
   useEffect(() => {
@@ -136,7 +136,7 @@ export default function OwnerDashboard() {
     chartInstance.current = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+        labels: stats.labels,
         datasets: [{
           label: 'Pendapatan (Juta)',
           data: stats.chartData,
@@ -158,12 +158,20 @@ export default function OwnerDashboard() {
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false, drawBorder: false }, ticks: { color: isDarkMode ? '#64748B' : '#94A3B8', font: { family: 'Inter', size: 11, weight: 'bold' } } },
-          y: { grid: { color: isDarkMode ? 'rgba(30, 41, 59, 0.5)' : 'rgba(226, 232, 240, 0.5)', drawBorder: false, borderDash: [5, 5] }, ticks: { color: isDarkMode ? '#64748B' : '#94A3B8', font: { family: 'Inter', size: 11, weight: 'bold' }, stepSize: 10, callback: function(value) { return value + 'jt'; } } }
+          y: { grid: { color: isDarkMode ? 'rgba(30, 41, 59, 0.5)' : 'rgba(226, 232, 240, 0.5)', drawBorder: false, borderDash: [5, 5] }, ticks: { color: isDarkMode ? '#64748B' : '#94A3B8', font: { family: 'Inter', size: 11, weight: 'bold' }, callback: function(value) { return value + 'jt'; } } }
         }
       }
     });
     return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-  }, [isDarkMode, stats.chartData, isLoading]);
+  }, [isDarkMode, stats.chartData, stats.labels, isLoading]);
+
+  // Handle Period Change
+  const handlePeriodChange = (newPeriod) => {
+    if (period === newPeriod) return;
+    setPeriod(newPeriod);
+    setIsLoading(true);
+    fetchAllData(userEmail, newPeriod).finally(() => setIsLoading(false));
+  };
 
   // 4. Submit Tambah Cabang Baru
   const handleCreateBranch = async (e) => {
@@ -189,9 +197,7 @@ export default function OwnerDashboard() {
       setIsModalOpen(false);
       setLinkBranchName('');
       setLinkBranchEmail('');
-      
-      // Refresh data secara background
-      fetchAllData(userEmail);
+      fetchAllData(userEmail, period);
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -217,7 +223,7 @@ export default function OwnerDashboard() {
       
       showToast('Cabang berhasil diperbarui!', 'success');
       setEditModal({ open: false, branch: null });
-      fetchAllData(userEmail);
+      fetchAllData(userEmail, period);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -246,7 +252,7 @@ export default function OwnerDashboard() {
           
           showToast(data.message, 'success');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
-          fetchAllData(userEmail);
+          fetchAllData(userEmail, period);
         } catch (err) {
           showToast(err.message, 'error');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
@@ -262,6 +268,10 @@ export default function OwnerDashboard() {
     if (diff < 60) return `${diff} menit lalu`;
     return `${Math.floor(diff/60)} jam lalu`;
   };
+
+  // Label Dinamis Tabel
+  const periodLabel = period === 'daily' ? 'Hari Ini' : period === 'monthly' ? 'Bulan Ini' : 'Minggu Ini';
+  const chartTitle = period === 'daily' ? 'Tren Pendapatan (Hari Ini)' : period === 'monthly' ? 'Tren Pendapatan (Bulan Ini)' : 'Tren Pendapatan (7 Hari Terakhir)';
 
   return (
     <div className="bg-slate-50 text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
@@ -307,6 +317,13 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Pantau seluruh ekosistem NexaFlow Anda</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
+              {/* TIME FILTER */}
+              <div className="hidden md:flex bg-slate-100 dark:bg-[#111C33] rounded-xl p-1 border border-slate-200 dark:border-slate-800">
+                <button onClick={() => handlePeriodChange('daily')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'daily' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Harian</button>
+                <button onClick={() => handlePeriodChange('weekly')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'weekly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Mingguan</button>
+                <button onClick={() => handlePeriodChange('monthly')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'monthly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Bulanan</button>
+              </div>
+
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 hover:bg-slate-200 transition-colors border border-slate-200 dark:border-slate-800 shadow-sm">
                 {isDarkMode ? (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -325,7 +342,7 @@ export default function OwnerDashboard() {
             {/* STATS ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all relative">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pendapatan</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pendapatan ({period === 'daily' ? 'Hari Ini' : period === 'monthly' ? 'Bulan Ini' : 'Minggu Ini'})</p>
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display">{isLoading ? '...' : formatRp(stats.totalRevenue)}</h3>
               </div>
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all">
@@ -348,7 +365,7 @@ export default function OwnerDashboard() {
             {/* BENTO GRID (Chart & Live Activity) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2 bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-sm">
-                <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight mb-4">Tren Pendapatan (7 Hari Terakhir)</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight mb-4">{chartTitle}</h2>
                 <div className="w-full h-[280px] relative z-10">
                   <canvas ref={chartRef}></canvas>
                 </div>
@@ -387,7 +404,7 @@ export default function OwnerDashboard() {
                     <tr className="border-b border-slate-200 dark:border-slate-800/80 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#060911]/50">
                       <th className="p-4 pl-6 font-black">Nama Cabang</th>
                       <th className="p-4 font-black">Status</th>
-                      <th className="p-4 font-black">Omset Hari Ini</th>
+                      <th className="p-4 font-black">Omset ({periodLabel})</th>
                       <th className="p-4 font-black">Transaksi</th>
                       <th className="p-4 font-black text-right pr-6">Aksi</th>
                     </tr>
