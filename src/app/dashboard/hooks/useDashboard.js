@@ -17,6 +17,7 @@ export function useDashboard() {
   const [menus, setMenus] = useState([]);
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
+  const [expenses, setExpenses] = useState([]); // <-- TAMBAHAN STATE PENGELUARAN
   const [settings, setSettings] = useState({ 
     name: '', wa: '', address: '', logo_url: '', qris_string: '', 
     banner_url: '', tax_percentage: 11, notify_order_ready: true,
@@ -158,6 +159,13 @@ export function useDashboard() {
     }
   };
 
+  // 🔥 FUNGSI BARU: FETCH EXPENSES 🔥
+  const fetchExpenses = async (tId) => {
+    if (!tId) return;
+    const { data } = await supabase.from('expenses').select('*').eq('tenant_id', tId).order('expense_date', { ascending: false });
+    if (data) setExpenses(data);
+  };
+
   const fetchTenantStatus = async (tId) => {
     const { data } = await supabase.from('tenants').select('is_open, is_pay_first, is_active').eq('id', tId).single();
     if (data) {
@@ -247,7 +255,6 @@ export function useDashboard() {
         return router.push('/login');
       }
 
-      // 🔥 FITUR BUKA KASIR: Owner bisa memantau cabang lain via URL param
       let activeTenantData = userData.tenants;
       let activeTenantId = userData.tenant_id;
 
@@ -289,7 +296,8 @@ export function useDashboard() {
         if (activeTenantData.banner_url) extractDominantColor(activeTenantData.banner_url);
         else if (activeTenantData.logo_url) extractDominantColor(activeTenantData.logo_url);
 
-        await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId)]);
+        // 🔥 TAMBAHKAN fetchExpenses DI SINI 🔥
+        await Promise.all([fetchMenus(tId), fetchTables(tId), fetchOrders(tId), fetchExpenses(tId)]);
 
         channel = supabase.channel('realtime-orders-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tId}` }, (payload) => {
@@ -301,6 +309,7 @@ export function useDashboard() {
             realtimeDebounceRef.current = setTimeout(() => fetchOrders(tId), 600);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'menus', filter: `tenant_id=eq.${tId}` }, () => fetchMenus(tId))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `tenant_id=eq.${tId}` }, () => fetchExpenses(tId)) // Realtime Expense
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tId}` }, (payload) => {
             if (payload.new.is_open !== undefined) setIsOpen(payload.new.is_open);
             if (payload.new.is_pay_first !== undefined) setSettings(prev => ({ ...prev, is_pay_first: payload.new.is_pay_first }));
@@ -330,6 +339,7 @@ export function useDashboard() {
 
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
+          fetchExpenses(tId); // Polling expense
           fetchTenantStatus(tId);
         }, 5000);
       }
@@ -924,9 +934,9 @@ export function useDashboard() {
   }, [orders, queueFilter, settings.is_pay_first]);
 
   return {
-    cafeName, userEmail, tenantId, menus, orders, tables, settings, isOpen, isSuspended,
+    cafeName, userEmail, tenantId, menus, orders, tables, expenses, settings, isOpen, isSuspended,
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen, audioUnlocked,
-    setTheme, setSettings, setMenus, setOrders, setTables, setToasts, setConfirmDialog,
+    setTheme, setSettings, setMenus, setOrders, setTables, setExpenses, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
     handleUpdateStock, 
@@ -934,7 +944,7 @@ export function useDashboard() {
     handleTogglePayFirst, 
     handleConfirmPayment,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
-    fetchMenus, fetchOrders, fetchTables, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
+    fetchMenus, fetchOrders, fetchTables, fetchExpenses, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
     queueFilter, setQueueFilter, displayOrders,
     reportMode, setReportMode, reportDateStr, setReportDateStr, reportMonth, setReportMonth, reportYear, setReportYear,
     reportStartDateStr, setReportStartDateStr, reportEndDateStr, setReportEndDateStr,

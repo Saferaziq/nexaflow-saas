@@ -36,10 +36,12 @@ export default function Header({
           : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'
     }`;
 
+  // 🔥 TAMBAHAN MENU PENGELUARAN DI SINI 🔥
   const navItems = [
     { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrdersCount },
     { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
     { key: 'tables', label: 'Meja', Icon: Icons.Grid },
+    { key: 'expenses', label: 'Pengeluaran', Icon: Icons.Wallet }, 
     { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
     { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
   ];

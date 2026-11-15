@@ -5,6 +5,7 @@ import TabMenu from './TabMenu';
 import TabTables from './TabTables';
 import TabReports from './TabReports';
 import TabSettings from './TabSettings';
+import TabExpenses from './TabExpenses'; // <-- TAMBAHKAN IMPORT INI
 
 export default function TabContent({
   activeTab, theme, d, rp, displayOrders, queueFilter, setQueueFilter,
@@ -27,6 +28,11 @@ export default function TabContent({
 
   if (activeTab === 'tables') {
     return <TabTables theme={theme} tables={d.tables} newTableNum={newTableNum} setNewTableNum={setNewTableNum} onAddTable={onAddTable} onDeleteTable={d.handleDeleteTable} onDownloadQR={onDownloadQR} />;
+  }
+
+  // 🔥 TAMBAHKAN KONDISI UNTUK MENAMPILKAN TAB PENGELUARAN 🔥
+  if (activeTab === 'expenses') {
+    return <TabExpenses theme={theme} d={d} rp={rp} />;
   }
 
   if (activeTab === 'reports') {
