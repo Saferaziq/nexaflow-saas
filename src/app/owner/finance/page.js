@@ -24,6 +24,9 @@ export default function OwnerFinance() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [expenseModal, setExpenseModal] = useState(false);
+  const [formExpense, setFormExpense] = useState({ tenant_id: '', category: 'Bulanan', description: '', amount: '' });
+  
   const [employeeModal, setEmployeeModal] = useState({ open: false, data: null });
   const [payrollModal, setPayrollModal] = useState({ open: false, employee: null, type: 'Gaji' });
 
@@ -57,6 +60,7 @@ export default function OwnerFinance() {
         setTransactions(data.transactions || []);
         if (data.tenants.length > 0) {
           setFormEmployee(prev => ({ ...prev, tenant_id: data.tenants[0].id }));
+          setFormExpense(prev => ({ ...prev, tenant_id: data.tenants[0].id }));
         }
       }
     } catch (err) {
@@ -79,6 +83,31 @@ export default function OwnerFinance() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  // FUNGSI TAMBAH PENGELUARAN BULANAN (OWNER)
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/owner/finance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'add_expense', 
+        manager_email: userEmail, 
+        payload: { 
+          ...formExpense, 
+          quantity: 1, 
+          unit_price: Number(formExpense.amount) 
+        } 
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message);
+      setExpenseModal(false);
+      setFormExpense({ ...formExpense, description: '', amount: '' });
+      fetchData(userEmail);
+    } else showToast(data.error, 'error');
   };
 
   const handleSaveEmployee = async (e) => {
@@ -251,7 +280,7 @@ export default function OwnerFinance() {
           <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
             <div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Manajemen Keuangan</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Kelola pengeluaran dan data karyawan kafe Anda</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Kelola pengeluaran bulanan dan data karyawan kafe Anda</p>
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -263,15 +292,15 @@ export default function OwnerFinance() {
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
             
             <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
-              <button onClick={() => setActiveTab('expenses')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'expenses' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500'}`}>Pengeluaran Operasional</button>
+              <button onClick={() => setActiveTab('expenses')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'expenses' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500'}`}>Pengeluaran Bulanan</button>
               <button onClick={() => setActiveTab('employees')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500'}`}>Data Karyawan & Gaji</button>
             </div>
 
             {activeTab === 'expenses' && (
               <div className="animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Riwayat Pengeluaran (Input oleh Kasir)</h2>
-                  {/* TOMBOL INPUT DIHAPUS DARI SINI */}
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Riwayat Pengeluaran (Bulanan & Operasional)</h2>
+                  <button onClick={() => setExpenseModal(true)} className="bg-[#2563EB] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg">+ Catat Pengeluaran Bulanan</button>
                 </div>
                 <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
                   <table className="w-full text-left">
@@ -279,28 +308,29 @@ export default function OwnerFinance() {
                       <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-black">
                         <th className="p-4 pl-6">Tanggal</th>
                         <th className="p-4">Cabang</th>
-                        <th className="p-4">Barang / Keterangan</th>
-                        <th className="p-4">Harga Satuan</th>
-                        <th className="p-4">Qty</th>
+                        <th className="p-4">Kategori</th>
+                        <th className="p-4">Keterangan</th>
                         <th className="p-4">Total</th>
                         <th className="p-4 pr-6 text-right">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                      {expenses.map(ex => (
-                        <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors">
-                          <td className="p-4 pl-6 text-sm text-slate-500">{new Date(ex.expense_date).toLocaleDateString('id-ID')}</td>
-                          <td className="p-4 text-sm font-bold">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                          <td className="p-4 text-sm">{ex.description || '-'}</td>
-                          <td className="p-4 text-sm">{formatRp(ex.unit_price || 0)}</td>
-                          <td className="p-4 text-sm font-bold">{ex.quantity || 1}</td>
-                          <td className="p-4 text-sm font-black text-rose-500">- {formatRp(ex.amount)}</td>
-                          <td className="p-4 pr-6 text-right">
-                            <button onClick={() => handleDelete('expense', ex.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors" title="Hapus jika ada kecurangan"><Icons.Trash /></button>
-                          </td>
-                        </tr>
-                      ))}
-                      {expenses.length === 0 && <tr><td colSpan="7" className="p-6 text-center text-slate-500 font-bold">Belum ada catatan pengeluaran dari kasir.</td></tr>}
+                      {expenses.map(ex => {
+                        const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
+                        return (
+                          <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors">
+                            <td className="p-4 pl-6 text-sm text-slate-500">{new Date(ex.expense_date).toLocaleDateString('id-ID')}</td>
+                            <td className="p-4 text-sm font-bold">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
+                            <td className="p-4"><span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs font-bold">{ex.category || 'Bulanan'}</span></td>
+                            <td className="p-4 text-sm">{ex.description || '-'} <span className="text-[10px] text-slate-500 ml-1">({ex.quantity || 1} Qty x {formatRp(safeUnitPrice)})</span></td>
+                            <td className="p-4 text-sm font-black text-rose-500">- {formatRp(ex.amount)}</td>
+                            <td className="p-4 pr-6 text-right">
+                              <button onClick={() => handleDelete('expense', ex.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors" title="Hapus jika ada kecurangan"><Icons.Trash /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {expenses.length === 0 && <tr><td colSpan="6" className="p-6 text-center text-slate-500 font-bold">Belum ada catatan pengeluaran.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -357,6 +387,41 @@ export default function OwnerFinance() {
           </div>
         </main>
       </div>
+
+      {expenseModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black mb-6">Catat Pengeluaran Bulanan</h3>
+            <form onSubmit={handleAddExpense} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">Pilih Cabang</label>
+                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Kategori</label>
+                <select value={formExpense.category} onChange={e => setFormExpense({...formExpense, category: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
+                  <option>Bulanan</option>
+                  <option>Operasional</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Keterangan (Contoh: Listrik, Sewa)</label>
+                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Token Listrik Juli" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Nominal (Rp)</label>
+                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-3 rounded-xl">Batal</button>
+                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-bold py-3 rounded-xl">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {employeeModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">

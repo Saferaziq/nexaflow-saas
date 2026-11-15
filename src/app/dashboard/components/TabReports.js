@@ -15,25 +15,11 @@ const SvgIcons = {
 };
 
 export default function TabReports({
-  theme,
-  reportMode, setReportMode,
-  reportDateStr, setReportDateStr,
-  reportMonth, setReportMonth,
-  reportYear, setReportYear,
-  reportStartDateStr, setReportStartDateStr,
-  reportEndDateStr, setReportEndDateStr,
-  reportLabel,
-  reportStats,
-  topMenus,
-  chartData,
-  maxChartRev,
-  totalChartRev,
-  showDailyBreakdown,
-  activeDays,
-  onExportCSV,
-  onPrintReport,
-  rp,
-  d,
+  theme, reportMode, setReportMode, reportDateStr, setReportDateStr,
+  reportMonth, setReportMonth, reportYear, setReportYear,
+  reportStartDateStr, setReportStartDateStr, reportEndDateStr, setReportEndDateStr,
+  reportLabel, reportStats, topMenus, chartData, maxChartRev, totalChartRev,
+  showDailyBreakdown, activeDays, onExportCSV, onPrintReport, rp, d,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
@@ -44,9 +30,11 @@ export default function TabReports({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formExpense, setFormExpense] = useState({ description: '', quantity: 1, unit_price: 0 });
 
+  // 🔥 FILTER KHUSUS PENGELUARAN HARIAN (HANYA KASIR YANG BISA INPUT HARIAN) 🔥
   const filteredExpenses = useMemo(() => {
     const exps = d?.expenses || [];
     return exps.filter(ex => {
+      if (ex.category !== 'Harian') return false; // <-- HANYA TAMPILKAN YANG HARIAN
       const exDate = new Date(ex.expense_date).toLocaleDateString('en-CA');
       if (reportMode === 'daily') return exDate === reportDateStr;
       if (reportMode === 'weekly') {
@@ -80,13 +68,13 @@ export default function TabReports({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenant_id: d.tenantId,
-          category: 'Belanja Harian', // <-- KATEGORI DEFAULT DITAMBAHKAN
+          category: 'Harian', // <-- KASIR HANYA KIRIM KATEGORI HARIAN
           ...formExpense
         })
       });
       if (!res.ok) throw new Error('Gagal mencatat pengeluaran');
       
-      d.showToast('Pengeluaran berhasil dicatat', 'success');
+      d.showToast('Pengeluaran harian berhasil dicatat', 'success');
       setExpenseModal(false);
       setFormExpense({ description: '', quantity: 1, unit_price: 0 });
       d.fetchExpenses(d.tenantId);
@@ -110,7 +98,7 @@ export default function TabReports({
             <button key={k} onClick={() => setReportMode(k)} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === k ? 'bg-[var(--primary-color)] text-white border-[var(--primary-dark)] shadow-md' : theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>{l}</button>
           ))}
           <button onClick={() => setExpenseModal(true)} className="ml-auto bg-[var(--primary-color)] text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-md hover:bg-[var(--primary-dark)] transition-colors">
-            <SvgIcons.Plus /> Catat Pengeluaran
+            <SvgIcons.Plus /> Catat Pengeluaran Harian
           </button>
         </div>
 
@@ -154,7 +142,7 @@ export default function TabReports({
           <p className="text-2xl font-black text-[var(--primary-color)]">{rp(reportStats?.revenue || 0)}</p>
         </div>
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
-          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 text-rose-500`}>Total Pengeluaran</p>
+          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 text-rose-500`}>Total Pengeluaran (Harian)</p>
           <p className="text-2xl font-black text-rose-500">- {rp(totalExpense)}</p>
         </div>
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
@@ -165,17 +153,21 @@ export default function TabReports({
 
       {filteredExpenses.length > 0 && (
         <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
-          <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Rincian Pengeluaran</h3>
+          <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Rincian Pengeluaran Harian</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-            {filteredExpenses.map(ex => (
-              <div key={ex.id} className={`flex justify-between items-center p-3 rounded-xl border-2 ${theme === 'light' ? 'bg-[#FAF6F2] border-[#E0D6CC]' : 'bg-slate-800 border-slate-700'}`}>
-                <div>
-                  <p className={`text-sm font-bold ${textMainClass}`}>{ex.description}</p>
-                  <p className={`text-[10px] ${textSubClass}`}>{new Date(ex.expense_date).toLocaleDateString('id-ID')} • {ex.quantity} Qty x {rp(ex.unit_price)}</p>
+            {filteredExpenses.map(ex => {
+              // Fallback: Jika unit_price 0, hitung dari Total / Qty
+              const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
+              return (
+                <div key={ex.id} className={`flex justify-between items-center p-3 rounded-xl border-2 ${theme === 'light' ? 'bg-[#FAF6F2] border-[#E0D6CC]' : 'bg-slate-800 border-slate-700'}`}>
+                  <div>
+                    <p className={`text-sm font-bold ${textMainClass}`}>{ex.description}</p>
+                    <p className={`text-[10px] ${textSubClass}`}>{new Date(ex.expense_date).toLocaleDateString('id-ID')} • {ex.quantity} Qty x {rp(safeUnitPrice)}</p>
+                  </div>
+                  <p className="text-sm font-black text-rose-500">- {rp(ex.amount)}</p>
                 </div>
-                <p className="text-sm font-black text-rose-500">- {rp(ex.amount)}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -277,7 +269,8 @@ export default function TabReports({
         <button onClick={onExportCSV} className={`flex-1 font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
           <Icons.Download /> Export CSV
         </button>
-        <button onClick={onPrintReport} className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 border-2 border-[var(--primary-dark)]">
+        {/* 🔥 PASSING DATA EXPENSE KE PRINT 🔥 */}
+        <button onClick={() => onPrintReport(filteredExpenses, totalExpense, netProfit)} className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 border-2 border-[var(--primary-dark)]">
           <Icons.Print /> Cetak Laporan
         </button>
       </div>
@@ -285,7 +278,7 @@ export default function TabReports({
       {expenseModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className={`w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border-2 ${cardClass}`}>
-            <h3 className={`text-xl font-black mb-6 ${textMainClass}`}>Catat Pengeluaran Baru</h3>
+            <h3 className={`text-xl font-black mb-6 ${textMainClass}`}>Catat Pengeluaran Harian</h3>
             
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>

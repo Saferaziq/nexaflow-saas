@@ -2,12 +2,8 @@
 // Kumpulan fungsi cetak: printHTML, laporan harian, bill + QRIS, QR meja, laporan custom, export CSV
 
 export const printHTML = (htmlContent) => {
-  // 🔥 CEK MODE PRINTER DARI LOCALSTORAGE
   const mode = typeof window !== 'undefined' ? (localStorage.getItem('nexaflow_printer_mode') || 'browser') : 'browser';
 
-  // ==========================================
-  // FALLBACK: BROWSER DEFAULT (Jika QZ Tray/App gagal)
-  // ==========================================
   const fallbackPrint = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -59,9 +55,6 @@ export const printHTML = (htmlContent) => {
     }
   };
 
-  // ==========================================
-  // 1. ANDROID (RawBT) & IPAD (BR RawPrinter) - SILENT PRINT
-  // ==========================================
   if (mode === 'rawbt' || mode === 'brraw') {
     try {
       const base64Html = window.btoa(unescape(encodeURIComponent(htmlContent)));
@@ -92,13 +85,9 @@ export const printHTML = (htmlContent) => {
     }
   }
 
-  // ==========================================
-  // 2. WINDOWS PC (QZ Tray) - SILENT PRINT
-  // ==========================================
   if (mode === 'qztray') {
     const connectAndPrint = () => {
       if (typeof qz === 'undefined') {
-        // Load QZ Tray library secara dinamis
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js';
         script.onload = () => executeQzPrint();
@@ -114,7 +103,6 @@ export const printHTML = (htmlContent) => {
     };
 
     const executeQzPrint = () => {
-      // Coba connect ke QZ Tray
       if (!qz.websocket.isActive()) {
         qz.websocket.connect().then(() => {
           sendToQz();
@@ -131,7 +119,6 @@ export const printHTML = (htmlContent) => {
     const sendToQz = () => {
       qz.printers.getDefault().then((defaultPrinter) => {
         const config = qz.configs.create(defaultPrinter);
-        // QZ Tray mendukung HTML secara native
         const data = [{ type: 'html', data: htmlContent }];
         return qz.print(config, data);
       }).then(() => {
@@ -147,15 +134,11 @@ export const printHTML = (htmlContent) => {
     return;
   }
 
-  // ==========================================
-  // 3. BROWSER DEFAULT (Fallback)
-  // ==========================================
   fallbackPrint();
 };
 
 const rp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
 
-// Helper: hitung QRIS/Cash dari array order
 const calcPaymentBreakdown = (ordersList) => {
   let qris = 0, cash = 0, qrisCount = 0, cashCount = 0;
   ordersList.forEach(o => {
@@ -262,7 +245,8 @@ export const exportCSV = ({ reportOrders, reportLabelForFile, showToast }) => {
   showToast('CSV diunduh', 'success');
 };
 
-export const printReport = ({ reportStats, topMenus, reportLabel, settings, userEmail, reportNow }) => {
+// 🔥 UPDATE: Tambahkan parameter filteredExpenses, totalExpense, netProfit 🔥
+export const printReport = ({ reportStats, topMenus, reportLabel, settings, userEmail, reportNow, filteredExpenses = [], totalExpense = 0, netProfit = 0 }) => {
   const breakdown = {
     qris: reportStats.revenueQRIS || 0,
     cash: reportStats.revenueCash || 0,
@@ -271,6 +255,25 @@ export const printReport = ({ reportStats, topMenus, reportLabel, settings, user
   };
   const statusCount = reportStats.statusCount || { pending: 0, cooking: 0, ready: 0, completed: 0, cancelled: 0 };
   
-  const html = `<html><head><title>Laporan ${reportLabel}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, system-ui, sans-serif; padding: 30px; color: #0f172a; } h1 { font-size: 22px; margin-bottom: 4px; font-weight: 900; } h2 { font-size: 13px; color: #64748b; margin-bottom: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; } .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; } .card { border: 1px solid #e2e8f0; padding: 14px; border-radius: 10px; } .card p:first-child { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; } .card p:last-child { font-size: 22px; font-weight: 900; } .card-qris { border: 2px solid #06b6d4; background: #ecfeff; } .card-qris p:first-child { color: #0e7490; } .card-qris p:last-child { color: #0e7490; } .card-cash { border: 2px solid #10b981; background: #ecfdf5; } .card-cash p:first-child { color: #047857; } .card-cash p:last-child { color: #047857; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; } th, td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; text-align: left; } th { background: #f8fafc; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; } .text-right { text-align: right; } .section-title { font-size: 13px; font-weight: 900; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #0f172a; } .footer { margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; } @media print { body { padding: 10mm; } }</style></head><body><h1>${settings.name || 'Kafe'}</h1><h2>Laporan · ${reportLabel}</h2><div class="grid"><div class="card"><p>Total Pesanan</p><p>${reportStats.totalOrders}</p></div><div class="card"><p>Total Omset</p><p>${rp(reportStats.revenue)}</p></div><div class="card"><p>Rata-rata / Order</p><p>${rp(reportStats.avgOrder)}</p></div><div class="card"><p>Item Terjual</p><p>${reportStats.totalItems}</p></div></div><p class="section-title">RINCIAN PEMBAYARAN</p><div class="grid"><div class="card card-qris"><p>QRIS (${breakdown.qrisCount} trx)</p><p>${rp(breakdown.qris)}</p></div><div class="card card-cash"><p>CASH (${breakdown.cashCount} trx)</p><p>${rp(breakdown.cash)}</p></div></div><p class="section-title">STATUS PESANAN</p><table><thead><tr><th>Status</th><th class="text-right">Jumlah</th></tr></thead><tbody><tr><td>Baru</td><td class="text-right">${statusCount.pending}</td></tr><tr><td>Dimasak</td><td class="text-right">${statusCount.cooking}</td></tr><tr><td>Siap</td><td class="text-right">${statusCount.ready}</td></tr><tr><td>Selesai</td><td class="text-right">${statusCount.completed}</td></tr><tr><td>Batal</td><td class="text-right">${statusCount.cancelled}</td></tr></tbody></table>${topMenus.length > 0 ? `<p class="section-title">MENU TERLARIS</p><table><thead><tr><th>#</th><th>Menu</th><th class="text-right">Qty</th><th class="text-right">Omset</th></tr></thead><tbody>${topMenus.map(([name, data], idx) => `<tr><td>${idx + 1}</td><td>${name}</td><td class="text-right">${data.qty}x</td><td class="text-right">${rp(data.revenue)}</td></tr>`).join('')}</tbody></table>` : ''}<div class="footer">Dicetak oleh ${userEmail || 'Kasir'} · ${reportNow ? reportNow.toLocaleString('id-ID') : ''} · NexaFlow SaaS</div></body></html>`;
+  const html = `<html><head><title>Laporan ${reportLabel}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, system-ui, sans-serif; padding: 30px; color: #0f172a; } h1 { font-size: 22px; margin-bottom: 4px; font-weight: 900; } h2 { font-size: 13px; color: #64748b; margin-bottom: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; } .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; } .card { border: 1px solid #e2e8f0; padding: 14px; border-radius: 10px; } .card p:first-child { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; } .card p:last-child { font-size: 22px; font-weight: 900; } .card-qris { border: 2px solid #06b6d4; background: #ecfeff; } .card-qris p:first-child { color: #0e7490; } .card-qris p:last-child { color: #0e7490; } .card-cash { border: 2px solid #10b981; background: #ecfdf5; } .card-cash p:first-child { color: #047857; } .card-cash p:last-child { color: #047857; } .card-expense { border: 2px solid #e11d48; background: #fff1f2; } .card-expense p:first-child { color: #be123c; } .card-expense p:last-child { color: #be123c; } .card-profit { border: 2px solid #059669; background: #ecfdf5; } .card-profit p:first-child { color: #047857; } .card-profit p:last-child { color: #047857; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; } th, td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; text-align: left; } th { background: #f8fafc; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; } .text-right { text-align: right; } .section-title { font-size: 13px; font-weight: 900; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #0f172a; } .footer { margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; } @media print { body { padding: 10mm; } }</style></head><body><h1>${settings.name || 'Kafe'}</h1><h2>Laporan · ${reportLabel}</h2><div class="grid"><div class="card"><p>Total Pesanan</p><p>${reportStats.totalOrders}</p></div><div class="card"><p>Total Omset</p><p>${rp(reportStats.revenue)}</p></div><div class="card"><p>Rata-rata / Order</p><p>${rp(reportStats.avgOrder)}</p></div><div class="card"><p>Item Terjual</p><p>${reportStats.totalItems}</p></div></div>
+  
+  <div class="grid">
+    <div class="card card-qris"><p>QRIS (${breakdown.qrisCount} trx)</p><p>${rp(breakdown.qris)}</p></div>
+    <div class="card card-cash"><p>CASH (${breakdown.cashCount} trx)</p><p>${rp(breakdown.cash)}</p></div>
+  </div>
+
+  <div class="grid">
+    <div class="card card-expense"><p>Total Pengeluaran</p><p>${rp(totalExpense)}</p></div>
+    <div class="card card-profit"><p>Laba Bersih</p><p>${rp(netProfit)}</p></div>
+  </div>
+
+  <p class="section-title">STATUS PESANAN</p><table><thead><tr><th>Status</th><th class="text-right">Jumlah</th></tr></thead><tbody><tr><td>Baru</td><td class="text-right">${statusCount.pending}</td></tr><tr><td>Dimasak</td><td class="text-right">${statusCount.cooking}</td></tr><tr><td>Siap</td><td class="text-right">${statusCount.ready}</td></tr><tr><td>Selesai</td><td class="text-right">${statusCount.completed}</td></tr><tr><td>Batal</td><td class="text-right">${statusCount.cancelled}</td></tr></tbody></table>
+  
+  ${filteredExpenses.length > 0 ? `<p class="section-title">RINCIAN PENGELUARAN (HARIAN)</p><table><thead><tr><th>Keterangan</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Total</th></tr></thead><tbody>${filteredExpenses.map(ex => {
+    const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
+    return `<tr><td>${ex.description}</td><td class="text-right">${ex.quantity}</td><td class="text-right">${rp(safeUnitPrice)}</td><td class="text-right">${rp(ex.amount)}</td></tr>`;
+  }).join('')}</tbody></table>` : ''}
+
+  ${topMenus.length > 0 ? `<p class="section-title">MENU TERLARIS</p><table><thead><tr><th>#</th><th>Menu</th><th class="text-right">Qty</th><th class="text-right">Omset</th></tr></thead><tbody>${topMenus.map(([name, data], idx) => `<tr><td>${idx + 1}</td><td>${name}</td><td class="text-right">${data.qty}x</td><td class="text-right">${rp(data.revenue)}</td></tr>`).join('')}</tbody></table>` : ''}<div class="footer">Dicetak oleh ${userEmail || 'Kasir'} · ${reportNow ? reportNow.toLocaleString('id-ID') : ''} · NexaFlow SaaS</div></body></html>`;
   printHTML(html);
 };
