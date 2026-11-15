@@ -26,7 +26,9 @@ export default function OwnerFinance() {
   const [formEmployee, setFormEmployee] = useState({ tenant_id: '', name: '', role: 'Kasir', base_salary: '' });
   const [formPayroll, setFormPayroll] = useState({ amount: '', notes: '' });
   
+  // UI State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
@@ -127,19 +129,38 @@ export default function OwnerFinance() {
     } else showToast(data.error, 'error');
   };
 
-  const handleDelete = async (type, id) => {
-    if (!confirm('Yakin ingin menghapus data ini?')) return;
-    const action = type === 'expense' ? 'delete_expense' : 'delete_employee';
-    const res = await fetch('/api/owner/finance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, manager_email: userEmail, payload: { id } })
+  // 🔥 FUNGSI DELETE DENGAN MODAL KUSTOM 🔥
+  const handleDelete = (type, id) => {
+    setConfirmModal({
+      open: true,
+      title: type === 'expense' ? 'Hapus Pengeluaran' : 'Hapus Karyawan',
+      message: 'Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.',
+      isDanger: true,
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          const action = type === 'expense' ? 'delete_expense' : 'delete_employee';
+          const res = await fetch('/api/owner/finance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, manager_email: userEmail, payload: { id } })
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+            showToast(data.message);
+            fetchData(userEmail);
+            setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+          } else {
+            throw new Error(data.error);
+          }
+        } catch (err) {
+          showToast(err.message, 'error');
+          setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+        }
+      }
     });
-    const data = await res.json();
-    if (res.ok) {
-      showToast(data.message);
-      fetchData(userEmail);
-    } else showToast(data.error, 'error');
   };
 
   const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -249,7 +270,6 @@ export default function OwnerFinance() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {employees.map(emp => {
-                    // Hitung total kasbon & bonus
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
@@ -287,7 +307,7 @@ export default function OwnerFinance() {
       {/* MODAL PENGELUARAN */}
       {expenseModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-black mb-6">Catat Pengeluaran</h3>
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>
@@ -327,7 +347,7 @@ export default function OwnerFinance() {
       {/* MODAL KARYAWAN */}
       {employeeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-black mb-6">Tambah Karyawan</h3>
             <form onSubmit={handleAddEmployee} className="space-y-4">
               <div>
@@ -362,10 +382,10 @@ export default function OwnerFinance() {
         </div>
       )}
 
-      {/* MODAL PAYROLL (GAJI/KASBON/BONUS) */}
+      {/* MODAL PAYROLL */}
       {payrollModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-black mb-2">Catat {payrollModal.type}</h3>
             <p className="text-sm font-bold text-slate-500 mb-6">{payrollModal.employee.name}</p>
             <form onSubmit={handlePayroll} className="space-y-4">
@@ -386,11 +406,47 @@ export default function OwnerFinance() {
         </div>
       )}
 
+      {/* CUSTOM CONFIRM MODAL (PENGGANTI ALERT BAWAAN BROWSER) */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
+                {confirmModal.isDanger ? (
+                  <>
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                    <line x1="12" y1="2" x2="12" y2="12"/>
+                  </>
+                ) : (
+                  <>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </>
+                )}
+              </svg>
+            </div>
+            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50">Batal</button>
+              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className={`flex-1 text-white font-black py-3 rounded-xl transition-all disabled:opacity-50 ${confirmModal.isDanger ? 'bg-rose-600 hover:bg-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]'}`}>{confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOAST */}
       {toast.show && (
-        <div className="fixed bottom-6 right-6 z-[200]">
-          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : 'bg-rose-500/10 border-rose-500/30 text-rose-600'}`}>
-            <p className="text-sm font-bold">{toast.message}</p>
+        <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+              {toast.type === 'success' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              )}
+            </div>
+            <p className="text-sm font-bold pr-4">{toast.message}</p>
           </div>
         </div>
       )}
