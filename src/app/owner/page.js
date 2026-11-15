@@ -21,8 +21,7 @@ export default function OwnerDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
-  const [newBranchName, setNewBranchName] = useState('');
-  const [newBranchEmail, setNewBranchEmail] = useState('');
+  const [linkBranchEmail, setLinkBranchEmail] = useState('');
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -135,8 +134,8 @@ export default function OwnerDashboard() {
     return () => { if (chartInstance.current) chartInstance.current.destroy(); };
   }, [isDarkMode, stats.chartData, isLoading]);
 
-  // 4. Submit Tambah Cabang
-  const handleCreateBranch = async (e) => {
+  // 4. Submit Hubungkan Cabang
+  const handleLinkBranch = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMsg('');
@@ -146,19 +145,17 @@ export default function OwnerDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          name: newBranchName, 
-          email: newBranchEmail,
-          manager_email: userEmail // <-- Simpan email manager
+          email: linkBranchEmail,
+          manager_email: userEmail 
         })
       });
       
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal membuat cabang');
+      if (!res.ok) throw new Error(data.error || 'Gagal menghubungkan cabang');
       
-      alert('Cabang berhasil ditambahkan!');
+      alert(data.message || 'Kafe berhasil dihubungkan!');
       setIsModalOpen(false);
-      setNewBranchName('');
-      setNewBranchEmail('');
+      setLinkBranchEmail('');
       fetchData(userEmail);
     } catch (err) {
       setErrorMsg(err.message);
@@ -271,7 +268,7 @@ export default function OwnerDashboard() {
               </button>
               <button onClick={() => setIsModalOpen(true)} className="bg-gradient-to-r from-[#1E4E8C] to-[#2563EB] hover:from-[#2563EB] hover:to-[#3B82F6] text-white font-bold px-4 py-2.5 rounded-xl text-xs md:text-sm flex items-center gap-2 shadow-[0_8px_24px_-6px_rgba(37,99,235,0.5)] transition-all transform hover:-translate-y-0.5">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-amber-300"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span className="hidden sm:inline">Tambah Cabang</span>
+                <span className="hidden sm:inline">Hubungkan Cabang</span>
               </button>
             </div>
           </header>
@@ -349,7 +346,7 @@ export default function OwnerDashboard() {
                     {isLoading ? (
                       <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-bold">Memuat data...</td></tr>
                     ) : branches.length === 0 ? (
-                      <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan tambah cabang baru.</td></tr>
+                      <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan hubungkan cabang baru.</td></tr>
                     ) : branches.map((branch) => (
                       <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors group">
                         <td className="p-4 pl-6">
@@ -405,23 +402,26 @@ export default function OwnerDashboard() {
         </main>
       </div>
 
-      {/* MODAL TAMBAH CABANG */}
+      {/* MODAL HUBUNGKAN CABANG */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display mb-6">Tambah Cabang Baru</h3>
-            <form onSubmit={handleCreateBranch} className="space-y-5 relative z-10">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#2563EB]/10 dark:bg-[#2563EB]/20 rounded-full blur-[60px] pointer-events-none"></div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display mb-2 relative z-10">Hubungkan Cabang</h3>
+            <p className="text-xs text-slate-500 mb-6 relative z-10">Masukkan email kasir dari kafe yang ingin Anda hubungkan ke dashboard ini.</p>
+            
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl relative z-10">{errorMsg}</div>
+            )}
+
+            <form onSubmit={handleLinkBranch} className="space-y-5 relative z-10">
               <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Nama Cabang</label>
-                <input type="text" value={newBranchName} onChange={(e) => setNewBranchName(e.target.value)} required placeholder="Contoh: Kopi Senja Surabaya" className="w-full bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Email Login Cabang</label>
-                <input type="email" value={newBranchEmail} onChange={(e) => setNewBranchEmail(e.target.value)} required placeholder="kasir.surabaya@gmail.com" className="w-full bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#2563EB]" />
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Email Login Kasir Cabang</label>
+                <input type="email" value={linkBranchEmail} onChange={(e) => setLinkBranchEmail(e.target.value)} required placeholder="kasir.senja@gmail.com" className="w-full bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#2563EB]" />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl">Batal</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-[#1E4E8C] to-[#2563EB] text-white font-black py-3.5 rounded-xl">{isSubmitting ? '...' : 'Buat'}</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-[#1E4E8C] to-[#2563EB] text-white font-black py-3.5 rounded-xl">{isSubmitting ? '...' : 'Hubungkan'}</button>
               </div>
             </form>
           </div>
