@@ -11,7 +11,8 @@ const Icons = {
   Activity: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   Power: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>,
   Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
 };
 
 export default function OwnerDashboard() {
@@ -20,12 +21,21 @@ export default function OwnerDashboard() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   
-  const [isDarkMode, setIsDarkMode] = useState(false); // DEFAULT TERANG
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [userEmail, setUserEmail] = useState('');
   const [period, setPeriod] = useState('daily'); 
-  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); 
   
+  // State untuk filter tanggal
+  const [dateDaily, setDateDaily] = useState(new Date().toLocaleDateString('en-CA'));
+  const [dateWeekly, setDateWeekly] = useState(() => {
+    const now = new Date();
+    const onejan = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${week.toString().padStart(2, '0')}`;
+  });
+  const [dateMonthly, setDateMonthly] = useState(new Date().toISOString().slice(0, 7));
+
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
   const [stats, setStats] = useState({ 
@@ -43,6 +53,12 @@ export default function OwnerDashboard() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
+  const getActiveDateStr = () => {
+    if (period === 'daily') return dateDaily;
+    if (period === 'weekly') return dateWeekly;
+    return dateMonthly;
+  };
+
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -53,11 +69,11 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  const fetchAllData = async (email, currentPeriod = period, currentDate = selectedDate) => {
+  const fetchAllData = async (email, currentPeriod = period, currentDateStr = getActiveDateStr()) => {
     try {
       const [tenantsRes, statsRes, actRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&selected_date=${currentDate}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${currentDateStr}`),
         fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
       ]);
 
@@ -97,15 +113,17 @@ export default function OwnerDashboard() {
       const email = session.user.email;
       setUserEmail(email);
       
-      await fetchAllData(email, period, selectedDate);
+      await fetchAllData(email, period, getActiveDateStr());
       setIsLoading(false);
 
-      // 🔥 PERBAIKAN ERROR AWAIT DI DALAM CALLBACK 🔥
+      // 🔥 MATIKAN POLLING JIKA BUKAN HARI INI 🔥
       const interval = setInterval(async () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
-        if (selectedDate === todayStr) {
+        const isToday = (period === 'daily' && dateDaily === todayStr);
+        
+        if (isToday) {
           const [statsRes, actRes] = await Promise.all([
-            fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}&selected_date=${selectedDate}`),
+            fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}&date_str=${getActiveDateStr()}`),
             fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
           ]);
           
@@ -122,9 +140,9 @@ export default function OwnerDashboard() {
               netProfit: statData.netProfit || 0
             });
           }
-          
           if (actRes.ok) setActivities(await actRes.json());
         } else {
+           // Hanya update aktivitas jika melihat masa lalu
            const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
            if (actRes.ok) setActivities(await actRes.json());
         }
@@ -134,8 +152,9 @@ export default function OwnerDashboard() {
     };
 
     getSessionAndFetch();
-  }, [period, selectedDate]);
+  }, [period, dateDaily, dateWeekly, dateMonthly]);
 
+  // 🔥 PERBAIKAN ERROR GRAFIK BERKERAK 🔥
   useEffect(() => {
     if (!chartRef.current || isLoading) return;
     
@@ -171,6 +190,7 @@ export default function OwnerDashboard() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 0 }, // Matikan animasi agar tidak "bergerak"
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false, drawBorder: false }, ticks: { color: isDarkMode ? '#64748B' : '#94A3B8', font: { family: 'Inter', size: 11, weight: 'bold' } } },
@@ -190,14 +210,22 @@ export default function OwnerDashboard() {
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
     setIsLoading(true);
-    fetchAllData(userEmail, newPeriod, selectedDate).finally(() => setIsLoading(false));
+    fetchAllData(userEmail, newPeriod, getActiveDateStr()).finally(() => setIsLoading(false));
   };
 
-  const handleDateChange = (e) => {
-    const newDate = e.target.value;
-    setSelectedDate(newDate);
+  const handleDateChange = (e, type) => {
+    const val = e.target.value;
+    if (type === 'daily') setDateDaily(val);
+    if (type === 'weekly') setDateWeekly(val);
+    if (type === 'monthly') setDateMonthly(val);
+    
     setIsLoading(true);
-    fetchAllData(userEmail, period, newDate).finally(() => setIsLoading(false));
+    fetchAllData(userEmail, period, val).finally(() => setIsLoading(false));
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
   };
 
   const handleCreateBranch = async (e) => {
@@ -219,7 +247,7 @@ export default function OwnerDashboard() {
       setIsModalOpen(false);
       setLinkBranchName('');
       setLinkBranchEmail('');
-      fetchAllData(userEmail, period, selectedDate);
+      fetchAllData(userEmail, period, getActiveDateStr());
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -244,7 +272,7 @@ export default function OwnerDashboard() {
       
       showToast('Cabang berhasil diperbarui!', 'success');
       setEditModal({ open: false, branch: null });
-      fetchAllData(userEmail, period, selectedDate);
+      fetchAllData(userEmail, period, getActiveDateStr());
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -272,7 +300,7 @@ export default function OwnerDashboard() {
           
           showToast(data.message, 'success');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
-          fetchAllData(userEmail, period, selectedDate);
+          fetchAllData(userEmail, period, getActiveDateStr());
         } catch (err) {
           showToast(err.message, 'error');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
@@ -322,6 +350,11 @@ export default function OwnerDashboard() {
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
             </Link>
           </nav>
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800/80">
+            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 rounded-xl font-bold transition-all whitespace-nowrap">
+              <Icons.Logout /> <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Logout</span>
+            </button>
+          </div>
         </aside>
 
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
@@ -331,13 +364,19 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Pantau seluruh ekosistem NexaFlow Anda</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
+              
+              {/* 🔥 FILTER WAKTU YANG TEPAT 🔥 */}
               <div className="flex items-center gap-2">
-                <input 
-                  type="date" 
-                  value={selectedDate} 
-                  onChange={handleDateChange}
-                  className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
-                />
+                {period === 'daily' && (
+                  <input type="date" value={dateDaily} onChange={(e) => handleDateChange(e, 'daily')} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none" />
+                )}
+                {period === 'weekly' && (
+                  <input type="week" value={dateWeekly} onChange={(e) => handleDateChange(e, 'weekly')} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none" />
+                )}
+                {period === 'monthly' && (
+                  <input type="month" value={dateMonthly} onChange={(e) => handleDateChange(e, 'monthly')} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none" />
+                )}
+                
                 <div className="hidden md:flex bg-slate-100 dark:bg-[#111C33] rounded-xl p-1 border border-slate-200 dark:border-slate-800">
                   <button onClick={() => handlePeriodChange('daily')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'daily' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Harian</button>
                   <button onClick={() => handlePeriodChange('weekly')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'weekly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Mingguan</button>
@@ -421,16 +460,17 @@ export default function OwnerDashboard() {
                       <th className="p-4 font-black">Status</th>
                       <th className="p-4 font-black">Pendapatan</th>
                       <th className="p-4 font-black">Transaksi</th>
+                      <th className="p-4 font-black text-center">Karyawan</th>
                       <th className="p-4 font-black text-right pr-6">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                     {isLoading ? (
-                      <tr><td colSpan="5" className="p-6 text-center text-slate-500 font-bold">Memuat data...</td></tr>
+                      <tr><td colSpan="6" className="p-6 text-center text-slate-500 font-bold">Memuat data...</td></tr>
                     ) : branches.length === 0 ? (
-                      <tr><td colSpan="5" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan tambahkan cabang baru.</td></tr>
+                      <tr><td colSpan="6" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan tambahkan cabang baru.</td></tr>
                     ) : branches.map((branch) => {
-                      const bStat = stats.branchStats[branch.id] || { revenue: 0, transactions: 0 };
+                      const bStat = stats.branchStats[branch.id] || { revenue: 0, transactions: 0, employeeCount: 0 };
                       return (
                         <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors group">
                           <td className="p-4 pl-6">
@@ -455,6 +495,11 @@ export default function OwnerDashboard() {
                           </td>
                           <td className="p-4">
                             <p className="font-bold text-sm text-slate-600 dark:text-slate-300">{bStat.transactions}</p>
+                          </td>
+                          <td className="p-4 text-center">
+                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                              {bStat.employeeCount} Orang
+                            </span>
                           </td>
                           <td className="p-4 pr-6 text-right flex justify-end gap-2">
                             <button onClick={() => handleToggleActive(branch)} title={branch.is_active ? 'Suspend' : 'Aktifkan'} className={`p-2 rounded-lg border transition-all ${branch.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'}`}>

@@ -6,7 +6,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const managerEmail = searchParams.get('manager_email');
     const period = searchParams.get('period') || 'daily';
-    const selectedDateStr = searchParams.get('selected_date'); // Format YYYY-MM-DD
+    const dateStr = searchParams.get('date_str'); 
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -21,56 +21,72 @@ export async function GET(request) {
 
     if (!tenants || tenants.length === 0) {
       return NextResponse.json({ 
-        totalRevenue: 0, totalTransactions: 0, totalBranches: 0, activeBranches: 0, 
+        totalRevenue: 0, totalTransactions: 0, activeBranches: 0, 
         chartData: [], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0
       });
     }
 
     const tenantIds = tenants.map(t => t.id);
 
-    // Tentukan Base Date berdasarkan pilihan kalender
-    const baseDate = selectedDateStr ? new Date(selectedDateStr) : new Date();
-    
-    let startDate = new Date(baseDate);
-    let endDate = new Date(baseDate);
+    // Tentukan Start Date & End Date
+    let startDate = new Date();
+    let endDate = new Date();
     let labels = [];
 
     if (period === 'daily') {
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(dateStr); startDate.setHours(0,0,0,0);
+      endDate = new Date(dateStr); endDate.setHours(23,59,59,999);
       labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
     } else if (period === 'monthly') {
-      startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-      endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 23, 59, 59);
+      const [year, month] = dateStr.split('-');
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0, 23, 59, 59);
       labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
-    } else { // weekly
-      startDate.setDate(baseDate.getDate() - 6);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'weekly') {
+      // Format dateStr: YYYY-Www (contoh: 2024-W20)
+      const [year, week] = dateStr.split('-W');
+      const simple = new Date(year, 0, 1 + (week - 1) * 7);
+      const dow = simple.getDay();
+      startDate = new Date(simple);
+      if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
+      else startDate.setDate(simple.getDate() + 8 - simple.getDay());
+      startDate.setHours(0,0,0,0);
+      
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23,59,59,999);
       labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     }
 
-    // Fetch Orders, Expenses, & Employee Transactions
-    const [orderRes, expenseRes, empTransRes] = await Promise.all([
+    const [orderRes, expenseRes, empTransRes, empRes] = await Promise.all([
       supabaseAdmin.from('orders').select('total_price, created_at, tenant_id').eq('status', 'completed').in('tenant_id', tenantIds).gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
       supabaseAdmin.from('expenses').select('amount, tenant_id').in('tenant_id', tenantIds).gte('expense_date', startDate.toISOString()).lte('expense_date', endDate.toISOString()),
-      supabaseAdmin.from('employee_transactions').select('amount, tenant_id').in('tenant_id', tenantIds).gte('transaction_date', startDate.toISOString()).lte('transaction_date', endDate.toISOString())
+      supabaseAdmin.from('employee_transactions').select('amount, tenant_id').in('tenant_id', tenantIds).gte('transaction_date', startDate.toISOString()).lte('transaction_date', endDate.toISOString()),
+      supabaseAdmin.from('employees').select('id, tenant_id').in('tenant_id', tenantIds)
     ]);
 
     const orders = orderRes.data || [];
     const expenses = expenseRes.data || [];
     const empTrans = empTransRes.data || [];
+    const employees = empRes.data || [];
 
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price), 0);
     const totalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0) + empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
     const netProfit = totalRevenue - totalExpense;
 
-    let chartData = [0, 0, 0, 0, 0, 0, 0]; 
-    if (period === 'daily') chartData = [0, 0, 0, 0, 0, 0, 0, 0];
+    let chartData = [0, 0, 0, 0, 0, 0, 0, 0]; 
     if (period === 'monthly') chartData = [0, 0, 0, 0, 0];
+    if (period === 'weekly') chartData = [0, 0, 0, 0, 0, 0, 0];
+    if (period === 'daily') chartData = [0, 0, 0, 0, 0, 0, 0, 0];
     
+    // Branch Stats
     const branchStats = {};
-    tenantIds.forEach(id => { branchStats[id] = { revenue: 0, transactions: 0 }; });
+    tenantIds.forEach(id => { 
+      branchStats[id] = { 
+        revenue: 0, transactions: 0, 
+        employeeCount: employees.filter(e => e.tenant_id === id).length 
+      }; 
+    });
 
     orders.forEach(order => {
       const orderDate = new Date(order.created_at);
@@ -112,6 +128,7 @@ export async function GET(request) {
     });
 
   } catch (error) {
+    console.error('Stats API Error:', error);
     return NextResponse.json({ error: 'Gagal mengambil data statistik' }, { status: 500 });
   }
 }

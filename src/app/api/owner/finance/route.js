@@ -11,6 +11,7 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Ambil tenant milik manager ini
     const { data: tenants } = await supabaseAdmin.from('tenants').select('id').eq('manager_email', manager_email);
     if (!tenants || tenants.length === 0) throw new Error('Tenant tidak ditemukan');
     const tenantIds = tenants.map(t => t.id);
@@ -27,6 +28,21 @@ export async function POST(request) {
       const { error } = await supabaseAdmin.from('employees').insert([payload]);
       if (error) throw error;
       return NextResponse.json({ success: true, message: 'Karyawan ditambahkan!' });
+    }
+
+    if (action === 'edit_employee') {
+      if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
+      const { error } = await supabaseAdmin.from('employees').update({
+        name: payload.name, 
+        role: payload.role, 
+        base_salary: payload.base_salary,
+        wa_number: payload.wa_number, 
+        address: payload.address,
+        bank_name: payload.bank_name, 
+        bank_account: payload.bank_account
+      }).eq('id', payload.id);
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Karyawan diperbarui!' });
     }
 
     if (action === 'add_emp_transaction') {
