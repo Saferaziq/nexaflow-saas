@@ -44,42 +44,19 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // 2. Ambil Data
-  useEffect(() => {
-    const getSessionAndFetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        window.location.href = '/login';
-        return;
-      }
-      const email = session.user.email;
-      setUserEmail(email);
-      await fetchData(email);
-    };
-
-    getSessionAndFetch();
-
-    const interval = setInterval(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(session.user.email)}`);
-        const actData = await actRes.json();
-        if (actRes.ok) setActivities(actData);
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchData = async (email) => {
-    setIsLoading(true);
+  // 2. Fungsi Fetch Data (Menggunakan Promise.all agar Paralel & Cepat)
+  const fetchAllData = async (email) => {
     try {
-      const { data: tenants } = await supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false });
-      if (tenants) setBranches(tenants);
+      const [tenantsRes, statsRes, actRes] = await Promise.all([
+        supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`),
+        fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
+      ]);
 
-      const res = await fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`);
-      const statData = await res.json();
-      if (res.ok) {
+      if (tenantsRes.data) setBranches(tenantsRes.data);
+
+      if (statsRes.ok) {
+        const statData = await statsRes.json();
         setStats({
           totalRevenue: statData.totalRevenue,
           totalTransactions: statData.totalTransactions,
@@ -89,16 +66,61 @@ export default function OwnerDashboard() {
         });
       }
 
-      const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
-      const actData = await actRes.json();
-      if (actRes.ok) setActivities(actData);
+      if (actRes.ok) {
+        const actData = await actRes.json();
+        setActivities(actData);
+      }
 
     } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching data:', err);
     }
   };
+
+  useEffect(() => {
+    const getSessionAndFetch = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/login';
+        return;
+      }
+      const email = session.user.email;
+      setUserEmail(email);
+      
+      // Fetch awal
+      await fetchAllData(email);
+      setIsLoading(false);
+
+      // Setup interval untuk auto-refresh aktivitas & statistik tiap 10 detik
+      const interval = setInterval(async () => {
+        // Fetch hanya statistik dan aktivitas untuk update live (tanpa reload tabel cabang)
+        const [statsRes, actRes] = await Promise.all([
+          fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`),
+          fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
+        ]);
+        
+        if (statsRes.ok) {
+          const statData = await statsRes.json();
+          setStats(prev => ({
+            ...prev,
+            totalRevenue: statData.totalRevenue,
+            totalTransactions: statData.totalTransactions,
+            activeBranches: statData.activeBranches,
+            chartData: statData.chartData,
+            branchStats: statData.branchStats || {}
+          }));
+        }
+        
+        if (actRes.ok) {
+          const actData = await actRes.json();
+          setActivities(actData);
+        }
+      }, 10000);
+
+      return () => clearInterval(interval);
+    };
+
+    getSessionAndFetch();
+  }, []);
 
   // 3. Chart.js
   useEffect(() => {
@@ -143,7 +165,7 @@ export default function OwnerDashboard() {
     return () => { if (chartInstance.current) chartInstance.current.destroy(); };
   }, [isDarkMode, stats.chartData, isLoading]);
 
-  // 4. Submit Tambah Cabang Baru (Dari Dashboard Owner)
+  // 4. Submit Tambah Cabang Baru
   const handleCreateBranch = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -167,7 +189,9 @@ export default function OwnerDashboard() {
       setIsModalOpen(false);
       setLinkBranchName('');
       setLinkBranchEmail('');
-      fetchData(userEmail);
+      
+      // Refresh data secara background
+      fetchAllData(userEmail);
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -193,7 +217,7 @@ export default function OwnerDashboard() {
       
       showToast('Cabang berhasil diperbarui!', 'success');
       setEditModal({ open: false, branch: null });
-      fetchData(userEmail);
+      fetchAllData(userEmail);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -222,7 +246,7 @@ export default function OwnerDashboard() {
           
           showToast(data.message, 'success');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
-          fetchData(userEmail);
+          fetchAllData(userEmail);
         } catch (err) {
           showToast(err.message, 'error');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
