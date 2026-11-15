@@ -5,7 +5,8 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const managerEmail = searchParams.get('manager_email');
-    const period = searchParams.get('period') || 'weekly';
+    const period = searchParams.get('period') || 'daily';
+    const selectedDateStr = searchParams.get('selected_date'); // Format YYYY-MM-DD
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -21,33 +22,39 @@ export async function GET(request) {
     if (!tenants || tenants.length === 0) {
       return NextResponse.json({ 
         totalRevenue: 0, totalTransactions: 0, totalBranches: 0, activeBranches: 0, 
-        chartData: [0,0,0,0,0,0,0], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0
+        chartData: [], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0
       });
     }
 
     const tenantIds = tenants.map(t => t.id);
 
-    const now = new Date();
-    let startDate = new Date();
+    // Tentukan Base Date berdasarkan pilihan kalender
+    const baseDate = selectedDateStr ? new Date(selectedDateStr) : new Date();
+    
+    let startDate = new Date(baseDate);
+    let endDate = new Date(baseDate);
     let labels = [];
 
     if (period === 'daily') {
       startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
       labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
     } else if (period === 'monthly') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+      endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 23, 59, 59);
       labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
-    } else {
-      startDate.setDate(now.getDate() - 6);
+    } else { // weekly
+      startDate.setDate(baseDate.getDate() - 6);
       startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
       labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     }
 
-    // Fetch Orders, Expenses, & Employee Transactions secara Paralel
+    // Fetch Orders, Expenses, & Employee Transactions
     const [orderRes, expenseRes, empTransRes] = await Promise.all([
-      supabaseAdmin.from('orders').select('total_price, created_at, tenant_id').eq('status', 'completed').in('tenant_id', tenantIds).gte('created_at', startDate.toISOString()),
-      supabaseAdmin.from('expenses').select('amount, tenant_id').in('tenant_id', tenantIds).gte('expense_date', startDate.toISOString()),
-      supabaseAdmin.from('employee_transactions').select('amount, tenant_id').in('tenant_id', tenantIds).gte('transaction_date', startDate.toISOString())
+      supabaseAdmin.from('orders').select('total_price, created_at, tenant_id').eq('status', 'completed').in('tenant_id', tenantIds).gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+      supabaseAdmin.from('expenses').select('amount, tenant_id').in('tenant_id', tenantIds).gte('expense_date', startDate.toISOString()).lte('expense_date', endDate.toISOString()),
+      supabaseAdmin.from('employee_transactions').select('amount, tenant_id').in('tenant_id', tenantIds).gte('transaction_date', startDate.toISOString()).lte('transaction_date', endDate.toISOString())
     ]);
 
     const orders = orderRes.data || [];
@@ -99,15 +106,9 @@ export async function GET(request) {
     const chartDataJuta = chartData.map(val => Number((val / 1000000).toFixed(2)));
 
     return NextResponse.json({
-      totalRevenue,
-      totalTransactions: orders.length,
-      totalBranches: tenants.length,
-      activeBranches: tenants.filter(t => t.is_active).length,
-      chartData: chartDataJuta,
-      labels,
-      branchStats,
-      totalExpense,
-      netProfit
+      totalRevenue, totalTransactions: orders.length,
+      totalBranches: tenants.length, activeBranches: tenants.filter(t => t.is_active).length,
+      chartData: chartDataJuta, labels, branchStats, totalExpense, netProfit
     });
 
   } catch (error) {

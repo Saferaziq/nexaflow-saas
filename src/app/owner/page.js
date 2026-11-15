@@ -14,12 +14,14 @@ export default function OwnerDashboard() {
 
   // State Data
   const [userEmail, setUserEmail] = useState('');
-  const [period, setPeriod] = useState('weekly'); // daily, weekly, monthly
+  const [period, setPeriod] = useState('daily'); // Default Harian
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default Hari Ini
+  
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
   const [stats, setStats] = useState({ 
     totalRevenue: 0, totalTransactions: 0, activeBranches: 0, 
-    chartData: [], labels: [], branchStats: {} 
+    chartData: [], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,12 +47,12 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // 2. Fungsi Fetch Data (Optimasi Promise.all)
-  const fetchAllData = async (email, currentPeriod = period) => {
+  // 2. Fetch Data (Termasuk Tanggal)
+  const fetchAllData = async (email, currentPeriod = period, currentDate = selectedDate) => {
     try {
       const [tenantsRes, statsRes, actRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&selected_date=${currentDate}`),
         fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
       ]);
 
@@ -64,7 +66,9 @@ export default function OwnerDashboard() {
           activeBranches: statData.activeBranches,
           chartData: statData.chartData,
           labels: statData.labels,
-          branchStats: statData.branchStats || {}
+          branchStats: statData.branchStats || {},
+          totalExpense: statData.totalExpense || 0,
+          netProfit: statData.netProfit || 0
         });
       }
 
@@ -88,31 +92,26 @@ export default function OwnerDashboard() {
       const email = session.user.email;
       setUserEmail(email);
       
-      await fetchAllData(email, period);
+      await fetchAllData(email, period, selectedDate);
       setIsLoading(false);
 
+      // Auto-refresh aktivitas & statistik (HANYA jika tanggal yg dipilih adalah hari ini)
+      const todayStr = new Date().toISOString().split('T')[0];
       const interval = setInterval(async () => {
-        const [statsRes, actRes] = await Promise.all([
-          fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}`),
-          fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
-        ]);
-        
-        if (statsRes.ok) {
-          const statData = await statsRes.json();
-          setStats(prev => ({
-            ...prev,
-            totalRevenue: statData.totalRevenue,
-            totalTransactions: statData.totalTransactions,
-            activeBranches: statData.activeBranches,
-            chartData: statData.chartData,
-            labels: statData.labels,
-            branchStats: statData.branchStats || {}
-          }));
-        }
-        
-        if (actRes.ok) {
-          const actData = await actRes.json();
-          setActivities(actData);
+        if (selectedDate === todayStr) {
+          const [statsRes, actRes] = await Promise.all([
+            fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${period}&selected_date=${selectedDate}`),
+            fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`)
+          ]);
+          if (statsRes.ok) {
+            const statData = await statsRes.json();
+            setStats(prev => ({ ...prev, ...statData }));
+          }
+          if (actRes.ok) setActivities(await actRes.json());
+        } else {
+           // Jika melihat masa lalu, cukup update aktivitasnya saja (opsional)
+           const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
+           if (actRes.ok) setActivities(await actRes.json());
         }
       }, 10000);
 
@@ -120,7 +119,7 @@ export default function OwnerDashboard() {
     };
 
     getSessionAndFetch();
-  }, [period]); // Re-run when period changes
+  }, [period, selectedDate]);
 
   // 3. Chart.js
   useEffect(() => {
@@ -165,12 +164,17 @@ export default function OwnerDashboard() {
     return () => { if (chartInstance.current) chartInstance.current.destroy(); };
   }, [isDarkMode, stats.chartData, stats.labels, isLoading]);
 
-  // Handle Period Change
   const handlePeriodChange = (newPeriod) => {
-    if (period === newPeriod) return;
     setPeriod(newPeriod);
     setIsLoading(true);
-    fetchAllData(userEmail, newPeriod).finally(() => setIsLoading(false));
+    fetchAllData(userEmail, newPeriod, selectedDate).finally(() => setIsLoading(false));
+  };
+
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+    setIsLoading(true);
+    fetchAllData(userEmail, period, newDate).finally(() => setIsLoading(false));
   };
 
   // 4. Submit Tambah Cabang Baru
@@ -197,7 +201,7 @@ export default function OwnerDashboard() {
       setIsModalOpen(false);
       setLinkBranchName('');
       setLinkBranchEmail('');
-      fetchAllData(userEmail, period);
+      fetchAllData(userEmail, period, selectedDate);
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -223,7 +227,7 @@ export default function OwnerDashboard() {
       
       showToast('Cabang berhasil diperbarui!', 'success');
       setEditModal({ open: false, branch: null });
-      fetchAllData(userEmail, period);
+      fetchAllData(userEmail, period, selectedDate);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -252,7 +256,7 @@ export default function OwnerDashboard() {
           
           showToast(data.message, 'success');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
-          fetchAllData(userEmail, period);
+          fetchAllData(userEmail, period, selectedDate);
         } catch (err) {
           showToast(err.message, 'error');
           setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
@@ -268,10 +272,6 @@ export default function OwnerDashboard() {
     if (diff < 60) return `${diff} menit lalu`;
     return `${Math.floor(diff/60)} jam lalu`;
   };
-
-  // Label Dinamis Tabel
-  const periodLabel = period === 'daily' ? 'Hari Ini' : period === 'monthly' ? 'Bulan Ini' : 'Minggu Ini';
-  const chartTitle = period === 'daily' ? 'Tren Pendapatan (Hari Ini)' : period === 'monthly' ? 'Tren Pendapatan (Bulan Ini)' : 'Tren Pendapatan (7 Hari Terakhir)';
 
   return (
     <div className="bg-slate-50 text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
@@ -298,6 +298,13 @@ export default function OwnerDashboard() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Overview</span>
             </Link>
+            
+            {/* 🔥 MENU KEUANGAN DITAMBAHKAN DI SINI 🔥 */}
+            <Link href="/owner/finance" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Keuangan</span>
+            </Link>
+
             <Link href="/owner/reports" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
@@ -317,11 +324,20 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Pantau seluruh ekosistem NexaFlow Anda</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
-              {/* TIME FILTER */}
-              <div className="hidden md:flex bg-slate-100 dark:bg-[#111C33] rounded-xl p-1 border border-slate-200 dark:border-slate-800">
-                <button onClick={() => handlePeriodChange('daily')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'daily' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Harian</button>
-                <button onClick={() => handlePeriodChange('weekly')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'weekly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Mingguan</button>
-                <button onClick={() => handlePeriodChange('monthly')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === 'monthly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>Bulanan</button>
+              
+              {/* 🔥 DATE PICKER & FILTER DITAMBAHKAN DI SINI 🔥 */}
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={handleDateChange}
+                  className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+                />
+                <div className="hidden md:flex bg-slate-100 dark:bg-[#111C33] rounded-xl p-1 border border-slate-200 dark:border-slate-800">
+                  <button onClick={() => handlePeriodChange('daily')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'daily' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Harian</button>
+                  <button onClick={() => handlePeriodChange('weekly')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'weekly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Mingguan</button>
+                  <button onClick={() => handlePeriodChange('monthly')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'monthly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Bulanan</button>
+                </div>
               </div>
 
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 hover:bg-slate-200 transition-colors border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -342,17 +358,22 @@ export default function OwnerDashboard() {
             {/* STATS ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all relative">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pendapatan ({period === 'daily' ? 'Hari Ini' : period === 'monthly' ? 'Bulan Ini' : 'Minggu Ini'})</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pendapatan</p>
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display">{isLoading ? '...' : formatRp(stats.totalRevenue)}</h3>
               </div>
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Transaksi</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display">{isLoading ? '...' : stats.totalTransactions}</h3>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Total Pengeluaran</p>
+                <h3 className="text-2xl font-black text-rose-500 font-display">{isLoading ? '...' : formatRp(stats.totalExpense)}</h3>
               </div>
+              
+              {/* 🔥 KARTU LABA BERSIH 🔥 */}
               <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm transition-all">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Cabang Aktif</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white font-display">{isLoading ? '...' : `${stats.activeBranches} / ${branches.length}`}</h3>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Laba Bersih (Net Profit)</p>
+                <h3 className={`text-2xl font-black font-display ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-rose-600'}`}>
+                  {isLoading ? '...' : formatRp(stats.netProfit)}
+                </h3>
               </div>
+
               <div className="bg-gradient-to-br from-[#0F172A] to-[#04060B] border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-2 relative z-10">
                   <p className="text-xs font-bold text-slate-400">Status Sistem</p>
@@ -365,7 +386,7 @@ export default function OwnerDashboard() {
             {/* BENTO GRID (Chart & Live Activity) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2 bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-sm">
-                <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight mb-4">{chartTitle}</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight mb-4">Tren Pendapatan</h2>
                 <div className="w-full h-[280px] relative z-10">
                   <canvas ref={chartRef}></canvas>
                 </div>
@@ -404,7 +425,7 @@ export default function OwnerDashboard() {
                     <tr className="border-b border-slate-200 dark:border-slate-800/80 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#060911]/50">
                       <th className="p-4 pl-6 font-black">Nama Cabang</th>
                       <th className="p-4 font-black">Status</th>
-                      <th className="p-4 font-black">Omset ({periodLabel})</th>
+                      <th className="p-4 font-black">Pendapatan</th>
                       <th className="p-4 font-black">Transaksi</th>
                       <th className="p-4 font-black text-right pr-6">Aksi</th>
                     </tr>
