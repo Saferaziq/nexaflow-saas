@@ -45,6 +45,7 @@ export default function RegisterPage() {
     }
 
     try {
+      // 1. Daftarkan Akun Login (Supabase Auth)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password,
@@ -53,20 +54,34 @@ export default function RegisterPage() {
       if (authError) throw new Error(authError.message);
 
       if (authData.user) {
+        // 2. Buat Data Kafe (Tenant) & Simpan Email sebagai manager_email
         const { data: tenantData, error: tenantError } = await supabase
           .from('tenants')
-          .insert([{ name: formData.cafeName, wa_number: formData.waNumber, is_active: true, is_open: true }])
+          .insert([{ 
+            name: formData.cafeName, 
+            wa_number: formData.waNumber, 
+            is_active: true, 
+            is_open: true,
+            manager_email: formData.email.trim() // <-- PENTING: Hubungkan Kafe ke Email Owner
+          }])
           .select().single();
 
         if (tenantError) throw new Error('Gagal membuat data kafe: ' + tenantError.message);
 
+        // 3. Hubungkan User (Owner) ke Kafe
         const { error: userError } = await supabase
           .from('users')
-          .insert([{ id: authData.user.id, tenant_id: tenantData.id, role: 'owner', email: formData.email.trim() }]);
+          .insert([{ 
+            id: authData.user.id, 
+            tenant_id: tenantData.id, 
+            role: 'owner', 
+            email: formData.email.trim() 
+          }]);
 
         if (userError) throw new Error('Gagal menghubungkan akun: ' + userError.message);
 
-        router.push('/dashboard');
+        // 4. LEMPAR KE DASHBOARD OWNER
+        router.push('/owner'); 
       }
     } catch (err) {
       setErrorMsg(err.message);
@@ -121,7 +136,7 @@ export default function RegisterPage() {
               </li>
               <li className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 text-white"><Icons.Check /></div>
-                <span className="text-sm font-bold text-white">Pelanggan Pesan Sendiri via QR</span>
+                <span className="text-sm font-bold text-white">Pantau Omset Multi-Cabang</span>
               </li>
             </ul>
           </div>
@@ -142,7 +157,7 @@ export default function RegisterPage() {
 
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight mb-2 font-display">Daftarkan Kafe / Resto</h1>
-            <p className="text-sm font-semibold text-slate-500">Mulai uji coba gratis 7 hari. Tanpa kartu kredit.</p>
+            <p className="text-sm font-semibold text-slate-500">Mulai uji coba gratis 7 hari. Akses langsung ke Dashboard Owner.</p>
           </div>
 
           {errorMsg && (
@@ -195,7 +210,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-[#0F172A] mb-1.5 uppercase tracking-wider">Alamat Email <span className="text-rose-500">*</span></label>
+              <label className="block text-[11px] font-black text-[#0F172A] mb-1.5 uppercase tracking-wider">Alamat Email (Owner) <span className="text-rose-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><Icons.Mail /></div>
                 <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="admin@kafe.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-[#0F172A] outline-none focus:bg-white focus:border-[#15376B] focus:ring-2 focus:ring-[#15376B]/20 transition-all placeholder:text-slate-400" required />
@@ -221,7 +236,7 @@ export default function RegisterPage() {
             </div>
 
             <button type="submit" disabled={loading} className="w-full mt-2 btn-navy text-white font-extrabold py-4 rounded-xl text-sm hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:translate-y-0">
-              {loading ? 'Memproses Pendaftaran...' : <><span>Daftar Kafe & Mulai Uji Coba</span> <Icons.ArrowRight /></>}
+              {loading ? 'Memproses Pendaftaran...' : <><span>Daftar Kafe & Masuk Dashboard Owner</span> <Icons.ArrowRight /></>}
             </button>
           </form>
 
