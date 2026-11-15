@@ -5,14 +5,13 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const managerEmail = searchParams.get('manager_email');
-    const period = searchParams.get('period') || 'weekly'; // daily, weekly, monthly
+    const period = searchParams.get('period') || 'weekly';
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 1. Ambil data cabang MILIK manager ini saja
     let query = supabaseAdmin.from('tenants').select('id, name, is_active');
     if (managerEmail) query = query.eq('manager_email', managerEmail);
     
@@ -22,46 +21,44 @@ export async function GET(request) {
     if (!tenants || tenants.length === 0) {
       return NextResponse.json({ 
         totalRevenue: 0, totalTransactions: 0, totalBranches: 0, activeBranches: 0, 
-        chartData: [0,0,0,0,0,0,0], labels: [], branchStats: {} 
+        chartData: [0,0,0,0,0,0,0], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0
       });
     }
 
     const tenantIds = tenants.map(t => t.id);
 
-    // 2. Tentukan Rentang Waktu (Start Date)
     const now = new Date();
     let startDate = new Date();
     let labels = [];
 
     if (period === 'daily') {
-      startDate.setHours(0, 0, 0, 0); // Hari ini jam 00:00
+      startDate.setHours(0, 0, 0, 0);
       labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
     } else if (period === 'monthly') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1); // Tanggal 1 bulan ini
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
     } else {
-      // Default: Weekly
-      startDate.setDate(now.getDate() - 6); // 7 hari terakhir
+      startDate.setDate(now.getDate() - 6);
       startDate.setHours(0, 0, 0, 0);
       labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     }
 
-    // 3. Ambil data pesanan sesuai rentang waktu
-    const { data: orders, error: orderErr } = await supabaseAdmin
-      .from('orders')
-      .select('total_price, created_at, tenant_id')
-      .eq('status', 'completed')
-      .in('tenant_id', tenantIds)
-      .gte('created_at', startDate.toISOString());
-    
-    if (orderErr) throw orderErr;
+    // Fetch Orders, Expenses, & Employee Transactions secara Paralel
+    const [orderRes, expenseRes, empTransRes] = await Promise.all([
+      supabaseAdmin.from('orders').select('total_price, created_at, tenant_id').eq('status', 'completed').in('tenant_id', tenantIds).gte('created_at', startDate.toISOString()),
+      supabaseAdmin.from('expenses').select('amount, tenant_id').in('tenant_id', tenantIds).gte('expense_date', startDate.toISOString()),
+      supabaseAdmin.from('employee_transactions').select('amount, tenant_id').in('tenant_id', tenantIds).gte('transaction_date', startDate.toISOString())
+    ]);
 
-    // 4. Hitung Total Global
+    const orders = orderRes.data || [];
+    const expenses = expenseRes.data || [];
+    const empTrans = empTransRes.data || [];
+
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price), 0);
-    const totalTransactions = orders.length;
+    const totalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0) + empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
+    const netProfit = totalRevenue - totalExpense;
 
-    // 5. Siapkan Data Chart & Cabang
-    let chartData = [0, 0, 0, 0, 0, 0, 0]; // Default 7
+    let chartData = [0, 0, 0, 0, 0, 0, 0]; 
     if (period === 'daily') chartData = [0, 0, 0, 0, 0, 0, 0, 0];
     if (period === 'monthly') chartData = [0, 0, 0, 0, 0];
     
@@ -72,11 +69,9 @@ export async function GET(request) {
       const orderDate = new Date(order.created_at);
       const amt = Number(order.total_price);
       
-      // Hitung per cabang
       branchStats[order.tenant_id].revenue += amt;
       branchStats[order.tenant_id].transactions += 1;
 
-      // Hitung Chart
       if (period === 'daily') {
         const hour = orderDate.getHours();
         if (hour <= 8) chartData[0] += amt;
@@ -105,12 +100,14 @@ export async function GET(request) {
 
     return NextResponse.json({
       totalRevenue,
-      totalTransactions,
+      totalTransactions: orders.length,
       totalBranches: tenants.length,
       activeBranches: tenants.filter(t => t.is_active).length,
       chartData: chartDataJuta,
       labels,
-      branchStats
+      branchStats,
+      totalExpense,
+      netProfit
     });
 
   } catch (error) {
