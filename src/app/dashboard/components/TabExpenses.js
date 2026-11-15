@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Icons } from '../helpers/icons';
+// Hapus import { Icons } jika tidak digunakan lagi
 
 export default function TabExpenses({ theme, d, rp }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -19,7 +19,6 @@ export default function TabExpenses({ theme, d, rp }) {
   const expenses = d.expenses || [];
   const todayStr = new Date().toLocaleDateString('en-CA');
   
-  // Filter pengeluaran hari ini
   const todayExpenses = expenses.filter(ex => {
     const exDate = new Date(ex.expense_date).toLocaleDateString('en-CA');
     return exDate === todayStr;
@@ -48,7 +47,7 @@ export default function TabExpenses({ theme, d, rp }) {
       d.showToast('Pengeluaran berhasil dicatat', 'success');
       setModalOpen(false);
       setFormData({ category: 'Bahan Baku', description: '', quantity: 1, unit_price: 0 });
-      d.fetchExpenses(); // Refresh data
+      d.fetchExpenses(d.tenantId);
     } catch (err) {
       d.showToast(err.message, 'error');
     } finally {
@@ -58,7 +57,6 @@ export default function TabExpenses({ theme, d, rp }) {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* Header & Tombol Tambah */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className={`text-xl font-black ${textMainClass}`}>Pengeluaran Kas</h2>
@@ -68,11 +66,11 @@ export default function TabExpenses({ theme, d, rp }) {
           onClick={() => setModalOpen(true)}
           className="bg-[#2A1F17] text-white px-5 py-3 rounded-xl text-sm font-black shadow-md hover:bg-[#1A1512] transition-colors flex items-center gap-2"
         >
-          <Icons.Plus /> Catat Pengeluaran
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Catat Pengeluaran
         </button>
       </div>
 
-      {/* Tabel Riwayat */}
       <div className={`rounded-2xl overflow-hidden ${cardClass}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -104,7 +102,6 @@ export default function TabExpenses({ theme, d, rp }) {
         </div>
       </div>
 
-      {/* Modal Input */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-slate-200 dark:border-slate-800">

@@ -21,12 +21,10 @@ export default function Header({
 }) {
   const textMainClass = theme === 'light' ? 'text-[#1A1512]' : 'text-white';
   
-  // HEADER TEGAS: Background Cream dengan border bawah tebal
   const headerClass = theme === 'light'
     ? 'bg-[#F4EFE9]/95 border-b-4 border-[#D4C5B8] shadow-sm'
     : 'bg-[#0a192f]/95 border-b-4 border-slate-700 shadow-sm';
 
-  // TOMBOL NAVIGASI TEGAS: Font super tebal, border tegas saat aktif
   const navBtnClass = (isActive) =>
     `relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-200 border-2 ${
       isActive
@@ -36,12 +34,18 @@ export default function Header({
           : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'
     }`;
 
-  // 🔥 TAMBAHAN MENU PENGELUARAN DI SINI 🔥
+  // GANTI Ikon.Wallet MENJADI SVG LANGSUNG AGAR TIDAK ERROR
+  const WalletIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+    </svg>
+  );
+
   const navItems = [
     { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrdersCount },
     { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
     { key: 'tables', label: 'Meja', Icon: Icons.Grid },
-    { key: 'expenses', label: 'Pengeluaran', Icon: Icons.Wallet }, 
+    { key: 'expenses', label: 'Pengeluaran', Icon: WalletIcon }, // <-- MENGGUNAKAN SVG LANGSUNG
     { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
     { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
   ];
@@ -51,7 +55,6 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-20">
 
-          {/* LOGO & BRAND */}
           <div className="flex items-center gap-3 shrink-0">
             <img 
               src="/logo-nexaflow.png" 
@@ -64,7 +67,6 @@ export default function Header({
             </div>
           </div>
 
-          {/* NAVIGASI DESKTOP */}
           <nav className="hidden md:flex items-center gap-1.5">
             {navItems.map(({ key, label, Icon, badge }) => (
               <button key={key} onClick={() => setActiveTab(key)} className={navBtnClass(activeTab === key)}>
@@ -79,7 +81,6 @@ export default function Header({
             ))}
           </nav>
 
-          {/* TOMBOL AKSI KANAN */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -88,7 +89,6 @@ export default function Header({
               <Icons.Menu />
             </button>
 
-            {/* TOMBOL BUKA/TUTUP KAFE (Sangat Tegas) */}
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
@@ -103,7 +103,6 @@ export default function Header({
               <span className="hidden sm:inline">{isOpen ? 'BUKA' : 'TUTUP'}</span>
             </button>
 
-            {/* TOMBOL LAYAR DAPUR */}
             <button
               onClick={onOpenKitchen}
               title="Layar Dapur (KDS)"
@@ -113,14 +112,12 @@ export default function Header({
               <span className="hidden xl:inline ml-1.5">Layar Dapur</span>
             </button>
 
-            {/* STATUS REALTIME */}
             <div className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-500' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-500' : 'bg-amber-50 border-amber-500'}`}>
               <span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
             </div>
 
             <div className={`w-0.5 h-6 mx-1 ${theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-700'}`}></div>
 
-            {/* TOMBOL TEMA & FULLSCREEN */}
             <button
               onClick={onToggleTheme}
               title="Ganti Tema"
@@ -137,7 +134,6 @@ export default function Header({
               {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
             </button>
 
-            {/* TOMBOL LOGOUT */}
             <button
               onClick={onLogout}
               title="Logout"
@@ -149,7 +145,6 @@ export default function Header({
         </div>
       </div>
 
-      {/* MOBILE MENU */}
       {isMobileMenuOpen && (
         <div className={`md:hidden border-t-2 p-4 space-y-2 absolute w-full shadow-xl z-50 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
           {navItems.map(({ key, label, Icon, badge }) => (
