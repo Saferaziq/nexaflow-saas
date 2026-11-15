@@ -16,15 +16,21 @@ export default function OwnerDashboard() {
   const [userEmail, setUserEmail] = useState('');
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [stats, setStats] = useState({ totalRevenue: 0, totalTransactions: 0, activeBranches: 0, chartData: [0,0,0,0,0,0,0] });
+  const [stats, setStats] = useState({ 
+    totalRevenue: 0, totalTransactions: 0, activeBranches: 0, 
+    chartData: [0,0,0,0,0,0,0], branchStats: {} 
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
   const [linkBranchEmail, setLinkBranchEmail] = useState('');
   const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // UI State (Toast & Confirmation)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
   // 1. Efek Tema
   useEffect(() => {
@@ -32,7 +38,12 @@ export default function OwnerDashboard() {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // 2. Ambil Sesi Login & Data
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+  };
+
+  // 2. Ambil Data
   useEffect(() => {
     const getSessionAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -47,7 +58,6 @@ export default function OwnerDashboard() {
 
     getSessionAndFetch();
 
-    // Polling aktivitas tiap 10 detik agar terasa "Live"
     const interval = setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -63,11 +73,9 @@ export default function OwnerDashboard() {
   const fetchData = async (email) => {
     setIsLoading(true);
     try {
-      // Ambil cabang MILIK manager ini saja
       const { data: tenants } = await supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false });
       if (tenants) setBranches(tenants);
 
-      // Ambil statistik
       const res = await fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}`);
       const statData = await res.json();
       if (res.ok) {
@@ -75,11 +83,11 @@ export default function OwnerDashboard() {
           totalRevenue: statData.totalRevenue,
           totalTransactions: statData.totalTransactions,
           activeBranches: statData.activeBranches,
-          chartData: statData.chartData
+          chartData: statData.chartData,
+          branchStats: statData.branchStats || {}
         });
       }
 
-      // Ambil Live Activity
       const actRes = await fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`);
       const actData = await actRes.json();
       if (actRes.ok) setActivities(actData);
@@ -91,7 +99,7 @@ export default function OwnerDashboard() {
     }
   };
 
-  // 3. Efek Chart.js
+  // 3. Chart.js
   useEffect(() => {
     if (!chartRef.current || isLoading) return;
     const ctx = chartRef.current.getContext('2d');
@@ -144,16 +152,13 @@ export default function OwnerDashboard() {
       const res = await fetch('/api/owner/create-branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: linkBranchEmail,
-          manager_email: userEmail 
-        })
+        body: JSON.stringify({ email: linkBranchEmail, manager_email: userEmail })
       });
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal menghubungkan cabang');
       
-      alert(data.message || 'Kafe berhasil dihubungkan!');
+      showToast(data.message || 'Kafe berhasil dihubungkan!', 'success');
       setIsModalOpen(false);
       setLinkBranchEmail('');
       fetchData(userEmail);
@@ -174,45 +179,50 @@ export default function OwnerDashboard() {
       const res = await fetch('/api/owner/manage-branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          tenant_id: editModal.branch.id, 
-          action: 'edit',
-          name: editName,
-          email: editEmail
-        })
+        body: JSON.stringify({ tenant_id: editModal.branch.id, action: 'edit', name: editName })
       });
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      alert('Cabang berhasil diperbarui!');
+      showToast('Cabang berhasil diperbarui!', 'success');
       setEditModal({ open: false, branch: null });
       fetchData(userEmail);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 6. Toggle Suspend (Aktif/Nonaktif)
-  const handleToggleActive = async (branch) => {
-    if (!confirm(`Yakin ingin ${branch.is_active ? 'menonaktifkan' : 'mengaktifkan'} cabang ${branch.name}?`)) return;
-
-    try {
-      const res = await fetch('/api/owner/manage-branch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: branch.id, action: 'toggle_active' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      alert(data.message);
-      fetchData(userEmail);
-    } catch (err) {
-      alert(err.message);
-    }
+  // 6. Toggle Suspend
+  const handleToggleActive = (branch) => {
+    setConfirmModal({
+      open: true,
+      title: branch.is_active ? 'Nonaktifkan Cabang' : 'Aktifkan Cabang',
+      message: `Apakah Anda yakin ingin ${branch.is_active ? 'menonaktifkan' : 'mengaktifkan'} cabang ${branch.name}?`,
+      isDanger: branch.is_active,
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          const res = await fetch('/api/owner/manage-branch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: branch.id, action: 'toggle_active' })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          
+          showToast(data.message, 'success');
+          setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+          fetchData(userEmail);
+        } catch (err) {
+          showToast(err.message, 'error');
+          setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+        }
+      }
+    });
   };
 
   const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -247,6 +257,14 @@ export default function OwnerDashboard() {
             <Link href="/owner" className="flex items-center gap-3 px-3 py-3 bg-blue-50 dark:bg-[#111C33] text-[#2563EB] dark:text-sky-400 rounded-xl font-bold transition-all border border-blue-100 dark:border-sky-500/20 shadow-sm whitespace-nowrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Overview</span>
+            </Link>
+            <Link href="/owner/reports" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
+            </Link>
+            <Link href="/owner/settings" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Pengaturan</span>
             </Link>
           </nav>
         </aside>
@@ -339,61 +357,57 @@ export default function OwnerDashboard() {
                     <tr className="border-b border-slate-200 dark:border-slate-800/80 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#060911]/50">
                       <th className="p-4 pl-6 font-black">Nama Cabang</th>
                       <th className="p-4 font-black">Status</th>
+                      <th className="p-4 font-black">Omset Hari Ini</th>
+                      <th className="p-4 font-black">Transaksi</th>
                       <th className="p-4 font-black text-right pr-6">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                     {isLoading ? (
-                      <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-bold">Memuat data...</td></tr>
+                      <tr><td colSpan="5" className="p-6 text-center text-slate-500 font-bold">Memuat data...</td></tr>
                     ) : branches.length === 0 ? (
-                      <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan hubungkan cabang baru.</td></tr>
-                    ) : branches.map((branch) => (
-                      <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors group">
-                        <td className="p-4 pl-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs">
-                              {branch.name.charAt(0).toUpperCase()}
+                      <tr><td colSpan="5" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan hubungkan cabang baru.</td></tr>
+                    ) : branches.map((branch) => {
+                      const bStat = stats.branchStats[branch.id] || { revenue: 0, transactions: 0 };
+                      return (
+                        <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors group">
+                          <td className="p-4 pl-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs">
+                                {branch.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm text-slate-900 dark:text-white">{branch.name}</p>
+                                <p className="text-[10px] text-slate-500">ID: {branch.id.split('-')[0]}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-sm text-slate-900 dark:text-white">{branch.name}</p>
-                              <p className="text-[10px] text-slate-500">ID: {branch.id.split('-')[0]}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black border ${branch.is_active ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${branch.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-                            {branch.is_active ? 'Aktif' : 'Suspend'}
-                          </span>
-                        </td>
-                        <td className="p-4 pr-6 text-right flex justify-end gap-2">
-                          <button 
-                            onClick={() => handleToggleActive(branch)}
-                            title={branch.is_active ? 'Suspend' : 'Aktifkan'}
-                            className={`p-2 rounded-lg border transition-all ${branch.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'}`}
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setEditModal({ open: true, branch });
-                              setEditName(branch.name);
-                              setEditEmail('');
-                            }}
-                            title="Edit"
-                            className="p-2 rounded-lg bg-slate-100 dark:bg-[#111C33] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          </button>
-                          <button 
-                            onClick={() => window.location.href = `/dashboard?tenant_id=${branch.id}`}
-                            className="bg-slate-100 dark:bg-[#111C33] hover:bg-[#2563EB] text-slate-700 dark:text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700"
-                          >
-                            Buka Kasir
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black border ${branch.is_active ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${branch.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                              {branch.is_active ? 'Aktif' : 'Suspend'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <p className="font-black text-sm text-slate-900 dark:text-white">{formatRp(bStat.revenue)}</p>
+                          </td>
+                          <td className="p-4">
+                            <p className="font-bold text-sm text-slate-600 dark:text-slate-300">{bStat.transactions}</p>
+                          </td>
+                          <td className="p-4 pr-6 text-right flex justify-end gap-2">
+                            <button onClick={() => handleToggleActive(branch)} title={branch.is_active ? 'Suspend' : 'Aktifkan'} className={`p-2 rounded-lg border transition-all ${branch.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'}`}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                            </button>
+                            <button onClick={() => { setEditModal({ open: true, branch }); setEditName(branch.name); }} title="Edit" className="p-2 rounded-lg bg-slate-100 dark:bg-[#111C33] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button onClick={() => window.location.href = `/dashboard?tenant_id=${branch.id}`} className="bg-slate-100 dark:bg-[#111C33] hover:bg-[#2563EB] text-slate-700 dark:text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700">
+                              Buka Kasir
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -443,6 +457,45 @@ export default function OwnerDashboard() {
                 <button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-[#1E4E8C] to-[#2563EB] text-white font-black py-3.5 rounded-xl">{isSubmitting ? '...' : 'Simpan'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRM MODAL */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
+                {confirmModal.isDanger ? (
+                  <><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                ) : (
+                  <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                )}
+              </svg>
+            </div>
+            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50">Batal</button>
+              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className={`flex-1 text-white font-black py-3 rounded-xl transition-all disabled:opacity-50 ${confirmModal.isDanger ? 'bg-rose-600 hover:bg-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]'}`}>{confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+              {toast.type === 'success' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              )}
+            </div>
+            <p className="text-sm font-bold pr-4">{toast.message}</p>
           </div>
         </div>
       )}

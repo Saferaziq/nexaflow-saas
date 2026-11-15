@@ -19,27 +19,32 @@ export async function GET(request) {
     if (tenantErr) throw tenantErr;
 
     if (!tenants || tenants.length === 0) {
-      return NextResponse.json({ totalRevenue: 0, totalTransactions: 0, totalBranches: 0, activeBranches: 0, chartData: [0,0,0,0,0,0,0] });
+      return NextResponse.json({ 
+        totalRevenue: 0, totalTransactions: 0, totalBranches: 0, activeBranches: 0, 
+        chartData: [0,0,0,0,0,0,0], branchStats: {} 
+      });
     }
 
     const tenantIds = tenants.map(t => t.id);
 
-    // 2. Ambil data pesanan HANYA dari cabang-cabang tersebut
+    // 2. Ambil data pesanan 7 hari terakhir dari cabang-cabang tersebut
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const { data: orders, error: orderErr } = await supabaseAdmin
       .from('orders')
-      .select('total_price, created_at')
+      .select('total_price, created_at, tenant_id')
       .eq('status', 'completed')
-      .in('tenant_id', tenantIds) // <-- Filter berdasarkan cabang manager
+      .in('tenant_id', tenantIds)
       .gte('created_at', sevenDaysAgo.toISOString());
     
     if (orderErr) throw orderErr;
 
+    // 3. Hitung Total Global
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price), 0);
     const totalTransactions = orders.length;
 
+    // 4. Siapkan data Chart (Agregasi per Hari)
     const chartData = [0, 0, 0, 0, 0, 0, 0];
     orders.forEach(order => {
       const date = new Date(order.created_at);
@@ -47,8 +52,22 @@ export async function GET(request) {
       if (dayIndex === -1) dayIndex = 6;
       chartData[dayIndex] += Number(order.total_price);
     });
-
     const chartDataJuta = chartData.map(val => Number((val / 1000000).toFixed(1)));
+
+    // 5. Hitung Statistik Per Cabang (Hari Ini)
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    const branchStats = {};
+
+    // Inisialisasi semua cabang dengan 0
+    tenantIds.forEach(id => { branchStats[id] = { revenue: 0, transactions: 0 }; });
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      if (orderDate === todayStr) {
+        branchStats[order.tenant_id].revenue += Number(order.total_price);
+        branchStats[order.tenant_id].transactions += 1;
+      }
+    });
 
     return NextResponse.json({
       totalRevenue,
@@ -56,6 +75,7 @@ export async function GET(request) {
       totalBranches: tenants.length,
       activeBranches: tenants.filter(t => t.is_active).length,
       chartData: chartDataJuta,
+      branchStats
     });
 
   } catch (error) {
