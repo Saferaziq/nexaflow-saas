@@ -5,7 +5,6 @@ import TabMenu from './TabMenu';
 import TabTables from './TabTables';
 import TabReports from './TabReports';
 import TabSettings from './TabSettings';
-import TabExpenses from './TabExpenses'; // <-- TAMBAHKAN IMPORT INI
 
 export default function TabContent({
   activeTab, theme, d, rp, displayOrders, queueFilter, setQueueFilter,
@@ -30,13 +29,8 @@ export default function TabContent({
     return <TabTables theme={theme} tables={d.tables} newTableNum={newTableNum} setNewTableNum={setNewTableNum} onAddTable={onAddTable} onDeleteTable={d.handleDeleteTable} onDownloadQR={onDownloadQR} />;
   }
 
-  // 🔥 TAMBAHKAN KONDISI UNTUK MENAMPILKAN TAB PENGELUARAN 🔥
-  if (activeTab === 'expenses') {
-    return <TabExpenses theme={theme} d={d} rp={rp} />;
-  }
-
   if (activeTab === 'reports') {
-    return <TabReports theme={theme} reportMode={reportMode} setReportMode={setReportMode} reportDateStr={reportDateStr} setReportDateStr={setReportDateStr} reportMonth={reportMonth} setReportMonth={setReportMonth} reportYear={reportYear} setReportYear={setReportYear} reportStartDateStr={reportStartDateStr} setReportStartDateStr={setReportStartDateStr} reportEndDateStr={reportEndDateStr} setReportEndDateStr={setReportEndDateStr} reportLabel={reportLabel} reportStats={reportStats} topMenus={topMenus} chartData={chartData} maxChartRev={maxChartRev} totalChartRev={totalChartRev} showDailyBreakdown={false} activeDays={activeDays} onExportCSV={handleExportCSV} onPrintReport={handlePrintReport} rp={rp} />;
+    return <TabReports theme={theme} reportMode={reportMode} setReportMode={setReportMode} reportDateStr={reportDateStr} setReportDateStr={setReportDateStr} reportMonth={reportMonth} setReportMonth={setReportMonth} reportYear={reportYear} setReportYear={setReportYear} reportStartDateStr={reportStartDateStr} setReportStartDateStr={setReportStartDateStr} reportEndDateStr={reportEndDateStr} setReportEndDateStr={setReportEndDateStr} reportLabel={reportLabel} reportStats={reportStats} topMenus={topMenus} chartData={chartData} maxChartRev={maxChartRev} totalChartRev={totalChartRev} showDailyBreakdown={false} activeDays={activeDays} onExportCSV={handleExportCSV} onPrintReport={handlePrintReport} rp={rp} d={d} />;
   }
 
   if (activeTab === 'settings') {

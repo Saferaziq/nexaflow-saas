@@ -34,18 +34,11 @@ export default function Header({
           : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'
     }`;
 
-  // GANTI Ikon.Wallet MENJADI SVG LANGSUNG AGAR TIDAK ERROR
-  const WalletIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
-    </svg>
-  );
-
+  // KITA KEMBALIKAN KE SEMULA (TANPA MENU PENGELUARAN)
   const navItems = [
     { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrdersCount },
     { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
     { key: 'tables', label: 'Meja', Icon: Icons.Grid },
-    { key: 'expenses', label: 'Pengeluaran', Icon: WalletIcon }, // <-- MENGGUNAKAN SVG LANGSUNG
     { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
     { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
   ];
