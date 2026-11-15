@@ -4,10 +4,11 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { tenant_id, category, description, quantity, unit_price } = body;
+    // Berikan nilai default 'Operasional' jika category tidak dikirim
+    const { tenant_id, category = 'Operasional', description, quantity, unit_price } = body;
 
-    if (!tenant_id || !category || !description || !quantity || !unit_price) {
-      return NextResponse.json({ error: 'Data tidak lengkap.' }, { status: 400 });
+    if (!tenant_id || !description || !quantity || !unit_price) {
+      return NextResponse.json({ error: 'Data tidak lengkap. Pastikan nama barang, qty, dan harga terisi.' }, { status: 400 });
     }
 
     const total_amount = Number(quantity) * Number(unit_price);
@@ -17,7 +18,6 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Simpan ke tabel expenses
     const { data, error } = await supabaseAdmin
       .from('expenses')
       .insert([{

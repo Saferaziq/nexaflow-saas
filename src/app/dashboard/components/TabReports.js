@@ -5,7 +5,6 @@ import { Icons } from '../helpers/icons';
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-// Kumpulan Ikon SVG (Tanpa Emoji)
 const SvgIcons = {
   Calendar: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   Qris: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
@@ -34,19 +33,17 @@ export default function TabReports({
   onExportCSV,
   onPrintReport,
   rp,
-  d, // <-- PROP D DITERIMA UNTUK AKSES EXPENSES
+  d,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
   const cardClass = theme === 'light' ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
   const inputClass = `w-full border-2 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`;
 
-  // STATE UNTUK MODAL PENGELUARAN
   const [expenseModal, setExpenseModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formExpense, setFormExpense] = useState({ description: '', quantity: 1, unit_price: 0 });
 
-  // LOGIKA FILTER PENGELUARAN BERDASARKAN TANGGAL LAPORAN
   const filteredExpenses = useMemo(() => {
     const exps = d?.expenses || [];
     return exps.filter(ex => {
@@ -83,6 +80,7 @@ export default function TabReports({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenant_id: d.tenantId,
+          category: 'Belanja Harian', // <-- KATEGORI DEFAULT DITAMBAHKAN
           ...formExpense
         })
       });
@@ -101,7 +99,6 @@ export default function TabReports({
 
   return (
     <div className="space-y-5">
-      {/* FILTER TANGGAL */}
       <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
         <div className="flex flex-wrap gap-2 mb-4">
           {[
@@ -147,7 +144,6 @@ export default function TabReports({
         )}
       </div>
 
-      {/* RINGKASAN (OMSET, PENGELUARAN, LABA BERSIH) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
           <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Pesanan</p>
@@ -167,7 +163,6 @@ export default function TabReports({
         </div>
       </div>
 
-      {/* 🔥 DAFTAR PENGELUARAN HARI INI / PERIODE INI 🔥 */}
       {filteredExpenses.length > 0 && (
         <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
           <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Rincian Pengeluaran</h3>
@@ -185,7 +180,6 @@ export default function TabReports({
         </div>
       )}
 
-      {/* QRIS vs CASH BREAKDOWN */}
       <div className="grid grid-cols-2 gap-4">
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${theme === 'light' ? 'bg-cyan-50 border-cyan-400' : 'bg-cyan-950 border-cyan-600'}`}>
           <div className="flex items-center gap-2 mb-2">
@@ -205,7 +199,6 @@ export default function TabReports({
         </div>
       </div>
 
-      {/* DAFTAR PESANAN DITOLAK */}
       {reportStats?.cancelledCount > 0 && (
         <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${theme === 'light' ? 'bg-rose-50 border-rose-300' : 'bg-slate-900 border-rose-900'}`}>
           <div className="flex items-center justify-between mb-4">
@@ -241,7 +234,6 @@ export default function TabReports({
         </div>
       )}
 
-      {/* GRAFIK 7 HARI TERAKHIR */}
       <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-black text-lg ${textMainClass}`}>7 Hari Terakhir</h3>
@@ -261,7 +253,6 @@ export default function TabReports({
         </div>
       </div>
 
-      {/* MENU TERLARIS */}
       {topMenus && topMenus.length > 0 && (
         <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${cardClass}`}>
           <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Menu Terlaris</h3>
@@ -282,7 +273,6 @@ export default function TabReports({
         </div>
       )}
 
-      {/* TOMBOL AKSI */}
       <div className="flex gap-2">
         <button onClick={onExportCSV} className={`flex-1 font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
           <Icons.Download /> Export CSV
@@ -292,7 +282,6 @@ export default function TabReports({
         </button>
       </div>
 
-      {/* MODAL INPUT PENGELUARAN */}
       {expenseModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className={`w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border-2 ${cardClass}`}>
