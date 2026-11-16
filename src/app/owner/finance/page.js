@@ -18,8 +18,6 @@ const Icons = {
 export default function OwnerFinance() {
   const [userEmail, setUserEmail] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // Tabs: 'expenses_daily' | 'expenses_monthly' | 'employees'
   const [activeTab, setActiveTab] = useState('expenses_daily');
   
   const [tenants, setTenants] = useState([]);
@@ -247,18 +245,19 @@ export default function OwnerFinance() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  // Filter Data
   const expensesDaily = expenses.filter(ex => ex.category === 'Harian');
-  // Bulanan mencakup Bulanan dan Operasional
   const expensesMonthly = expenses.filter(ex => ex.category === 'Bulanan' || ex.category === 'Operasional');
   
-  // Hitung Total Gaji yang sudah dibayar (dari transaksi karyawan)
   const totalGajiBulanIni = transactions
     .filter(t => t.type === 'Gaji')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalPengeluaranBulanan = expensesMonthly.reduce((sum, ex) => sum + Number(ex.amount), 0) + totalGajiBulanIni;
   const totalPengeluaranHarian = expensesDaily.reduce((sum, ex) => sum + Number(ex.amount), 0);
+
+  // Logic untuk Cek Gaji Bulan Ini
+  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const isEndOfMonth = new Date().getDate() >= 25;
 
   return (
     <div className="bg-[#F8FAFC] text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
@@ -337,14 +336,12 @@ export default function OwnerFinance() {
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
             
-            {/* TABS */}
             <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
               <button onClick={() => setActiveTab('expenses_daily')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_daily' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Pengeluaran Harian (Kasir)</button>
               <button onClick={() => setActiveTab('expenses_monthly')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_monthly' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Biaya Bulanan (Fixed Cost)</button>
               <button onClick={() => setActiveTab('employees')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Data Karyawan & Gaji</button>
             </div>
 
-            {/* TAB 1: PENGELUARAN HARIAN (KASIR) */}
             {activeTab === 'expenses_daily' && (
               <div className="animate-in fade-in duration-300">
                 <div className="mb-6 p-4 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 rounded-2xl flex items-start gap-3">
@@ -400,7 +397,6 @@ export default function OwnerFinance() {
               </div>
             )}
 
-            {/* TAB 2: PENGELUARAN BULANAN (OWNER) */}
             {activeTab === 'expenses_monthly' && (
               <div className="animate-in fade-in duration-300">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -416,8 +412,9 @@ export default function OwnerFinance() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="owner-3d bg-white dark:bg-[#0A0F1C] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/60">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Biaya Bulanan</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Pengeluaran Bulanan</p>
                     <h3 className="text-2xl font-black text-rose-500 owner-num">{formatRp(totalPengeluaranBulanan)}</h3>
+                    <p className="text-[11px] text-slate-500 mt-2">*Termasuk total gaji karyawan yang telah dibayarkan</p>
                   </div>
                   <div className="owner-3d bg-white dark:bg-[#0A0F1C] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/60">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Gaji Dibayarkan</p>
@@ -457,7 +454,6 @@ export default function OwnerFinance() {
               </div>
             )}
 
-            {/* TAB 3: DATA KARYAWAN */}
             {activeTab === 'employees' && (
               <div className="animate-in fade-in duration-300">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -471,49 +467,72 @@ export default function OwnerFinance() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* MODEL 2: HORIZONTAL CARD */}
+                <div className="space-y-4">
                   {employees.map(emp => {
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
                     
+                    // Logic Pengingat Gaji
+                    const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
+                    const showSalaryReminder = isEndOfMonth && !hasBeenPaidThisMonth;
+
                     return (
-                      <div key={emp.id} className="owner-3d owner-3d-hover bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-6 rounded-2xl relative flex flex-col">
-                        <div className="flex justify-between items-start mb-5">
-                          <div className="flex items-center gap-3.5">
-                            <div className="w-12 h-12 rounded-full owner-avatar flex items-center justify-center text-base font-black text-sky-300 shrink-0" style={{ background: 'linear-gradient(180deg,#0F2033,#0A1826)' }}>
-                              {getInitials(emp.name)}
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{emp.name}</h3>
-                              <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mt-1">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
-                            </div>
+                      <div key={emp.id} className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 relative overflow-hidden">
+                        
+                        {/* Indikator Belum Digaji */}
+                        {showSalaryReminder && (
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-rose-400"></div>
+                        )}
+
+                        <div className="flex items-center gap-3 w-full md:w-[28%] shrink-0">
+                          <div className="w-12 h-12 rounded-full owner-avatar flex items-center justify-center text-base font-black text-sky-300 shrink-0" style={{ background: 'linear-gradient(180deg,#0F2033,#0A1826)' }}>
+                            {getInitials(emp.name)}
                           </div>
-                          <div className="flex gap-1.5">
-                            <button onClick={() => handleOpenEditEmployee(emp)} className="owner-icon-btn" title="Edit Karyawan"><Icons.Edit /></button>
-                            <button onClick={() => handleDelete('employee', emp.id)} className="owner-icon-btn owner-icon-btn-danger" title="Hapus Karyawan"><Icons.Trash /></button>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                               <p className="font-bold text-white text-base truncate">{emp.name}</p>
+                               {showSalaryReminder && (
+                                 <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black px-2 py-0.5 rounded shrink-0">Belum Digaji</span>
+                               )}
+                            </div>
+                            <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mt-0.5">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
                           </div>
                         </div>
                         
-                        <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 mb-5 space-y-3 text-sm flex-1">
-                          <div className="flex justify-between items-center"><span className="text-slate-600 dark:text-slate-400 font-medium">Gaji Pokok</span> <span className="font-black text-slate-900 dark:text-white owner-num text-base">{formatRp(emp.base_salary)}</span></div>
-                          <div className="flex justify-between items-center"><span className="text-slate-600 dark:text-slate-400 font-medium">Bank</span> <span className="font-bold text-slate-800 dark:text-slate-300 truncate max-w-[140px] text-right">{emp.bank_name ? `${emp.bank_name} (${emp.bank_account})` : '—'}</span></div>
-                          <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800/50"><span className="text-slate-600 dark:text-slate-400 font-medium">Total Kasbon</span> <span className={`font-bold owner-num ${totalKasbon > 0 ? 'text-amber-500' : 'text-slate-500'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</span></div>
-                          <div className="flex justify-between items-center"><span className="text-slate-600 dark:text-slate-400 font-medium">Total Bonus</span> <span className={`font-bold owner-num ${totalBonus > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</span></div>
+                        <div className="flex-1 w-full grid grid-cols-3 gap-2 bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800/50 rounded-xl p-3">
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Gaji Pokok</p>
+                            <p className="font-black text-white owner-num text-sm">{formatRp(emp.base_salary)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Kasbon</p>
+                            <p className={`font-bold owner-num text-sm ${totalKasbon > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Bonus</p>
+                            <p className={`font-bold owner-num text-sm ${totalBonus > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
+                          </div>
                         </div>
-                        
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-bold py-2.5 rounded-lg transition-colors">Gaji</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 text-xs font-bold py-2.5 rounded-lg transition-colors">Kasbon</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 text-xs font-bold py-2.5 rounded-lg transition-colors">Bonus</button>
+
+                        <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end mt-4 md:mt-0">
+                          <button onClick={() => handleOpenEditEmployee(emp)} className="owner-icon-btn hidden md:flex" title="Edit"><Icons.Edit /></button>
+                          <button onClick={() => handleDelete('employee', emp.id)} className="owner-icon-btn owner-icon-btn-danger hidden md:flex" title="Hapus"><Icons.Trash /></button>
+                          
+                          <div className="w-px h-8 bg-slate-800 mx-1 hidden md:block"></div>
+
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="flex-1 md:flex-none bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-colors">Gaji</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="flex-1 md:flex-none bg-amber-500/10 text-amber-400 border border-amber-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-colors">Kasbon</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">Bonus</button>
+                          <button onClick={() => handleSendSalaryWA(emp)} className="flex-1 md:flex-none bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#25D366]/20 flex items-center gap-1 justify-center transition-colors">
+                            <Icons.WhatsApp /> WA
+                          </button>
                         </div>
-                        <button onClick={() => handleSendSalaryWA(emp)} className="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#128C7E] dark:text-[#25D366] text-sm font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors mt-auto">
-                          <Icons.WhatsApp /> Kirim Rincian Gaji
-                        </button>
                       </div>
                     );
                   })}
-                  {employees.length === 0 && <div className="col-span-full p-10 text-center text-slate-500 font-bold border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-base">Belum ada data karyawan.</div>}
+                  {employees.length === 0 && <div className="p-10 text-center text-slate-500 font-bold border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-base">Belum ada data karyawan.</div>}
                 </div>
               </div>
             )}
