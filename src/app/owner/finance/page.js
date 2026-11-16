@@ -10,13 +10,14 @@ const Icons = {
   Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
   Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-  WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+  WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
 };
 
 export default function OwnerFinance() {
   const [userEmail, setUserEmail] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState('expenses');
+  const [activeTab, setActiveTab] = useState('expenses_daily');
   
   const [tenants, setTenants] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -25,7 +26,7 @@ export default function OwnerFinance() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [expenseModal, setExpenseModal] = useState(false);
-  const [formExpense, setFormExpense] = useState({ tenant_id: '', category: 'Bulanan', description: '', amount: '' });
+  const [formExpense, setFormExpense] = useState({ tenant_id: '', category: 'Harian', description: '', amount: '' });
   
   const [employeeModal, setEmployeeModal] = useState({ open: false, data: null });
   const [payrollModal, setPayrollModal] = useState({ open: false, employee: null, type: 'Gaji' });
@@ -85,7 +86,14 @@ export default function OwnerFinance() {
     window.location.href = '/login';
   };
 
-  // FUNGSI TAMBAH PENGELUARAN BULANAN (OWNER)
+  const openExpenseModal = () => {
+    setFormExpense({
+      ...formExpense,
+      category: activeTab === 'expenses_daily' ? 'Harian' : 'Bulanan'
+    });
+    setExpenseModal(true);
+  };
+
   const handleAddExpense = async (e) => {
     e.preventDefault();
     const res = await fetch('/api/owner/finance', {
@@ -229,7 +237,7 @@ export default function OwnerFinance() {
       msg += `A/N: ${emp.name}\n\n`;
     }
     
-    msg += `Terima kasih atas kerja kerasnya! 🙏`;
+    msg += `Terima kasih atas kerja kerasnya!`;
 
     const phone = emp.wa_number.replace(/^0/, '62').replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -237,8 +245,40 @@ export default function OwnerFinance() {
 
   const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const filteredExpenses = expenses.filter(ex => {
+    if (activeTab === 'expenses_daily') return ex.category === 'Harian';
+    if (activeTab === 'expenses_monthly') return ex.category === 'Bulanan' || ex.category === 'Operasional';
+    return false;
+  });
+
   return (
     <div className="bg-[#F8FAFC] text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
+      <style>{`
+        .owner-3d { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04), 0 8px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.7); }
+        .dark .owner-3d { box-shadow: 0 1px 2px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.20), 0 8px 20px rgba(0,0,0,0.25), 0 20px 40px -12px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.30); }
+        .owner-3d-hover { transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease; }
+        .owner-3d-hover:hover { transform: translateY(-2px); }
+        .owner-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; }
+        .owner-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: #F1F5F9; border: 1px solid #E2E8F0; color: #64748B; transition: all 150ms ease; }
+        .dark .owner-icon-btn { background: #111826; border-color: rgba(148,163,184,0.10); color: #94A3B8; }
+        .owner-icon-btn:hover { background: #E2E8F0; color: #334155; }
+        .dark .owner-icon-btn:hover { background: #17202E; color: #E2E8F0; border-color: rgba(148,163,184,0.22); }
+        .owner-icon-btn-danger:hover { background: #FEE2E2; color: #DC2626; border-color: #FCA5A5; }
+        .dark .owner-icon-btn-danger:hover { background: rgba(244,63,94,0.10); color: #FB7185; border-color: rgba(244,63,94,0.30); }
+        .owner-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+        .owner-avatar { box-shadow: 0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10); border: 1px solid rgba(148,163,184,0.12); }
+        .owner-row { transition: background-color 150ms ease; }
+        .owner-row:hover { background-color: rgba(17, 28, 51, 0.04); }
+        .dark .owner-row:hover { background-color: rgba(17, 28, 51, 0.55); }
+      `}</style>
+      
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0"></div>
       
       <div className="flex h-screen relative z-10">
@@ -268,6 +308,10 @@ export default function OwnerFinance() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
             </Link>
+            <Link href="/owner/settings" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
+              <Icons.Settings />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Pengaturan</span>
+            </Link>
           </nav>
           <div className="p-4 border-t border-slate-200 dark:border-slate-800/80">
             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 rounded-xl font-bold transition-all whitespace-nowrap">
@@ -280,7 +324,7 @@ export default function OwnerFinance() {
           <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
             <div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Manajemen Keuangan</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Kelola pengeluaran bulanan dan data karyawan kafe Anda</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Kelola pengeluaran harian, bulanan, dan data karyawan</p>
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -291,96 +335,124 @@ export default function OwnerFinance() {
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
             
-            <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
-              <button onClick={() => setActiveTab('expenses')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'expenses' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500'}`}>Pengeluaran Bulanan</button>
-              <button onClick={() => setActiveTab('employees')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500'}`}>Data Karyawan & Gaji</button>
+            <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
+              <button onClick={() => setActiveTab('expenses_daily')} className={`px-6 py-2.5 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_daily' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Pengeluaran Harian</button>
+              <button onClick={() => setActiveTab('expenses_monthly')} className={`px-6 py-2.5 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_monthly' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Pengeluaran Bulanan</button>
+              <button onClick={() => setActiveTab('employees')} className={`px-6 py-2.5 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-500 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Data Karyawan & Gaji</button>
             </div>
 
-            {activeTab === 'expenses' && (
+            {(activeTab === 'expenses_daily' || activeTab === 'expenses_monthly') && (
               <div className="animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Riwayat Pengeluaran (Bulanan & Operasional)</h2>
-                  <button onClick={() => setExpenseModal(true)} className="bg-[#2563EB] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg">+ Catat Pengeluaran Bulanan</button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">
+                      {activeTab === 'expenses_daily' ? 'Riwayat Pengeluaran Harian' : 'Riwayat Pengeluaran Bulanan'}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {activeTab === 'expenses_daily' ? 'Catatan bahan baku dan operasional harian' : 'Catatan operasional rutin, sewa, dan tagihan'}
+                    </p>
+                  </div>
+                  <button onClick={openExpenseModal} className="bg-[#2563EB] hover:bg-[#1E4E8C] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Catat Pengeluaran
+                  </button>
                 </div>
-                <div className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800">
-                      <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-black">
-                        <th className="p-4 pl-6">Tanggal</th>
-                        <th className="p-4">Cabang</th>
-                        <th className="p-4">Kategori</th>
-                        <th className="p-4">Keterangan</th>
-                        <th className="p-4">Total</th>
-                        <th className="p-4 pr-6 text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                      {expenses.map(ex => {
-                        const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
-                        return (
-                          <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-[#111C33]/50 transition-colors">
-                            <td className="p-4 pl-6 text-sm text-slate-500">{new Date(ex.expense_date).toLocaleDateString('id-ID')}</td>
-                            <td className="p-4 text-sm font-bold">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                            <td className="p-4"><span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs font-bold">{ex.category || 'Bulanan'}</span></td>
-                            <td className="p-4 text-sm">{ex.description || '-'} <span className="text-[10px] text-slate-500 ml-1">({ex.quantity || 1} Qty x {formatRp(safeUnitPrice)})</span></td>
-                            <td className="p-4 text-sm font-black text-rose-500">- {formatRp(ex.amount)}</td>
-                            <td className="p-4 pr-6 text-right">
-                              <button onClick={() => handleDelete('expense', ex.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors" title="Hapus jika ada kecurangan"><Icons.Trash /></button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {expenses.length === 0 && <tr><td colSpan="6" className="p-6 text-center text-slate-500 font-bold">Belum ada catatan pengeluaran.</td></tr>}
-                    </tbody>
-                  </table>
+                
+                <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800/80">
+                        <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-black">
+                          <th className="p-4 pl-6">Tanggal</th>
+                          <th className="p-4">Cabang</th>
+                          <th className="p-4">Keterangan</th>
+                          <th className="p-4">Total</th>
+                          <th className="p-4 pr-6 text-right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        {filteredExpenses.map(ex => {
+                          const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
+                          return (
+                            <tr key={ex.id} className="owner-row">
+                              <td className="p-4 pl-6 text-sm text-slate-500 whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID')}</td>
+                              <td className="p-4 text-sm font-bold text-slate-800 dark:text-white">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
+                              <td className="p-4">
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{ex.description || '-'}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">({ex.quantity || 1} Qty x {formatRp(safeUnitPrice)})</p>
+                              </td>
+                              <td className="p-4 text-sm font-black text-rose-500 owner-num whitespace-nowrap">- {formatRp(ex.amount)}</td>
+                              <td className="p-4 pr-6 text-right">
+                                <button onClick={() => handleDelete('expense', ex.id)} className="owner-icon-btn owner-icon-btn-danger inline-flex" title="Hapus"><Icons.Trash /></button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredExpenses.length === 0 && <tr><td colSpan="5" className="p-10 text-center text-slate-500 font-bold">Belum ada catatan pengeluaran {activeTab === 'expenses_daily' ? 'harian' : 'bulanan'}.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === 'employees' && (
               <div className="animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Daftar Karyawan</h2>
-                  <button onClick={() => { setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' }); setEmployeeModal({ open: true, data: null }); }} className="bg-[#EA8B42] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg">+ Tambah Karyawan</button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Daftar Karyawan</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Kelola gaji, kasbon, dan bonus karyawan</p>
+                  </div>
+                  <button onClick={() => { setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' }); setEmployeeModal({ open: true, data: null }); }} className="bg-[#EA8B42] hover:bg-[#D97736] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Tambah Karyawan
+                  </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {employees.map(emp => {
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
                     
                     return (
-                      <div key={emp.id} className="bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm relative">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-black text-lg">{emp.name}</h3>
-                            <p className="text-xs font-bold text-slate-500 uppercase">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
-                            {emp.wa_number && <p className="text-xs text-slate-500 mt-1">WA: {emp.wa_number}</p>}
-                            {emp.address && <p className="text-[10px] text-slate-400 mt-0.5">{emp.address}</p>}
+                      <div key={emp.id} className="owner-3d owner-3d-hover bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-5 rounded-2xl relative flex flex-col">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full owner-avatar flex items-center justify-center text-sm font-black text-sky-300 shrink-0" style={{ background: 'linear-gradient(180deg,#0F2033,#0A1826)' }}>
+                              {getInitials(emp.name)}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">{emp.name}</h3>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => handleOpenEditEmployee(emp)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Edit Karyawan"><Icons.Edit /></button>
-                            <button onClick={() => handleDelete('employee', emp.id)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded transition-colors" title="Hapus Karyawan"><Icons.Trash /></button>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => handleOpenEditEmployee(emp)} className="owner-icon-btn" title="Edit Karyawan"><Icons.Edit /></button>
+                            <button onClick={() => handleDelete('employee', emp.id)} className="owner-icon-btn owner-icon-btn-danger" title="Hapus Karyawan"><Icons.Trash /></button>
                           </div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-[#04060B] rounded-xl p-3 mb-4 space-y-1">
-                          <div className="flex justify-between text-xs"><span className="text-slate-500">Gaji Pokok:</span> <span className="font-bold">{formatRp(emp.base_salary)}</span></div>
-                          <div className="flex justify-between text-xs"><span className="text-slate-500">Bank:</span> <span className="font-bold">{emp.bank_name || '-'} ({emp.bank_account || '-'})</span></div>
-                          <div className="flex justify-between text-xs"><span className="text-slate-500">Total Kasbon:</span> <span className="font-bold text-rose-500">{formatRp(totalKasbon)}</span></div>
-                          <div className="flex justify-between text-xs"><span className="text-slate-500">Total Bonus:</span> <span className="font-bold text-emerald-500">{formatRp(totalBonus)}</span></div>
+                        
+                        <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800/80 rounded-xl p-3.5 mb-4 space-y-2 text-xs flex-1">
+                          <div className="flex justify-between"><span className="text-slate-500 font-medium">Gaji Pokok</span> <span className="font-bold text-slate-900 dark:text-white owner-num">{formatRp(emp.base_salary)}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-500 font-medium">Bank</span> <span className="font-bold text-slate-600 dark:text-slate-300 truncate max-w-[120px] text-right">{emp.bank_name ? `${emp.bank_name} (${emp.bank_account})` : '—'}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-500 font-medium">Total Kasbon</span> <span className={`font-bold owner-num ${totalKasbon > 0 ? 'text-amber-500' : 'text-slate-500'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-500 font-medium">Total Bonus</span> <span className={`font-bold owner-num ${totalBonus > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</span></div>
+                          {emp.wa_number && <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800/50 mt-1"><span className="text-slate-500 font-medium">WhatsApp</span> <span className="font-bold text-slate-600 dark:text-slate-400 owner-num">{emp.wa_number}</span></div>}
                         </div>
+                        
                         <div className="grid grid-cols-3 gap-2 mb-2">
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="bg-[#2563EB] text-white text-xs font-bold py-2 rounded-lg">Gaji</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="bg-rose-500 text-white text-xs font-bold py-2 rounded-lg">Kasbon</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="bg-emerald-500 text-white text-xs font-bold py-2 rounded-lg">Bonus</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 text-[11px] font-bold py-2 rounded-lg transition-colors">Gaji</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 text-[11px] font-bold py-2 rounded-lg transition-colors">Kasbon</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 text-[11px] font-bold py-2 rounded-lg transition-colors">Bonus</button>
                         </div>
-                        <button onClick={() => handleSendSalaryWA(emp)} className="w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2">
+                        <button onClick={() => handleSendSalaryWA(emp)} className="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#128C7E] dark:text-[#25D366] text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors mt-auto">
                           <Icons.WhatsApp /> Kirim Rincian Gaji
                         </button>
                       </div>
                     );
                   })}
-                  {employees.length === 0 && <div className="col-span-full p-10 text-center text-slate-500 font-bold border-2 border-dashed rounded-2xl">Belum ada data karyawan.</div>}
+                  {employees.length === 0 && <div className="col-span-full p-10 text-center text-slate-500 font-bold border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">Belum ada data karyawan.</div>}
                 </div>
               </div>
             )}
@@ -389,34 +461,35 @@ export default function OwnerFinance() {
       </div>
 
       {expenseModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black mb-6">Catat Pengeluaran Bulanan</h3>
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black mb-6 text-slate-900 dark:text-white">Catat Pengeluaran</h3>
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold mb-1">Pilih Cabang</label>
-                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Pilih Cabang</label>
+                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]">
                   {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Kategori</label>
-                <select value={formExpense.category} onChange={e => setFormExpense({...formExpense, category: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
-                  <option>Bulanan</option>
-                  <option>Operasional</option>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Kategori</label>
+                <select value={formExpense.category} onChange={e => setFormExpense({...formExpense, category: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]">
+                  <option value="Harian">Harian (Bahan Baku, dll)</option>
+                  <option value="Bulanan">Bulanan (Sewa, Listrik, dll)</option>
+                  <option value="Operasional">Operasional (Lain-lain)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Keterangan (Contoh: Listrik, Sewa)</label>
-                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Token Listrik Juli" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Keterangan</label>
+                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Contoh: Beli Susu, Token Listrik" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Nominal (Rp)</label>
-                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Nominal (Rp)</label>
+                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-3 rounded-xl">Batal</button>
-                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-bold py-3 rounded-xl">Simpan</button>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
+                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)]">Simpan</button>
               </div>
             </form>
           </div>
@@ -424,34 +497,34 @@ export default function OwnerFinance() {
       )}
 
       {employeeModal.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-black mb-6">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-black mb-6 text-slate-900 dark:text-white">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
             <form onSubmit={handleSaveEmployee} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold mb-1">Pilih Cabang</label>
-                <select value={formEmployee.tenant_id} onChange={e => setFormEmployee({...formEmployee, tenant_id: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Pilih Cabang</label>
+                <select value={formEmployee.tenant_id} onChange={e => setFormEmployee({...formEmployee, tenant_id: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]">
                   {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Nama Lengkap</label>
-                  <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({...formEmployee, name: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Nama Lengkap</label>
+                  <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({...formEmployee, name: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">No. WhatsApp</label>
-                  <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({...formEmployee, wa_number: e.target.value})} placeholder="0812..." className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">No. WhatsApp</label>
+                  <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({...formEmployee, wa_number: e.target.value})} placeholder="0812..." className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Alamat</label>
-                <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({...formEmployee, address: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Alamat</label>
+                <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({...formEmployee, address: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Jabatan</label>
-                  <select value={formEmployee.role} onChange={e => setFormEmployee({...formEmployee, role: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Jabatan</label>
+                  <select value={formEmployee.role} onChange={e => setFormEmployee({...formEmployee, role: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]">
                     <option>Kasir</option>
                     <option>Koki / Barista</option>
                     <option>Pelayan</option>
@@ -459,23 +532,23 @@ export default function OwnerFinance() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Gaji Pokok (Rp)</label>
-                  <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({...formEmployee, base_salary: e.target.value})} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Gaji Pokok (Rp)</label>
+                  <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({...formEmployee, base_salary: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Nama Bank</label>
-                  <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({...formEmployee, bank_name: e.target.value})} placeholder="BCA / Mandiri" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Nama Bank</label>
+                  <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({...formEmployee, bank_name: e.target.value})} placeholder="BCA / Mandiri" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">No. Rekening</label>
-                  <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({...formEmployee, bank_account: e.target.value})} placeholder="12345678" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">No. Rekening</label>
+                  <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({...formEmployee, bank_account: e.target.value})} placeholder="12345678" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-3 rounded-xl">Batal</button>
-                <button type="submit" className="flex-1 bg-[#EA8B42] text-white font-bold py-3 rounded-xl">Simpan</button>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
+                <button type="submit" className="flex-1 bg-[#EA8B42] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(234,139,66,0.5)]">Simpan</button>
               </div>
             </form>
           </div>
@@ -483,22 +556,33 @@ export default function OwnerFinance() {
       )}
 
       {payrollModal.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black mb-2">Catat {payrollModal.type}</h3>
-            <p className="text-sm font-bold text-slate-500 mb-6">{payrollModal.employee.name}</p>
-            <form onSubmit={handlePayroll} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-1">Nominal (Rp)</label>
-                <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({...formPayroll, amount: e.target.value})} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                payrollModal.type === 'Gaji' ? 'bg-blue-500/10 text-blue-500' : 
+                payrollModal.type === 'Kasbon' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+              }`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Catatan (Opsional)</label>
-                <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({...formPayroll, notes: e.target.value})} placeholder="Contoh: Gaji Bulan Juli" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold" />
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Catat {payrollModal.type}</h3>
+                <p className="text-sm font-bold text-slate-500">{payrollModal.employee.name}</p>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-3 rounded-xl">Batal</button>
-                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-bold py-3 rounded-xl">Simpan</button>
+            </div>
+            
+            <form onSubmit={handlePayroll} className="space-y-4 mt-6">
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Nominal (Rp)</label>
+                <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({...formPayroll, amount: e.target.value})} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Catatan (Opsional)</label>
+                <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({...formPayroll, notes: e.target.value})} placeholder={`Contoh: ${payrollModal.type} Bulan Ini`} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
+                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)]">Simpan</button>
               </div>
             </form>
           </div>
@@ -507,7 +591,7 @@ export default function OwnerFinance() {
 
       {confirmModal.open && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
                 {confirmModal.isDanger ? (
@@ -535,7 +619,7 @@ export default function OwnerFinance() {
 
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl border backdrop-blur-xl owner-3d ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
               {toast.type === 'success' ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
