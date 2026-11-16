@@ -22,9 +22,9 @@ const Icons = {
 export default function OwnerReports() {
   const [userEmail, setUserEmail] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [period, setPeriod] = useState('monthly'); 
+  const [period, setPeriod] = useState('monthly');
   const [dateStr, setDateStr] = useState(new Date().toISOString().slice(0, 7));
-  
+
   const [reports, setReports] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +35,8 @@ export default function OwnerReports() {
     dailyExpense: 0,
     monthlyExpense: 0,
     salaryExpense: 0,
+    actualSalaryTx: 0,
+    pendingBaseSalary: 0,
     totalExpense: 0,
     netProfit: 0
   });
@@ -49,7 +51,22 @@ export default function OwnerReports() {
     try {
       // 1. Ambil Data Cabang
       const { data: t } = await supabase.from('tenants').select('id, name').eq('manager_email', email);
-      if (!t) { setIsLoading(false); return; }
+      if (!t || t.length === 0) {
+        setTenants([]);
+        setReports([]);
+        setPlData({
+          revenue: 0,
+          dailyExpense: 0,
+          monthlyExpense: 0,
+          salaryExpense: 0,
+          actualSalaryTx: 0,
+          pendingBaseSalary: 0,
+          totalExpense: 0,
+          netProfit: 0
+        });
+        setIsLoading(false);
+        return;
+      }
       setTenants(t);
 
       const tenantIds = t.map(x => x.id);
@@ -57,10 +74,10 @@ export default function OwnerReports() {
       // 2. Tentukan Rentang Tanggal
       let startDate = new Date();
       let endDate = new Date();
-      
+
       if (currentPeriod === 'daily') {
-        startDate = new Date(currentDate); startDate.setHours(0,0,0,0);
-        endDate = new Date(currentDate); endDate.setHours(23,59,59,999);
+        startDate = new Date(currentDate); startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(currentDate); endDate.setHours(23, 59, 59, 999);
       } else if (currentPeriod === 'monthly') {
         const [year, month] = currentDate.split('-');
         startDate = new Date(year, month - 1, 1);
@@ -72,20 +89,21 @@ export default function OwnerReports() {
         startDate = new Date(simple);
         if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
         else startDate.setDate(simple.getDate() + 8 - simple.getDay());
-        startDate.setHours(0,0,0,0);
+        startDate.setHours(0, 0, 0, 0);
         endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + 6);
-        endDate.setHours(23,59,59,999);
+        endDate.setHours(23, 59, 59, 999);
       }
 
       const startStr = startDate.toISOString();
       const endStr = endDate.toISOString();
 
-      // 3. Fetch Data (Orders, Expenses, Employee Transactions)
-      const [ordersRes, expensesRes, empTxRes] = await Promise.all([
+      // 3. Fetch Data (Orders, Expenses, Employee Transactions, Employees)
+      const [ordersRes, expensesRes, empTxRes, empRes] = await Promise.all([
         supabase.from('orders').select('id, tenant_id, customer_name, total_price, created_at, status, payment_status').in('tenant_id', tenantIds).gte('created_at', startStr).lte('created_at', endStr).order('created_at', { ascending: false }),
         supabase.from('expenses').select('id, tenant_id, category, amount, expense_date').in('tenant_id', tenantIds).gte('expense_date', startStr).lte('expense_date', endStr),
-        supabase.from('employee_transactions').select('id, tenant_id, type, amount, transaction_date').in('tenant_id', tenantIds).gte('transaction_date', startStr).lte('transaction_date', endStr)
+        supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', tenantIds).gte('transaction_date', startStr).lte('transaction_date', endStr),
+        supabase.from('employees').select('id, tenant_id, name, base_salary, is_active').in('tenant_id', tenantIds)
       ]);
 
       // 4. Proses Data Pesanan
@@ -100,15 +118,28 @@ export default function OwnerReports() {
       // 5. Proses Kalkulasi Laba Rugi (P&L)
       const exps = expensesRes.data || [];
       const empTx = empTxRes.data || [];
+      const empList = empRes.data || [];
 
       const totalRevenue = validOrders.filter(o => o.payment_status === 'PAID' || o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price), 0);
-      
+
       const dailyExpense = exps.filter(e => e.category === 'Harian').reduce((sum, e) => sum + Number(e.amount), 0);
       const monthlyExpense = exps.filter(e => e.category === 'Bulanan' || e.category === 'Operasional').reduce((sum, e) => sum + Number(e.amount), 0);
-      
-      // Total Gaji Karyawan (Gaji + Kasbon + Bonus)
-      const salaryExpense = empTx.reduce((sum, e) => sum + Number(e.amount), 0);
 
+      // Transaksi Gaji/Kasbon/Bonus Aktual
+      const actualSalaryTx = empTx.reduce((sum, e) => sum + Number(e.amount), 0);
+
+      // Opsi 2: Untuk mode bulanan, hitung gaji pokok karyawan aktif yang belum menerima transaksi 'Gaji' bulan ini (anti double-counting)
+      let pendingBaseSalary = 0;
+      if (currentPeriod === 'monthly') {
+        const paidEmployeeIds = new Set(
+          empTx.filter(tx => tx.type === 'Gaji').map(tx => tx.employee_id)
+        );
+        pendingBaseSalary = empList
+          .filter(emp => emp.is_active && !paidEmployeeIds.has(emp.id))
+          .reduce((sum, emp) => sum + Number(emp.base_salary || 0), 0);
+      }
+
+      const salaryExpense = actualSalaryTx + pendingBaseSalary;
       const totalExpense = dailyExpense + monthlyExpense + salaryExpense;
       const netProfit = totalRevenue - totalExpense;
 
@@ -117,6 +148,8 @@ export default function OwnerReports() {
         dailyExpense,
         monthlyExpense,
         salaryExpense,
+        actualSalaryTx,
+        pendingBaseSalary,
         totalExpense,
         netProfit
       });
@@ -142,7 +175,7 @@ export default function OwnerReports() {
     let newDate = dateStr;
     if (newPeriod === 'monthly') newDate = new Date().toISOString().slice(0, 7);
     if (newPeriod === 'daily') newDate = new Date().toLocaleDateString('en-CA');
-    
+
     setPeriod(newPeriod);
     setDateStr(newDate);
     fetchReports(userEmail, newPeriod, newDate);
@@ -160,12 +193,16 @@ export default function OwnerReports() {
 
   const handleExportCSV = () => {
     let csv = `Laporan Laba Rugi (P&L) NexaFlow\nManager: ${userEmail}\nPeriode: ${period} (${dateStr})\nTanggal Unduh: ${new Date().toLocaleDateString('id-ID')}\n\n`;
-    
+
     csv += `RINGKASAN KEUANGAN\n`;
     csv += `Pendapatan Kotor,"${plData.revenue}"\n`;
     csv += `Pengeluaran Harian,"${plData.dailyExpense}"\n`;
     csv += `Biaya Bulanan,"${plData.monthlyExpense}"\n`;
-    csv += `Gaji Karyawan,"${plData.salaryExpense}"\n`;
+    csv += `Gaji Karyawan (Total),"${plData.salaryExpense}"\n`;
+    if (period === 'monthly' && plData.pendingBaseSalary > 0) {
+      csv += `Gaji Aktual Tercatat,"${plData.actualSalaryTx}"\n`;
+      csv += `Estimasi Gaji Pokok Belum Dibayar,"${plData.pendingBaseSalary}"\n`;
+    }
     csv += `Total Pengeluaran,"${plData.totalExpense}"\n`;
     csv += `Laba Bersih,"${plData.netProfit}"\n\n`;
 
@@ -174,7 +211,7 @@ export default function OwnerReports() {
     reports.forEach(r => {
       csv += `"${new Date(r.created_at).toLocaleString('id-ID')}","${r.branchName}","${r.customer_name || 'Walk-in'}","${r.status}","${r.total_price}"\n`;
     });
-    
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -198,7 +235,7 @@ export default function OwnerReports() {
         .owner-row { transition: background-color 150ms ease; }
         .owner-row:hover { background-color: rgba(17, 28, 51, 0.04); }
         .dark .owner-row:hover { background-color: rgba(17, 28, 51, 0.55); }
-        
+
         /* Print Styles */
         @media print {
           @page { margin: 1cm; size: A4 portrait; }
@@ -212,11 +249,11 @@ export default function OwnerReports() {
           .text-white { color: black !important; }
         }
       `}</style>
-      
+
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0 no-print"></div>
-      
+
       <div className="flex h-screen relative z-10">
-        
+
         {/* SIDEBAR (Hidden on Print) */}
         <aside className="no-print group w-[80px] hover:w-64 transition-all duration-300 ease-in-out bg-white/70 dark:bg-[#060911]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 h-full shrink-0">
           <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800/80 overflow-hidden shrink-0">
@@ -258,7 +295,7 @@ export default function OwnerReports() {
 
         {/* MAIN CONTENT */}
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-          
+
           {/* HEADER */}
           <header className="no-print h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
             <div>
@@ -266,7 +303,7 @@ export default function OwnerReports() {
               <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Analisis pendapatan dan pengeluaran bisnis Anda</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
-              
+
               <div className="flex items-center gap-2">
                 {period === 'daily' && (
                   <input type="date" value={dateStr} onChange={handleDateChange} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 outline-none" />
@@ -277,7 +314,7 @@ export default function OwnerReports() {
                 {period === 'monthly' && (
                   <input type="month" value={dateStr} onChange={handleDateChange} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 outline-none" />
                 )}
-                
+
                 <div className="hidden md:flex bg-slate-100 dark:bg-[#111C33] rounded-xl p-1 border border-slate-200 dark:border-slate-800">
                   <button onClick={() => handlePeriodChange('daily')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${period === 'daily' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Harian</button>
                   <button onClick={() => handlePeriodChange('weekly')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${period === 'weekly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Mingguan</button>
@@ -291,7 +328,7 @@ export default function OwnerReports() {
               <button onClick={() => window.print()} className="bg-[#2563EB] hover:bg-[#1E4E8C] text-white font-bold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition-all">
                 <Icons.Printer /> Cetak PDF
               </button>
-              
+
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shadow-sm">
                 {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
               </button>
@@ -299,7 +336,7 @@ export default function OwnerReports() {
           </header>
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth print-container">
-            
+
             {/* PRINT HEADER (Only visible on print) */}
             <div className="hidden print-only mb-8 text-center border-b-2 border-black pb-4">
               <h1 className="text-2xl font-black text-black">LAPORAN LABA RUGI</h1>
@@ -309,7 +346,7 @@ export default function OwnerReports() {
 
             {/* KPI CARDS (P&L SUMMARY) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              
+
               {/* Pendapatan */}
               <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-6 rounded-3xl">
                 <div className="flex items-center justify-between mb-4">
@@ -375,9 +412,14 @@ export default function OwnerReports() {
                   <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0">
                     <Icons.Users />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-500">Gaji Karyawan</p>
                     <p className="text-lg font-black text-slate-900 dark:text-white owner-num mt-1">{formatRp(plData.salaryExpense)}</p>
+                    {period === 'monthly' && plData.pendingBaseSalary > 0 && (
+                      <p className="text-[11px] font-semibold text-slate-400 mt-1 owner-num">
+                        Aktual: {formatRp(plData.actualSalaryTx)} + Est. Pokok: {formatRp(plData.pendingBaseSalary)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
