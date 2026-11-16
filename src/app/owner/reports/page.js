@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -24,6 +24,7 @@ export default function OwnerReports() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [period, setPeriod] = useState('monthly');
   const [dateStr, setDateStr] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
 
   const [reports, setReports] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -46,7 +47,7 @@ export default function OwnerReports() {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  const fetchReports = async (email, currentPeriod, currentDate) => {
+  const fetchReports = async (email, currentPeriod, currentDate, branchId = selectedBranchId) => {
     setIsLoading(true);
     try {
       // 1. Ambil Data Cabang
@@ -69,7 +70,10 @@ export default function OwnerReports() {
       }
       setTenants(t);
 
-      const tenantIds = t.map(x => x.id);
+      const allTenantIds = t.map(x => x.id);
+      const targetTenantIds = branchId && branchId !== 'all'
+        ? allTenantIds.filter(id => id === branchId)
+        : allTenantIds;
 
       // 2. Tentukan Rentang Tanggal
       let startDate = new Date();
@@ -97,13 +101,14 @@ export default function OwnerReports() {
 
       const startStr = startDate.toISOString();
       const endStr = endDate.toISOString();
+      const safeTargetIds = targetTenantIds.length > 0 ? targetTenantIds : ['00000000-0000-0000-0000-000000000000'];
 
-      // 3. Fetch Data (Orders, Expenses, Employee Transactions, Employees)
+      // 3. Fetch Data (Orders, Expenses, Employee Transactions, Employees) sesuai Filter Cabang
       const [ordersRes, expensesRes, empTxRes, empRes] = await Promise.all([
-        supabase.from('orders').select('id, tenant_id, customer_name, total_price, created_at, status, payment_status').in('tenant_id', tenantIds).gte('created_at', startStr).lte('created_at', endStr).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('id, tenant_id, category, amount, expense_date').in('tenant_id', tenantIds).gte('expense_date', startStr).lte('expense_date', endStr),
-        supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', tenantIds).gte('transaction_date', startStr).lte('transaction_date', endStr),
-        supabase.from('employees').select('id, tenant_id, name, base_salary, is_active').in('tenant_id', tenantIds)
+        supabase.from('orders').select('id, tenant_id, customer_name, total_price, created_at, status, payment_status').in('tenant_id', safeTargetIds).gte('created_at', startStr).lte('created_at', endStr).order('created_at', { ascending: false }),
+        supabase.from('expenses').select('id, tenant_id, category, amount, expense_date').in('tenant_id', safeTargetIds).gte('expense_date', startStr).lte('expense_date', endStr),
+        supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', safeTargetIds).gte('transaction_date', startStr).lte('transaction_date', endStr),
+        supabase.from('employees').select('id, tenant_id, name, base_salary, is_active').in('tenant_id', safeTargetIds)
       ]);
 
       // 4. Proses Data Pesanan
@@ -122,8 +127,13 @@ export default function OwnerReports() {
 
       const totalRevenue = validOrders.filter(o => o.payment_status === 'PAID' || o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price), 0);
 
-      const dailyExpense = exps.filter(e => e.category === 'Harian').reduce((sum, e) => sum + Number(e.amount), 0);
-      const monthlyExpense = exps.filter(e => e.category === 'Bulanan' || e.category === 'Operasional').reduce((sum, e) => sum + Number(e.amount), 0);
+      // Poin 2: Semua kategori pengeluaran terhitung penuh tanpa ada yang terlewat
+      const dailyExpense = exps
+        .filter(e => e.category === 'Harian')
+        .reduce((sum, e) => sum + Number(e.amount), 0);
+      const monthlyExpense = exps
+        .filter(e => e.category !== 'Harian')
+        .reduce((sum, e) => sum + Number(e.amount), 0);
 
       // Transaksi Gaji/Kasbon/Bonus Aktual
       const actualSalaryTx = empTx.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -166,7 +176,7 @@ export default function OwnerReports() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { window.location.href = '/login'; return; }
       setUserEmail(session.user.email);
-      fetchReports(session.user.email, period, dateStr);
+      fetchReports(session.user.email, period, dateStr, selectedBranchId);
     };
     getSession();
   }, []);
@@ -175,15 +185,27 @@ export default function OwnerReports() {
     let newDate = dateStr;
     if (newPeriod === 'monthly') newDate = new Date().toISOString().slice(0, 7);
     if (newPeriod === 'daily') newDate = new Date().toLocaleDateString('en-CA');
+    if (newPeriod === 'weekly') {
+      const now = new Date();
+      const onejan = new Date(now.getFullYear(), 0, 1);
+      const week = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+      newDate = `${now.getFullYear()}-W${week.toString().padStart(2, '0')}`;
+    }
 
     setPeriod(newPeriod);
     setDateStr(newDate);
-    fetchReports(userEmail, newPeriod, newDate);
+    fetchReports(userEmail, newPeriod, newDate, selectedBranchId);
   };
 
   const handleDateChange = (e) => {
     setDateStr(e.target.value);
-    fetchReports(userEmail, period, e.target.value);
+    fetchReports(userEmail, period, e.target.value, selectedBranchId);
+  };
+
+  const handleBranchChange = (e) => {
+    const nextBranch = e.target.value;
+    setSelectedBranchId(nextBranch);
+    fetchReports(userEmail, period, dateStr, nextBranch);
   };
 
   const handleLogout = async () => {
@@ -191,13 +213,18 @@ export default function OwnerReports() {
     window.location.href = '/login';
   };
 
+  const selectedBranchLabel = useMemo(() => {
+    if (selectedBranchId === 'all') return 'Semua Cabang';
+    return tenants.find(t => t.id === selectedBranchId)?.name || 'Cabang';
+  }, [tenants, selectedBranchId]);
+
   const handleExportCSV = () => {
-    let csv = `Laporan Laba Rugi (P&L) NexaFlow\nManager: ${userEmail}\nPeriode: ${period} (${dateStr})\nTanggal Unduh: ${new Date().toLocaleDateString('id-ID')}\n\n`;
+    let csv = `\uFEFFLaporan Laba Rugi (P&L) NexaFlow\nManager: ${userEmail}\nCabang: ${selectedBranchLabel}\nPeriode: ${period} (${dateStr})\nTanggal Unduh: ${new Date().toLocaleDateString('id-ID')}\n\n`;
 
     csv += `RINGKASAN KEUANGAN\n`;
     csv += `Pendapatan Kotor,"${plData.revenue}"\n`;
     csv += `Pengeluaran Harian,"${plData.dailyExpense}"\n`;
-    csv += `Biaya Bulanan,"${plData.monthlyExpense}"\n`;
+    csv += `Biaya Bulanan & Operasional,"${plData.monthlyExpense}"\n`;
     csv += `Gaji Karyawan (Total),"${plData.salaryExpense}"\n`;
     if (period === 'monthly' && plData.pendingBaseSalary > 0) {
       csv += `Gaji Aktual Tercatat,"${plData.actualSalaryTx}"\n`;
@@ -216,7 +243,8 @@ export default function OwnerReports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Laporan_PL_${dateStr}.csv`;
+    const slugBranch = selectedBranchLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    a.download = `Laporan_PL_${slugBranch}_${dateStr}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -297,12 +325,26 @@ export default function OwnerReports() {
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
 
           {/* HEADER */}
-          <header className="no-print h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
+          <header className="no-print min-h-20 py-3 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 px-6 lg:px-10 z-40 transition-colors">
             <div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Laporan Laba Rugi</h1>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Analisis pendapatan dan pengeluaran bisnis Anda</p>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+                Analisis pendapatan dan pengeluaran · {selectedBranchLabel}
+              </p>
             </div>
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
+
+              {/* Poin 3: Filter Cabang di Laporan Global */}
+              <select
+                value={selectedBranchId}
+                onChange={handleBranchChange}
+                className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none max-w-[200px]"
+              >
+                <option value="all">Semua Cabang</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
 
               <div className="flex items-center gap-2">
                 {period === 'daily' && (
@@ -340,7 +382,7 @@ export default function OwnerReports() {
             {/* PRINT HEADER (Only visible on print) */}
             <div className="hidden print-only mb-8 text-center border-b-2 border-black pb-4">
               <h1 className="text-2xl font-black text-black">LAPORAN LABA RUGI</h1>
-              <p className="text-sm font-bold text-black mt-1">Periode: {period.toUpperCase()} ({dateStr})</p>
+              <p className="text-sm font-bold text-black mt-1">Cabang: {selectedBranchLabel} · Periode: {period.toUpperCase()} ({dateStr})</p>
               <p className="text-xs text-black mt-1">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
             </div>
 
@@ -404,7 +446,7 @@ export default function OwnerReports() {
                     <Icons.Building />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-500">Biaya Wajib Bulanan</p>
+                    <p className="text-sm font-bold text-slate-500">Biaya Wajib Bulanan & Lainnya</p>
                     <p className="text-lg font-black text-slate-900 dark:text-white owner-num mt-1">{formatRp(plData.monthlyExpense)}</p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -13,31 +13,39 @@ const Icons = {
   WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
   Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   Warning: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  Box: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
 };
 
 export default function OwnerFinance() {
   const [userEmail, setUserEmail] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('expenses_daily');
-  
+
   const [tenants, setTenants] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [expenseModal, setExpenseModal] = useState(false);
   const [formExpense, setFormExpense] = useState({ tenant_id: '', category: 'Bulanan', description: '', amount: '' });
-  
+
   const [employeeModal, setEmployeeModal] = useState({ open: false, data: null });
   const [payrollModal, setPayrollModal] = useState({ open: false, employee: null, type: 'Gaji' });
 
-  const [formEmployee, setFormEmployee] = useState({ 
-    id: null, tenant_id: '', name: '', role: 'Kasir', base_salary: '', 
-    wa_number: '', address: '', bank_name: '', bank_account: '' 
+  const [formEmployee, setFormEmployee] = useState({
+    id: null, tenant_id: '', name: '', role: 'Kasir', base_salary: '',
+    wa_number: '', address: '', bank_name: '', bank_account: ''
   });
   const [formPayroll, setFormPayroll] = useState({ amount: '', notes: '' });
-  
+
+  // Poin 5: State Kelola Stok Menu Khusus Owner
+  const [stockBranchFilter, setStockBranchFilter] = useState('all');
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockModal, setStockModal] = useState({ open: false, menu: null, mode: 'add', qty: '' });
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
+
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
@@ -60,9 +68,10 @@ export default function OwnerFinance() {
         setExpenses(data.expenses || []);
         setEmployees(data.employees || []);
         setTransactions(data.transactions || []);
+        setMenus(data.menus || []);
         if (data.tenants.length > 0) {
-          setFormEmployee(prev => ({ ...prev, tenant_id: data.tenants[0].id }));
-          setFormExpense(prev => ({ ...prev, tenant_id: data.tenants[0].id }));
+          setFormEmployee(prev => ({ ...prev, tenant_id: prev.tenant_id || data.tenants[0].id }));
+          setFormExpense(prev => ({ ...prev, tenant_id: prev.tenant_id || data.tenants[0].id }));
         }
       }
     } catch (err) {
@@ -92,14 +101,14 @@ export default function OwnerFinance() {
     const res = await fetch('/api/owner/finance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action: 'add_expense', 
-        manager_email: userEmail, 
-        payload: { 
-          ...formExpense, 
-          quantity: 1, 
-          unit_price: Number(formExpense.amount) 
-        } 
+      body: JSON.stringify({
+        action: 'add_expense',
+        manager_email: userEmail,
+        payload: {
+          ...formExpense,
+          quantity: 1,
+          unit_price: Number(formExpense.amount)
+        }
       })
     });
     const data = await res.json();
@@ -115,14 +124,14 @@ export default function OwnerFinance() {
     e.preventDefault();
     const isEdit = !!formEmployee.id;
     const action = isEdit ? 'edit_employee' : 'add_employee';
-    
+
     const res = await fetch('/api/owner/finance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action, 
-        manager_email: userEmail, 
-        payload: { ...formEmployee, base_salary: Number(formEmployee.base_salary) } 
+      body: JSON.stringify({
+        action,
+        manager_email: userEmail,
+        payload: { ...formEmployee, base_salary: Number(formEmployee.base_salary) }
       })
     });
     const data = await res.json();
@@ -175,6 +184,71 @@ export default function OwnerFinance() {
     } else showToast(data.error, 'error');
   };
 
+  const handleQuickAddStock = async (menu, addQty) => {
+    const nextStock = Math.max(0, Number(menu.stock || 0) + Number(addQty));
+    try {
+      const res = await fetch('/api/owner/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_menu_stock',
+          manager_email: userEmail,
+          payload: {
+            tenant_id: menu.tenant_id,
+            menu_id: menu.id,
+            new_stock: nextStock
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`${menu.name}: +${addQty} pcs (Total: ${nextStock} pcs)`);
+        fetchData(userEmail);
+      } else {
+        showToast(data.error || 'Gagal memperbarui stok', 'error');
+      }
+    } catch (err) {
+      showToast('Gagal menghubungi server', 'error');
+    }
+  };
+
+  const handleSaveStockModal = async (e) => {
+    e.preventDefault();
+    if (!stockModal.menu) return;
+    const inputNum = Number(stockModal.qty || 0);
+    const currentStock = Number(stockModal.menu.stock || 0);
+    const nextStock = stockModal.mode === 'add' ? Math.max(0, currentStock + inputNum) : Math.max(0, inputNum);
+
+    setIsUpdatingStock(true);
+    try {
+      const res = await fetch('/api/owner/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_menu_stock',
+          manager_email: userEmail,
+          payload: {
+            tenant_id: stockModal.menu.tenant_id,
+            menu_id: stockModal.menu.id,
+            new_stock: nextStock
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        setStockModal({ open: false, menu: null, mode: 'add', qty: '' });
+        fetchData(userEmail);
+      } else {
+        showToast(data.error || 'Gagal memperbarui stok', 'error');
+      }
+    } catch (err) {
+      showToast('Gagal menghubungi server', 'error');
+    } finally {
+      setIsUpdatingStock(false);
+    }
+  };
+
   const handleDelete = (type, id) => {
     setConfirmModal({
       open: true,
@@ -207,14 +281,14 @@ export default function OwnerFinance() {
 
   const handleSendSalaryWA = (emp) => {
     if (!emp.wa_number) return showToast('Nomor WA karyawan belum diisi', 'error');
-    
+
     const empTrans = transactions.filter(t => t.employee_id === emp.id);
     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
     const gajiBersih = Number(emp.base_salary) + totalBonus - totalKasbon;
 
     const tenantName = tenants.find(t => t.id === emp.tenant_id)?.name || 'Kafe';
-    
+
     let msg = `Halo *${emp.name}*,\n\nBerikut rincian gaji Anda di *${tenantName}*:\n`;
     msg += `----------------------------\n`;
     msg += `Gaji Pokok   : Rp ${Number(emp.base_salary).toLocaleString('id-ID')}\n`;
@@ -222,21 +296,21 @@ export default function OwnerFinance() {
     msg += `Kasbon       : - Rp ${totalKasbon.toLocaleString('id-ID')}\n`;
     msg += `----------------------------\n`;
     msg += `*Total Diterima: Rp ${gajiBersih.toLocaleString('id-ID')}*\n\n`;
-    
+
     if (emp.bank_name && emp.bank_account) {
       msg += `Silakan transfer ke rekening:\n`;
       msg += `Bank: *${emp.bank_name}*\n`;
       msg += `No. Rek: *${emp.bank_account}*\n`;
       msg += `A/N: ${emp.name}\n\n`;
     }
-    
+
     msg += `Terima kasih atas kerja kerasnya!`;
 
     const phone = emp.wa_number.replace(/^0/, '62').replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+  const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -246,14 +320,27 @@ export default function OwnerFinance() {
   };
 
   const expensesDaily = expenses.filter(ex => ex.category === 'Harian');
-  const expensesMonthly = expenses.filter(ex => ex.category === 'Bulanan' || ex.category === 'Operasional');
-  
+  const expensesMonthly = expenses.filter(ex => ex.category !== 'Harian');
+
   const totalGajiBulanIni = transactions
     .filter(t => t.type === 'Gaji')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const totalPengeluaranBulanan = expensesMonthly.reduce((sum, ex) => sum + Number(ex.amount), 0) + totalGajiBulanIni;
   const totalPengeluaranHarian = expensesDaily.reduce((sum, ex) => sum + Number(ex.amount), 0);
+
+  const lowStockCount = useMemo(
+    () => menus.filter(m => Number(m.stock) <= 10).length,
+    [menus]
+  );
+
+  const filteredMenus = useMemo(() => {
+    return menus.filter(m => {
+      const matchBranch = stockBranchFilter === 'all' || m.tenant_id === stockBranchFilter;
+      const matchSearch = !stockSearch.trim() || m.name.toLowerCase().includes(stockSearch.trim().toLowerCase());
+      return matchBranch && matchSearch;
+    });
+  }, [menus, stockBranchFilter, stockSearch]);
 
   // Logic untuk Cek Gaji Bulan Ini
   const currentMonthStr = new Date().toISOString().slice(0, 7);
@@ -279,9 +366,9 @@ export default function OwnerFinance() {
         .owner-row:hover { background-color: rgba(17, 28, 51, 0.04); }
         .dark .owner-row:hover { background-color: rgba(17, 28, 51, 0.55); }
       `}</style>
-      
+
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0"></div>
-      
+
       <div className="flex h-screen relative z-10">
         <aside className="group w-[80px] hover:w-64 transition-all duration-300 ease-in-out bg-white/70 dark:bg-[#060911]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 h-full shrink-0">
           <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800/80 overflow-hidden shrink-0">
@@ -324,8 +411,8 @@ export default function OwnerFinance() {
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
           <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Manajemen Keuangan</h1>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Pisahkan biaya operasional harian dan biaya wajib bulanan</p>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Manajemen Keuangan & Stok</h1>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Kelola biaya operasional, gaji karyawan, dan stok menu cabang</p>
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -335,11 +422,20 @@ export default function OwnerFinance() {
           </header>
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
-            
+
             <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
               <button onClick={() => setActiveTab('expenses_daily')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_daily' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Pengeluaran Harian (Kasir)</button>
               <button onClick={() => setActiveTab('expenses_monthly')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_monthly' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Biaya Bulanan (Fixed Cost)</button>
               <button onClick={() => setActiveTab('employees')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Data Karyawan & Gaji</button>
+              <button onClick={() => setActiveTab('stocks')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'stocks' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>
+                <Icons.Box />
+                <span>Kelola Stok Menu (Owner)</span>
+                {lowStockCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-300 text-xs font-black">
+                    {lowStockCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {activeTab === 'expenses_daily' && (
@@ -351,7 +447,7 @@ export default function OwnerFinance() {
                     <p className="text-sm text-sky-700 dark:text-sky-400 mt-1">Data di bawah ini adalah pengeluaran harian yang diinput oleh <b>Kasir</b> (seperti bahan baku, gas, dll). Owner hanya dapat memantau dan menghapus jika ada kecurangan.</p>
                   </div>
                 </div>
-                
+
                 <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden mb-6">
                   <div className="p-6 border-b border-slate-200 dark:border-slate-800/60 flex justify-between items-center">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Riwayat Pengeluaran Harian</h2>
@@ -421,7 +517,7 @@ export default function OwnerFinance() {
                     <h3 className="text-2xl font-black text-sky-500 owner-num">{formatRp(totalGajiBulanIni)}</h3>
                   </div>
                 </div>
-                
+
                 <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -466,22 +562,20 @@ export default function OwnerFinance() {
                     Tambah Karyawan
                   </button>
                 </div>
-                
+
                 {/* MODEL 2: HORIZONTAL CARD */}
                 <div className="space-y-4">
                   {employees.map(emp => {
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
-                    
-                    // Logic Pengingat Gaji
+
                     const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
                     const showSalaryReminder = isEndOfMonth && !hasBeenPaidThisMonth;
 
                     return (
                       <div key={emp.id} className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 relative overflow-hidden">
-                        
-                        {/* Indikator Belum Digaji */}
+
                         {showSalaryReminder && (
                           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-rose-400"></div>
                         )}
@@ -492,39 +586,39 @@ export default function OwnerFinance() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                               <p className="font-bold text-white text-base truncate">{emp.name}</p>
-                               {showSalaryReminder && (
-                                 <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black px-2 py-0.5 rounded shrink-0">Belum Digaji</span>
-                               )}
+                              <p className="font-bold text-slate-900 dark:text-white text-base truncate">{emp.name}</p>
+                              {showSalaryReminder && (
+                                <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black px-2 py-0.5 rounded shrink-0">Belum Digaji</span>
+                              )}
                             </div>
                             <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mt-0.5">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex-1 w-full grid grid-cols-3 gap-2 bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800/50 rounded-xl p-3">
                           <div>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Gaji Pokok</p>
-                            <p className="font-black text-white owner-num text-sm">{formatRp(emp.base_salary)}</p>
+                            <p className="font-black text-slate-900 dark:text-white owner-num text-sm">{formatRp(emp.base_salary)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Kasbon</p>
-                            <p className={`font-bold owner-num text-sm ${totalKasbon > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
+                            <p className={`font-bold owner-num text-sm ${totalKasbon > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-600'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Bonus</p>
-                            <p className={`font-bold owner-num text-sm ${totalBonus > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
+                            <p className={`font-bold owner-num text-sm ${totalBonus > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-600'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end mt-4 md:mt-0">
                           <button onClick={() => handleOpenEditEmployee(emp)} className="owner-icon-btn hidden md:flex" title="Edit"><Icons.Edit /></button>
                           <button onClick={() => handleDelete('employee', emp.id)} className="owner-icon-btn owner-icon-btn-danger hidden md:flex" title="Hapus"><Icons.Trash /></button>
-                          
-                          <div className="w-px h-8 bg-slate-800 mx-1 hidden md:block"></div>
 
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="flex-1 md:flex-none bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-colors">Gaji</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="flex-1 md:flex-none bg-amber-500/10 text-amber-400 border border-amber-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-colors">Kasbon</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">Bonus</button>
+                          <div className="w-px h-8 bg-slate-300 dark:bg-slate-800 mx-1 hidden md:block"></div>
+
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="flex-1 md:flex-none bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-colors">Gaji</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="flex-1 md:flex-none bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-colors">Kasbon</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">Bonus</button>
                           <button onClick={() => handleSendSalaryWA(emp)} className="flex-1 md:flex-none bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#25D366]/20 flex items-center gap-1 justify-center transition-colors">
                             <Icons.WhatsApp /> WA
                           </button>
@@ -536,9 +630,193 @@ export default function OwnerFinance() {
                 </div>
               </div>
             )}
+
+            {/* POIN 5: TAB KELOLA STOK MENU KHUSUS OWNER */}
+            {activeTab === 'stocks' && (
+              <div className="animate-in fade-in duration-300">
+                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3">
+                  <div className="text-amber-500 mt-0.5"><Icons.Warning /></div>
+                  <div>
+                    <h4 className="font-bold text-amber-800 dark:text-amber-300">Kontrol Stok Khusus Owner (Anti-Manipulasi Kasir)</h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      Penambahan stok porsi harian dilakukan oleh Owner dari halaman ini. Jika stok diubah menjadi di atas 0, status menu otomatis berubah menjadi <b>Available</b> di layar QR pelanggan dan Kasir.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={stockBranchFilter}
+                      onChange={(e) => setStockBranchFilter(e.target.value)}
+                      className="bg-white dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none"
+                    >
+                      <option value="all">Semua Cabang ({tenants.length})</option>
+                      {tenants.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="text"
+                      value={stockSearch}
+                      onChange={(e) => setStockSearch(e.target.value)}
+                      placeholder="Cari nama menu..."
+                      className="bg-white dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none"
+                    />
+                  </div>
+                  <p className="text-xs font-bold text-slate-500">
+                    Menampilkan {filteredMenus.length} menu
+                  </p>
+                </div>
+
+                <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800/80">
+                        <tr className="text-xs uppercase tracking-wider text-slate-500 font-black">
+                          <th className="p-4 pl-6">Nama Menu</th>
+                          <th className="p-4">Cabang</th>
+                          <th className="p-4">Kategori</th>
+                          <th className="p-4">Harga</th>
+                          <th className="p-4 text-center">Sisa Stok</th>
+                          <th className="p-4 pr-6 text-right">Tambah / Atur Stok</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        {filteredMenus.map(m => {
+                          const branchName = tenants.find(t => t.id === m.tenant_id)?.name || 'Cabang';
+                          const stockNum = Number(m.stock || 0);
+                          return (
+                            <tr key={m.id} className="owner-row">
+                              <td className="p-4 pl-6">
+                                <p className="font-bold text-sm text-slate-900 dark:text-white">{m.name}</p>
+                                <p className="text-[11px] text-slate-500">{m.status === 'available' && stockNum > 0 ? 'Tersedia di QR' : 'Habis (Sold Out)'}</p>
+                              </td>
+                              <td className="p-4 text-sm font-bold text-slate-700 dark:text-slate-300">{branchName}</td>
+                              <td className="p-4 text-xs font-bold text-slate-500 uppercase">{m.category}</td>
+                              <td className="p-4 text-sm font-black text-slate-900 dark:text-white owner-num">{formatRp(m.price)}</td>
+                              <td className="p-4 text-center">
+                                <span className={`owner-pill ${
+                                  stockNum <= 3
+                                    ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                                    : stockNum <= 10
+                                    ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                                }`}>
+                                  {stockNum} pcs
+                                </span>
+                              </td>
+                              <td className="p-4 pr-6 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickAddStock(m, 10)}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-black transition-colors"
+                                  >
+                                    +10
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickAddStock(m, 25)}
+                                    className="px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-black transition-colors"
+                                  >
+                                    +25
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setStockModal({ open: true, menu: m, mode: 'add', qty: '20' })}
+                                    className="px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1E4E8C] text-white text-xs font-bold transition-colors"
+                                  >
+                                    Atur Manual
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredMenus.length === 0 && (
+                          <tr>
+                            <td colSpan="6" className="p-10 text-center text-slate-500 font-bold text-sm">
+                              Tidak ada menu yang cocok dengan filter.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
+
+      {/* MODAL ATUR STOK MANUAL (POIN 5) */}
+      {stockModal.open && stockModal.menu && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white">Kelola Stok Menu</h3>
+            <p className="text-sm font-bold text-sky-500 mt-1">
+              {stockModal.menu.name} · Stok Saat Ini: {stockModal.menu.stock} pcs
+            </p>
+
+            <form onSubmit={handleSaveStockModal} className="space-y-4 mt-6">
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setStockModal(prev => ({ ...prev, mode: 'add' }))}
+                  className={`py-2 rounded-lg text-xs font-black transition-all ${
+                    stockModal.mode === 'add' ? 'bg-[#2563EB] text-white' : 'text-slate-500'
+                  }`}
+                >
+                  + Tambah Stok
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStockModal(prev => ({ ...prev, mode: 'set', qty: String(stockModal.menu.stock || 0) }))}
+                  className={`py-2 rounded-lg text-xs font-black transition-all ${
+                    stockModal.mode === 'set' ? 'bg-[#2563EB] text-white' : 'text-slate-500'
+                  }`}
+                >
+                  Setel Angka Pasti
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  {stockModal.mode === 'add' ? 'Jumlah Porsi yang Ditambahkan' : 'Total Stok Baru (Porsi)'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={stockModal.qty}
+                  onChange={(e) => setStockModal(prev => ({ ...prev, qty: e.target.value }))}
+                  className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setStockModal({ open: false, menu: null, mode: 'add', qty: '' })}
+                  className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingStock}
+                  className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)] disabled:opacity-50"
+                >
+                  {isUpdatingStock ? 'Menyimpan...' : 'Simpan Stok'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL EXPENSE */}
       {expenseModal && (
@@ -635,7 +913,7 @@ export default function OwnerFinance() {
           <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                payrollModal.type === 'Gaji' ? 'bg-blue-500/10 text-blue-500' : 
+                payrollModal.type === 'Gaji' ? 'bg-blue-500/10 text-blue-500' :
                 payrollModal.type === 'Kasbon' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
               }`}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -645,7 +923,7 @@ export default function OwnerFinance() {
                 <p className="text-sm font-bold text-slate-500">{payrollModal.employee.name}</p>
               </div>
             </div>
-            
+
             <form onSubmit={handlePayroll} className="space-y-4 mt-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nominal (Rp)</label>

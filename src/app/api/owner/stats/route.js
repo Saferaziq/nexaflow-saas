@@ -17,7 +17,7 @@ export async function GET(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    let query = supabaseAdmin.from('tenants').select('id, name, is_active');
+    let query = supabaseAdmin.from('tenants').select('*');
     if (managerEmail) query = query.eq('manager_email', managerEmail);
 
     const { data: tenants, error: tenantErr } = await query;
@@ -35,11 +35,14 @@ export async function GET(request) {
         totalExpense: 0,
         operationalExpense: 0,
         salaryExpense: 0,
+        actualSalaryTx: 0,
+        pendingBaseSalary: 0,
         netProfit: 0,
         expenseCategories: {},
         topMenus: [],
         lowStockMenus: [],
         unpaidInvoices: [],
+        savedAiConfig: null,
         aiInsights: {
           avgBasket: 0,
           repeatRate: 0,
@@ -58,6 +61,14 @@ export async function GET(request) {
     tenants.forEach((t) => {
       tenantNameMap[t.id] = t.name;
     });
+
+    // Ambil konfigurasi AI yang tersimpan di database (lintas perangkat)
+    const tenantWithAi = tenants.find((t) => t.ai_api_key || t.ai_provider || t.ai_model) || tenants[0];
+    const savedAiConfig = {
+      provider: tenantWithAi?.ai_provider || 'gemini',
+      model: tenantWithAi?.ai_model || 'gemini-2.5-flash',
+      apiKey: tenantWithAi?.ai_api_key || '',
+    };
 
     const isFilteredBranch = Boolean(tenantIdParam && tenantIdParam !== 'all');
     const targetTenantIds = isFilteredBranch
@@ -121,17 +132,17 @@ export async function GET(request) {
         .lte('expense_date', endDate.toISOString()),
       supabaseAdmin
         .from('employee_transactions')
-        .select('amount, tenant_id')
+        .select('id, employee_id, type, amount, tenant_id, transaction_date')
         .in('tenant_id', safeTargetIds)
         .gte('transaction_date', startDate.toISOString())
         .lte('transaction_date', endDate.toISOString()),
       supabaseAdmin
         .from('employees')
-        .select('id, tenant_id')
+        .select('id, tenant_id, name, base_salary, is_active')
         .in('tenant_id', allTenantIds),
       supabaseAdmin
         .from('menus')
-        .select('id, tenant_id, name, category, price, discount_price, stock, status, is_featured')
+        .select('*')
         .in('tenant_id', safeTargetIds)
         .order('stock', { ascending: true }),
       supabaseAdmin
@@ -153,7 +164,9 @@ export async function GET(request) {
     const completedAllOrders = rawPeriodOrders.filter((o) => o.status === 'completed');
     const expenses = expenseRes.data || [];
     const empTrans = empTransRes.data || [];
-    const employees = empRes.data || [];
+    const allEmployees = empRes.data || [];
+    const targetEmployees = allEmployees.filter((e) => targetTenantIds.includes(e.tenant_id));
+
     const allMenus = (allMenusRes.data || []).map((m) => ({
       ...m,
       branch_name: tenantNameMap[m.tenant_id] || 'Cabang',
@@ -170,7 +183,7 @@ export async function GET(request) {
       branchStats[id] = {
         revenue: 0,
         transactions: 0,
-        employeeCount: employees.filter((e) => e.tenant_id === id).length,
+        employeeCount: allEmployees.filter((e) => e.tenant_id === id).length,
       };
     });
 
@@ -188,7 +201,20 @@ export async function GET(request) {
 
     const totalRevenue = targetOrders.reduce((sum, order) => sum + Number(order.total_price), 0);
     const operationalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-    const salaryExpense = empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
+    const actualSalaryTx = empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
+
+    // Poin 1: Sinkronisasi Perhitungan Gaji Bulanan Opsi 2 (Anti Double-Counting)
+    let pendingBaseSalary = 0;
+    if (period === 'monthly') {
+      const paidEmployeeIds = new Set(
+        empTrans.filter((tx) => tx.type === 'Gaji').map((tx) => tx.employee_id)
+      );
+      pendingBaseSalary = targetEmployees
+        .filter((emp) => emp.is_active && !paidEmployeeIds.has(emp.id))
+        .reduce((sum, emp) => sum + Number(emp.base_salary || 0), 0);
+    }
+
+    const salaryExpense = actualSalaryTx + pendingBaseSalary;
     const totalExpense = operationalExpense + salaryExpense;
     const netProfit = totalRevenue - totalExpense;
 
@@ -257,7 +283,6 @@ export async function GET(request) {
     const recent30Orders = recent30OrdersRes.data || [];
     const completed30 = recent30Orders.filter((o) => o.status === 'completed');
 
-    // 1. Rata-rata nilai struk (Basket Size)
     const avgBasket =
       targetOrders.length > 0
         ? Math.round(totalRevenue / targetOrders.length)
@@ -265,7 +290,6 @@ export async function GET(request) {
         ? Math.round(completed30.reduce((s, o) => s + Number(o.total_price), 0) / completed30.length)
         : 0;
 
-    // 2. Repeat Order Rate berdasarkan device_id (30 hari terakhir)
     const deviceCountMap = {};
     completed30.forEach((o) => {
       if (o.device_id && String(o.device_id).trim() !== '') {
@@ -276,7 +300,6 @@ export async function GET(request) {
     const repeatDevices = Object.values(deviceCountMap).filter((c) => c > 1).length;
     const repeatRate = uniqueDevices > 0 ? Number(((repeatDevices / uniqueDevices) * 100).toFixed(1)) : 0;
 
-    // 3. KDS Speed Monitor (created_at -> updated_at pada pesanan completed)
     let kdsTotalMin = 0;
     let kdsCount = 0;
     let maxKdsMin = 0;
@@ -298,7 +321,6 @@ export async function GET(request) {
     });
     const avgKdsMinutes = kdsCount > 0 ? Number((kdsTotalMin / kdsCount).toFixed(1)) : 8.5;
 
-    // 4. AI Fraud & Void Watchdog (Pesanan Cancelled)
     const cancelledOrders = recent30Orders.filter(
       (o) => o.status === 'cancelled' || o.payment_status === 'CANCELLED'
     );
@@ -326,7 +348,6 @@ export async function GET(request) {
     });
     const fraudAlerts = Object.values(fraudByBranch).sort((a, b) => b.totalAmount - a.totalAmount);
 
-    // 5. Smart Basket Analysis (Pasangan Menu dari orders.items 30 hari terakhir)
     const pairCountMap = {};
     const singleMenuPriceMap = {};
     allMenus.forEach((m) => {
@@ -370,7 +391,6 @@ export async function GET(request) {
       Math.round((normalBundlePrice * 0.85) / 1000) * 1000
     );
 
-    // 6. Kandidat Menu untuk Promo Jam Sepi & Restock
     const promoCandidate =
       [...allMenus]
         .filter((m) => m.status === 'available' && Number(m.stock) >= 10 && !m.discount_price)
@@ -397,7 +417,13 @@ export async function GET(request) {
       ? Number(restockCandidate.price || 25000) * 15
       : 375000;
 
-    // 7. Susun 3 Hasil Riset Mendalam (Diagnostics 01 - 03)
+    // Poin 6: Format jam soldout dari menus.updated_at jika tersedia
+    let soldoutTimeInfo = '';
+    if (restockCandidate && restockCandidate.updated_at) {
+      const dt = new Date(restockCandidate.updated_at);
+      soldoutTimeInfo = ` (tercatat pada pukul ${String(dt.getHours()).padStart(2, '0')}.${String(dt.getMinutes()).padStart(2, '0')} WIB)`;
+    }
+
     const diagnostics = [
       {
         code: '01',
@@ -414,7 +440,7 @@ export async function GET(request) {
           ? `Detektor Potensi Omzet Hilang (~${formatRpServer(estimatedLostRev)}/Hari)`
           : 'Stok Menu Utama Terpantau Stabil',
         description: restockCandidate
-          ? `Menu ${restockCandidate.name} (${restockCandidate.branch_name}) berada pada stok ${restockCandidate.stock} pcs (status: ${restockCandidate.status}). Jika habis sebelum jam ramai malam, potensi kehilangan sekitar 15 porsi penjualan.`
+          ? `Menu ${restockCandidate.name} (${restockCandidate.branch_name}) berada pada stok ${restockCandidate.stock} pcs dengan status "${restockCandidate.status}"${soldoutTimeInfo}. Jika habis sebelum jam ramai malam, potensi kehilangan sekitar 15 porsi penjualan.`
           : 'Seluruh menu utama masih memiliki stok di atas batas aman 10 porsi.',
       },
       {
@@ -428,7 +454,6 @@ export async function GET(request) {
       },
     ];
 
-    // 8. Susun 3 Rencana Aksi 1-Klik (Action Plan)
     const actionPlans = [];
     if (promoCandidate) {
       actionPlans.push({
@@ -495,11 +520,14 @@ export async function GET(request) {
       totalExpense,
       operationalExpense,
       salaryExpense,
+      actualSalaryTx,
+      pendingBaseSalary,
       netProfit,
       expenseCategories,
       topMenus,
       lowStockMenus,
       unpaidInvoices,
+      savedAiConfig,
       aiInsights: {
         avgBasket,
         repeatRate,
@@ -528,6 +556,28 @@ export async function POST(request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
+
+    // 0. SIMPAN KONFIGURASI AI KE DATABASE LINTAS PERANGKAT (POIN 4)
+    if (action_type === 'save_ai_config') {
+      const { provider, model, apiKey } = body;
+      if (!manager_email) {
+        return NextResponse.json({ error: 'Email Owner tidak ditemukan' }, { status: 400 });
+      }
+      const { error } = await supabaseAdmin
+        .from('tenants')
+        .update({
+          ai_provider: provider || 'gemini',
+          ai_model: model || 'gemini-2.5-flash',
+          ai_api_key: apiKey || null,
+        })
+        .eq('manager_email', manager_email);
+
+      if (error) throw error;
+      return NextResponse.json({
+        success: true,
+        message: `Konfigurasi AI (${(provider || 'gemini').toUpperCase()} · ${model}) berhasil disimpan ke database lintas perangkat!`,
+      });
+    }
 
     // 1. EKSEKUSI 1-KLIK: AKTIFKAN PROMO HARGA CORET
     if (action_type === 'promo_discount') {
@@ -628,21 +678,37 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Pertanyaan tidak boleh kosong' }, { status: 400 });
       }
 
-      const provider = ai_config?.provider || 'gemini';
-      const model = ai_config?.model || 'gemini-2.5-flash';
+      // Cari konfigurasi AI dari database jika di request belum ada
+      let dbProvider = '';
+      let dbModel = '';
+      let dbApiKey = '';
+      if (manager_email) {
+        const { data: tList } = await supabaseAdmin
+          .from('tenants')
+          .select('ai_provider, ai_model, ai_api_key')
+          .eq('manager_email', manager_email)
+          .limit(1);
+        if (tList && tList[0]) {
+          dbProvider = tList[0].ai_provider || '';
+          dbModel = tList[0].ai_model || '';
+          dbApiKey = tList[0].ai_api_key || '';
+        }
+      }
+
+      const provider = ai_config?.provider || dbProvider || 'gemini';
+      const model = ai_config?.model || dbModel || 'gemini-2.5-flash';
       const apiKey =
         ai_config?.apiKey?.trim() ||
+        dbApiKey?.trim() ||
         process.env.GEMINI_API_KEY ||
         process.env.DEEPSEEK_API_KEY ||
         process.env.OPENAI_API_KEY ||
         '';
 
-      // Ringkasan JSON super ringkas agar biaya API < Rp 15.000/bulan
       const compactSummary = context_summary || { manager: manager_email, info: 'Ringkasan operasional NexaFlow' };
       const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran multi-cabang di Indonesia. Jawab dalam Bahasa Indonesia yang ringkas, tajam, berbasis angka dari JSON berikut, dan berikan saran tindakan nyata (maksimal 3-4 kalimat). Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
 
       if (!apiKey) {
-        // Fallback cerdas berbasis data jika Owner belum menempelkan API Key di Pengaturan
         const fallbackRev = formatRpServer(compactSummary?.totalRevenue || 0);
         const fallbackNet = formatRpServer(compactSummary?.netProfit || 0);
         const topMenuName = compactSummary?.topMenus?.[0]?.name || 'Menu Utama';
@@ -678,7 +744,6 @@ export async function POST(request) {
           'AI selesai menganalisis namun tidak mengembalikan teks.';
         return NextResponse.json({ answer: replyText });
       } else {
-        // OpenAI-Compatible Endpoint (DeepSeek, Groq, OpenAI, OpenRouter)
         let endpoint = 'https://api.openai.com/v1/chat/completions';
         if (provider === 'deepseek') endpoint = 'https://api.deepseek.com/chat/completions';
         if (provider === 'groq') endpoint = 'https://api.groq.com/openai/v1/chat/completions';
