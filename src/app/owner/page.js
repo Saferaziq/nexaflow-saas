@@ -40,6 +40,7 @@ export default function OwnerDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [period, setPeriod] = useState('daily');
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
 
   const [dateDaily, setDateDaily] = useState(new Date().toLocaleDateString('en-CA'));
   const [dateWeekly, setDateWeekly] = useState(() => {
@@ -60,8 +61,16 @@ export default function OwnerDashboard() {
   const [unpaidInvoices, setUnpaidInvoices] = useState([]);
 
   const [stats, setStats] = useState({
-    totalRevenue: 0, totalTransactions: 0, activeBranches: 0,
-    chartData: [], labels: [], branchStats: {}, totalExpense: 0, netProfit: 0,
+    totalRevenue: 0,
+    totalTransactions: 0,
+    activeBranches: 0,
+    chartData: [],
+    labels: [],
+    branchStats: {},
+    totalExpense: 0,
+    operationalExpense: 0,
+    salaryExpense: 0,
+    netProfit: 0,
     trends: { revenue: null, expense: null, netProfit: null }
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -147,14 +156,15 @@ export default function OwnerDashboard() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  const fetchAllData = async (email, currentPeriod, currentDateStr) => {
+  const fetchAllData = async (email, currentPeriod, currentDateStr, branchId = selectedBranchId) => {
     try {
       const prevDateStr = getPrevPeriodStr(currentPeriod, currentDateStr);
+      const branchQuery = branchId && branchId !== 'all' ? `&tenant_id=${encodeURIComponent(branchId)}` : '';
       const [tenantsRes, statsRes, actRes, prevRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${currentDateStr}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${currentDateStr}${branchQuery}`),
         fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${prevDateStr}`)
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${prevDateStr}${branchQuery}`)
       ]);
 
       const tenantList = tenantsRes.data || [];
@@ -167,26 +177,31 @@ export default function OwnerDashboard() {
 
       if (statsRes.ok) {
         const statData = await statsRes.json();
-        
-        // Ambil data Karyawan & Transaksi untuk perhitungan Total Pengeluaran
+
         const branchIds = tenantList.map(b => b.id);
+        const targetBranchIds = branchId && branchId !== 'all'
+          ? branchIds.filter(id => id === branchId)
+          : branchIds;
         const range = getPeriodRange(currentPeriod, currentDateStr);
-        
+
         let empList = [];
         let txList = [];
 
-        if (branchIds.length > 0) {
-           const [empRes, txRes] = await Promise.all([
-              supabase.from('employees').select('id, tenant_id, name, role, base_salary, wa_number, is_active, created_at').in('tenant_id', branchIds),
-              supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', branchIds).gte('transaction_date', range.start).lte('transaction_date', range.end)
-           ]);
-           empList = empRes.data || [];
-           txList = txRes.data || [];
-           setEmployees(empList);
-           setEmployeeTransactions(txList);
+        if (targetBranchIds.length > 0) {
+          const [empRes, txRes] = await Promise.all([
+            supabase.from('employees').select('id, tenant_id, name, role, base_salary, wa_number, is_active, created_at').in('tenant_id', targetBranchIds),
+            supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', targetBranchIds).gte('transaction_date', range.start).lte('transaction_date', range.end)
+          ]);
+          empList = empRes.data || [];
+          txList = txRes.data || [];
         }
 
-        const totalSalaryExpense = txList.reduce((sum, t) => sum + Number(t.amount), 0);
+        setEmployees(empList);
+        setEmployeeTransactions(txList);
+        setExpenseCategories(statData.expenseCategories || {});
+        setTopMenus(statData.topMenus || []);
+        setLowStockMenus(statData.lowStockMenus || []);
+        setUnpaidInvoices(statData.unpaidInvoices || []);
 
         setStats({
           totalRevenue: statData.totalRevenue || 0,
@@ -195,12 +210,14 @@ export default function OwnerDashboard() {
           chartData: statData.chartData || [],
           labels: statData.labels || [],
           branchStats: statData.branchStats || {},
-          totalExpense: (statData.totalExpense || 0) + totalSalaryExpense, // <-- Gaji ditambahkan ke pengeluaran
-          netProfit: (statData.netProfit || 0) - totalSalaryExpense, // <-- Laba bersih dikurangi gaji
+          totalExpense: statData.totalExpense || 0,
+          operationalExpense: statData.operationalExpense || 0,
+          salaryExpense: statData.salaryExpense || 0,
+          netProfit: statData.netProfit || 0,
           trends: {
             revenue: computeTrend(statData.totalRevenue || 0, prevData?.totalRevenue || 0),
-            expense: computeTrend((statData.totalExpense || 0) + totalSalaryExpense, prevData?.totalExpense || 0),
-            netProfit: computeTrend((statData.netProfit || 0) - totalSalaryExpense, prevData?.netProfit || 0),
+            expense: computeTrend(statData.totalExpense || 0, prevData?.totalExpense || 0),
+            netProfit: computeTrend(statData.netProfit || 0, prevData?.netProfit || 0),
           }
         });
       }
@@ -226,7 +243,7 @@ export default function OwnerDashboard() {
       setUserEmail(email);
 
       setIsLoading(true);
-      await fetchAllData(email, period, getActiveDateStr());
+      await fetchAllData(email, period, getActiveDateStr(), selectedBranchId);
       setIsLoading(false);
 
       const todayStr = new Date().toLocaleDateString('en-CA');
@@ -236,14 +253,14 @@ export default function OwnerDashboard() {
 
       if (isToday) {
         interval = setInterval(async () => {
-          await fetchAllData(email, period, getActiveDateStr());
-        }, 30000); // Auto refresh 30 detik
+          await fetchAllData(email, period, getActiveDateStr(), selectedBranchId);
+        }, 30000);
       }
     };
 
     getSessionAndFetch();
     return () => { if (interval) clearInterval(interval); };
-  }, [period, dateDaily, dateWeekly, dateMonthly]);
+  }, [period, dateDaily, dateWeekly, dateMonthly, selectedBranchId]);
 
   useEffect(() => {
     if (!chartRef.current || isLoading) return;
@@ -348,13 +365,103 @@ export default function OwnerDashboard() {
   };
 
   const handleRefresh = () => {
-    fetchAllData(userEmail, period, getActiveDateStr());
+    fetchAllData(userEmail, period, getActiveDateStr(), selectedBranchId);
     showToast('Data diperbarui', 'success');
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const handleCreateBranch = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/owner/create-branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: linkBranchName.trim(),
+          email: linkBranchEmail.trim(),
+          manager_email: userEmail
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Gagal menambahkan cabang.');
+        setIsSubmitting(false);
+        return;
+      }
+      setIsModalOpen(false);
+      setLinkBranchName('');
+      setLinkBranchEmail('');
+      showToast(data.message || 'Cabang berhasil ditambahkan', 'success');
+      await fetchAllData(userEmail, period, getActiveDateStr(), selectedBranchId);
+    } catch (err) {
+      setErrorMsg('Terjadi kesalahan jaringan.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const selectedBranchObj = useMemo(
+    () => branches.find(b => b.id === selectedBranchId) || null,
+    [branches, selectedBranchId]
+  );
+  const selectedBranchLabel = selectedBranchObj ? selectedBranchObj.name : 'Semua Cabang';
+
+  const handleExportCSV = () => {
+    const activeDate = getActiveDateStr();
+    const periodLabel = period === 'daily' ? 'Harian' : period === 'weekly' ? 'Mingguan' : 'Bulanan';
+    const marginPct = stats.totalRevenue > 0 ? ((stats.netProfit / stats.totalRevenue) * 100).toFixed(1) : '0.0';
+
+    const escapeCsv = (val) => {
+      const str = String(val ?? '');
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = [
+      ['Laporan Ringkasan Laba Rugi (P&L) - NexaFlow', ''],
+      ['Cabang', selectedBranchLabel],
+      ['Periode', periodLabel],
+      ['Tanggal / Filter Aktif', activeDate],
+      ['', ''],
+      ['Komponen P&L', 'Nilai (IDR)'],
+      ['Pendapatan Kotor', stats.totalRevenue],
+      ['Total Transaksi', stats.totalTransactions],
+      ['Pengeluaran Operasional', stats.operationalExpense],
+      ['Biaya Karyawan (Gaji/Kasbon/Bonus)', stats.salaryExpense],
+      ['Total Pengeluaran', stats.totalExpense],
+      ['Laba Bersih (Net Profit)', stats.netProfit],
+      ['Margin Laba (%)', `${marginPct}%`],
+    ];
+
+    const categoryEntries = Object.entries(expenseCategories).sort((a, b) => b[1] - a[1]);
+    if (categoryEntries.length > 0) {
+      rows.push(['', '']);
+      rows.push(['Rincian Pengeluaran per Kategori', 'Nilai (IDR)']);
+      categoryEntries.forEach(([cat, amt]) => {
+        rows.push([cat, amt]);
+      });
+    }
+
+    const csvContent = '\uFEFF' + rows.map(r => r.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const slugBranch = selectedBranchLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    link.href = url;
+    link.setAttribute('download', `laporan-pnl-nexaflow-${slugBranch}-${activeDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Ringkasan P&L berhasil diunduh', 'success');
   };
 
   const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
@@ -371,7 +478,15 @@ export default function OwnerDashboard() {
     return `${Math.floor(diff / 60)} jam lalu`;
   };
 
-  // Alert Logic for Dashboard Owner
+  const filteredActivities = useMemo(() => {
+    if (selectedBranchId === 'all') return activities;
+    return activities.filter((act) => {
+      if (act.tenant_id) return act.tenant_id === selectedBranchId;
+      if (selectedBranchObj && act.tenants?.name) return act.tenants.name === selectedBranchObj.name;
+      return true;
+    });
+  }, [activities, selectedBranchId, selectedBranchObj]);
+
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const isEndOfMonth = new Date().getDate() >= 25;
   const unpaidEmployees = useMemo(() => {
@@ -382,6 +497,11 @@ export default function OwnerDashboard() {
       return emp.is_active && !hasPaid;
     });
   }, [employees, employeeTransactions, isEndOfMonth, currentMonthStr]);
+
+  const totalUnpaidInvoiceAmount = useMemo(
+    () => unpaidInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0),
+    [unpaidInvoices]
+  );
 
   return (
     <div className="bg-[#F8FAFC] text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
@@ -397,7 +517,7 @@ export default function OwnerDashboard() {
         .dark .owner-row:hover { background-color: rgba(17, 28, 51, 0.55); }
       `}</style>
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0"></div>
-      
+
       <div className="flex h-screen relative z-10">
         <aside className="group w-[80px] hover:w-64 transition-all duration-300 ease-in-out bg-white/70 dark:bg-[#060911]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 h-full shrink-0">
           <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800/80 overflow-hidden shrink-0">
@@ -438,12 +558,26 @@ export default function OwnerDashboard() {
         </aside>
 
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-          <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
+          <header className="min-h-20 py-3 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 px-6 lg:px-10 z-40 transition-colors">
             <div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Command Center</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Pantau seluruh ekosistem NexaFlow Anda</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                {selectedBranchId === 'all' ? 'Pantau seluruh ekosistem NexaFlow Anda' : `Menampilkan performa: ${selectedBranchLabel}`}
+              </p>
             </div>
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+              <select
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                aria-label="Filter Cabang"
+                className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none max-w-[180px]"
+              >
+                <option value="all">Semua Cabang</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+
               <div className="flex items-center gap-2">
                 {period === 'daily' && (
                   <input type="date" value={dateDaily} onChange={(e) => handleDateChange(e, 'daily')} className="bg-slate-100 dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none" />
@@ -460,6 +594,12 @@ export default function OwnerDashboard() {
                   <button onClick={() => handlePeriodChange('monthly')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === 'monthly' ? 'bg-white dark:bg-[#1E293B] text-[#2563EB] dark:text-white shadow-sm' : 'text-slate-500'}`}>Bulanan</button>
                 </div>
               </div>
+
+              <button onClick={handleExportCSV} title="Export Ringkasan P&L (CSV)" className="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#111C33] transition-colors border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-1.5 text-xs font-bold">
+                <Icons.Download />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+
               <button onClick={handleRefresh} title="Refresh data" className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#111C33] transition-colors border border-slate-200 dark:border-slate-800 shadow-sm">
                 <Icons.Refresh />
               </button>
@@ -474,35 +614,54 @@ export default function OwnerDashboard() {
           </header>
 
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
-            
-            {/* ALERT BAR (Pengeluaran & Gaji) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {unpaidEmployees.length > 0 && (
-                <div className="bg-rose-500/5 border border-rose-500/30 rounded-2xl p-4 flex items-start gap-3 hover:bg-rose-500/10 transition-colors cursor-pointer">
-                  <div className="w-9 h-9 rounded-lg bg-rose-500/20 flex items-center justify-center shrink-0 text-rose-500">
-                    <Icons.Alert />
+
+            {/* ALERT BAR (Invoice SaaS, Gaji, & Stok) */}
+            {(unpaidInvoices.length > 0 || unpaidEmployees.length > 0 || lowStockMenus.length > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {unpaidInvoices.length > 0 && (
+                  <div className="bg-blue-500/5 border border-blue-500/30 rounded-2xl p-4 flex items-start gap-3 hover:bg-blue-500/10 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0 text-blue-500">
+                      <Icons.File />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-blue-600 dark:text-blue-300">Tagihan Langganan NexaFlow</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {unpaidInvoices.length} invoice belum dibayar · Total <span className="font-bold text-slate-700 dark:text-slate-200 owner-num">{formatRp(totalUnpaidInvoiceAmount)}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+                        {unpaidInvoices.slice(0, 2).map(inv => `${inv.branch_name} (${inv.period})`).join(', ')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-rose-600 dark:text-rose-300">Peringatan Gaji Karyawan</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{unpaidEmployees.length} karyawan belum menerima gaji bulan ini. Segera proses!</p>
-                    <Link href="/owner/finance" className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1.5 inline-block">Proses Gaji →</Link>
+                )}
+
+                {unpaidEmployees.length > 0 && (
+                  <div className="bg-rose-500/5 border border-rose-500/30 rounded-2xl p-4 flex items-start gap-3 hover:bg-rose-500/10 transition-colors cursor-pointer">
+                    <div className="w-9 h-9 rounded-lg bg-rose-500/20 flex items-center justify-center shrink-0 text-rose-500">
+                      <Icons.Alert />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-rose-600 dark:text-rose-300">Peringatan Gaji Karyawan</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{unpaidEmployees.length} karyawan belum menerima gaji bulan ini. Segera proses!</p>
+                      <Link href="/owner/finance" className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1.5 inline-block">Proses Gaji →</Link>
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              {lowStockMenus.length > 0 && (
-                <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3 hover:bg-amber-500/10 transition-colors cursor-pointer">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-500">
-                    <Icons.Box />
+                )}
+
+                {lowStockMenus.length > 0 && (
+                  <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3 hover:bg-amber-500/10 transition-colors cursor-pointer">
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-500">
+                      <Icons.Box />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-amber-600 dark:text-amber-300">Stok Menipis</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{lowStockMenus.length} menu di bawah 10 pcs</p>
+                      <Link href="/owner/finance" className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1.5 inline-block">Kelola Stok →</Link>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-amber-600 dark:text-amber-300">Stok Menipis</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{lowStockMenus.length} menu di bawah 10 pcs</p>
-                    <Link href="/owner/finance" className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1.5 inline-block">Kelola Stok →</Link>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* KPI CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
@@ -544,7 +703,9 @@ export default function OwnerDashboard() {
                 <h3 className="text-2xl font-black text-white owner-num">
                   {isLoading ? '...' : <>{employees.filter(e => e.is_active).length}<span className="text-slate-600 text-base font-bold">/{employees.length}</span></>}
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-2">Lintas {branches.length} cabang</p>
+                <p className="text-[11px] text-slate-500 mt-2">
+                  {selectedBranchId === 'all' ? `Lintas ${branches.length} cabang` : selectedBranchLabel}
+                </p>
               </div>
             </div>
 
@@ -554,7 +715,7 @@ export default function OwnerDashboard() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-black text-slate-900 dark:text-white font-display tracking-tight">Tren Pendapatan</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Performa periode aktif</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Performa periode aktif · {selectedBranchLabel}</p>
                   </div>
                 </div>
                 <div className="w-full h-[280px] relative z-10">
@@ -595,9 +756,9 @@ export default function OwnerDashboard() {
               <div className="owner-3d lg:col-span-2 bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl p-6 md:p-8">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white font-display mb-4">Aktivitas Terbaru</h2>
                 <div className="max-h-[340px] overflow-y-auto pr-2 space-y-4">
-                  {activities.length === 0 ? (
+                  {filteredActivities.length === 0 ? (
                     <p className="text-xs text-slate-500 text-center mt-10">Belum ada aktivitas.</p>
-                  ) : activities.map((act, i) => (
+                  ) : filteredActivities.map((act, i) => (
                     <div key={i} className="flex gap-3 items-start">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                         <Icons.Activity />
@@ -621,7 +782,7 @@ export default function OwnerDashboard() {
                   <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Biaya Karyawan</h2>
                   <Link href="/owner/finance" className="text-[10px] font-bold text-sky-500 hover:text-sky-400">Kelola →</Link>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Periode aktif · semua cabang</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Periode aktif · {selectedBranchLabel.toLowerCase()}</p>
 
                 <div className="space-y-3">
                   <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between">
@@ -631,7 +792,7 @@ export default function OwnerDashboard() {
                       </div>
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Gaji</span>
                     </div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t=>t.type==='Gaji').reduce((s,t)=>s+t.amount,0))}</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t => t.type === 'Gaji').reduce((s, t) => s + Number(t.amount), 0))}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -640,7 +801,7 @@ export default function OwnerDashboard() {
                       </div>
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Kasbon</span>
                     </div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t=>t.type==='Kasbon').reduce((s,t)=>s+t.amount,0))}</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t => t.type === 'Kasbon').reduce((s, t) => s + Number(t.amount), 0))}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -649,12 +810,12 @@ export default function OwnerDashboard() {
                       </div>
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Bonus</span>
                     </div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t=>t.type==='Bonus').reduce((s,t)=>s+t.amount,0))}</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white owner-num">{formatRp(employeeTransactions.filter(t => t.type === 'Bonus').reduce((s, t) => s + Number(t.amount), 0))}</span>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total</span>
-                  <span className="text-sm font-black text-rose-500 owner-num">{formatRp(employeeTransactions.reduce((s,t)=>s+t.amount,0))}</span>
+                  <span className="text-sm font-black text-rose-500 owner-num">{formatRp(employeeTransactions.reduce((s, t) => s + Number(t.amount), 0))}</span>
                 </div>
               </div>
             </div>
@@ -715,7 +876,7 @@ export default function OwnerDashboard() {
                       <div key={m.id} className="flex items-center justify-between bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2">
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{m.name}</p>
-                          <p className="text-[10px] text-slate-500">{m.tenant_id}</p>
+                          <p className="text-[10px] text-slate-500">{m.branch_name || m.tenant_id}</p>
                         </div>
                         <span className={`owner-pill shrink-0 ${Number(m.stock) <= 3 ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
                           {m.stock} pcs
@@ -752,8 +913,9 @@ export default function OwnerDashboard() {
                       <tr><td colSpan="6" className="p-6 text-center text-slate-500 font-bold">Belum ada cabang. Silakan tambahkan cabang baru.</td></tr>
                     ) : branches.map((branch) => {
                       const bStat = stats.branchStats[branch.id] || { revenue: 0, transactions: 0, employeeCount: 0 };
+                      const isSelected = selectedBranchId === branch.id;
                       return (
-                        <tr key={branch.id} className="owner-row group">
+                        <tr key={branch.id} className={`owner-row group ${isSelected ? 'bg-blue-50/60 dark:bg-[#111C33]/70' : ''}`}>
                           <td className="p-4 pl-6">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs">
