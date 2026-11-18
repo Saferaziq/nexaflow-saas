@@ -30,6 +30,7 @@ const Icons = {
   Tag: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
   Bolt: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   Check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="20 6 9 17 4 12"/></svg>,
+  Clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
 };
 
 const DONUT_COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#64748B'];
@@ -92,6 +93,10 @@ export default function OwnerDashboard() {
     actionPlans: [],
     fraudAlerts: [],
     activePromos: [],
+    revenueAnomalies: [],
+    costAudit: [],
+    deadStockMenus: [],
+    kdsPeakBottleneck: null,
   });
 
   const [executedActionIds, setExecutedActionIds] = useState({});
@@ -246,6 +251,13 @@ export default function OwnerDashboard() {
         setTopMenus(statData.topMenus || []);
         setLowStockMenus(statData.lowStockMenus || []);
         setUnpaidInvoices(statData.unpaidInvoices || []);
+        if (statData.savedAiConfig) {
+          setAiConfig(prev => ({
+            provider: statData.savedAiConfig.provider || prev.provider,
+            model: statData.savedAiConfig.model || prev.model,
+            apiKey: statData.savedAiConfig.apiKey || prev.apiKey,
+          }));
+        }
         if (statData.aiInsights) {
           setAiInsights(statData.aiInsights);
         }
@@ -522,25 +534,54 @@ export default function OwnerDashboard() {
     }
   };
 
+  const selectedBranchObj = useMemo(
+    () => branches.find(b => b.id === selectedBranchId) || null,
+    [branches, selectedBranchId]
+  );
+  const selectedBranchLabel = selectedBranchObj ? selectedBranchObj.name : `Semua Cabang (${branches.length} Outlet)`;
+
   const handleAskAiAdvisor = async (e) => {
     e.preventDefault();
     const q = aiPromptInput.trim();
     if (!q || isAskingAi) return;
     setIsAskingAi(true);
     try {
+      const branchSummary = branches.map(b => ({
+        nama: b.name,
+        omzet: stats.branchStats?.[b.id]?.revenue || 0,
+        transaksi: stats.branchStats?.[b.id]?.transactions || 0,
+      }));
+
       const compactContext = {
         cabangAktif: selectedBranchLabel,
         periode: `${period} (${getActiveDateStr()})`,
         totalRevenue: stats.totalRevenue,
         totalExpense: stats.totalExpense,
+        operationalExpense: stats.operationalExpense,
+        salaryExpense: stats.salaryExpense,
         netProfit: stats.netProfit,
         totalTransactions: stats.totalTransactions,
         avgBasket: aiInsights.avgBasket,
         repeatRatePct: aiInsights.repeatRate,
         avgKdsMinutes: aiInsights.avgKdsMinutes,
+        kdsPeakBottleneck: aiInsights.kdsPeakBottleneck,
+        ringkasanCabang: branchSummary,
+        kategoriPengeluaran: expenseCategories,
+        anomaliOmzet: aiInsights.revenueAnomalies || [],
+        auditBiayaTinggi: aiInsights.costAudit || [],
+        deadStockCount: aiInsights.deadStockMenus?.length || 0,
+        deadStockSample: (aiInsights.deadStockMenus || []).slice(0, 5).map(m => `${m.name} (${m.branch_name})`),
         topMenus: topMenus.slice(0, 5),
         lowStockCount: lowStockMenus.length,
-        fraudAlertCount: aiInsights.fraudAlerts?.length || 0,
+        activePromoCount: aiInsights.activePromos?.length || 0,
+        fraudAlerts: (aiInsights.fraudAlerts || []).map(f => ({
+          cabang: f.branch_name,
+          cancelCount: f.count,
+          cancelCash: f.cashCount,
+          nightCancelCash: f.nightCashCancelCount,
+          staleCash: f.staleCashCount,
+          nilai: f.totalAmount,
+        })),
       };
 
       const res = await fetch('/api/owner/stats', {
@@ -567,12 +608,6 @@ export default function OwnerDashboard() {
       setIsAskingAi(false);
     }
   };
-
-  const selectedBranchObj = useMemo(
-    () => branches.find(b => b.id === selectedBranchId) || null,
-    [branches, selectedBranchId]
-  );
-  const selectedBranchLabel = selectedBranchObj ? selectedBranchObj.name : `Semua Cabang (${branches.length} Outlet)`;
 
   const handleExportCSV = () => {
     const activeDate = getActiveDateStr();
@@ -786,7 +821,7 @@ export default function OwnerDashboard() {
 
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 z-10 scroll-smooth space-y-6">
 
-            {/* SUB-NAVIGATION TABS (AI BUSINESS ADVISOR / AUDIT FRAUD / MENU & PROMO AKTIF) */}
+            {/* SUB-NAVIGATION TABS */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 <button
@@ -892,7 +927,7 @@ export default function OwnerDashboard() {
               </div>
             )}
 
-            {/* 4 KPI UTAMA + 3 METRIK AI OPERASIONAL */}
+            {/* 4 KPI UTAMA */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="owner-3d owner-3d-hover bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-2xl p-5">
                 <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Omzet Periode Ini</p>
@@ -948,8 +983,69 @@ export default function OwnerDashboard() {
             {/* ===================================================================== */}
             {activeAiTab === 'advisor' && (
               <>
+                {/* PANEL PERINGATAN DINI: ANOMALI OMZET & AUDIT BIAYA */}
+                {((aiInsights.revenueAnomalies || []).length > 0 || (aiInsights.costAudit || []).length > 0) && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {(aiInsights.revenueAnomalies || []).map((anom) => (
+                      <div
+                        key={`anom-${anom.tenant_id}`}
+                        className={`rounded-2xl p-4 border flex items-start gap-3 ${
+                          anom.status === 'drop'
+                            ? 'bg-rose-500/5 border-rose-500/35'
+                            : 'bg-emerald-500/5 border-emerald-500/35'
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                          anom.status === 'drop' ? 'bg-rose-500/20 text-rose-500' : 'bg-emerald-500/20 text-emerald-500'
+                        }`}>
+                          {anom.status === 'drop' ? <Icons.Alert /> : <Icons.Activity />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`text-xs font-black ${anom.status === 'drop' ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                              {anom.status === 'drop' ? 'Peringatan Anomali Omzet Turun' : 'Lonjakan Omzet Terdeteksi'}: {anom.branch_name}
+                            </p>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black owner-num ${
+                              anom.status === 'drop' ? 'bg-rose-500/15 text-rose-500' : 'bg-emerald-500/15 text-emerald-500'
+                            }`}>
+                              {anom.diffPct > 0 ? `+${anom.diffPct}%` : `${anom.diffPct}%`}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                            Aktual <strong className="owner-num">{formatRp(anom.currentRev)}</strong> vs rata-rata historis <strong className="owner-num">{formatRp(anom.expectedRev)}</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {(aiInsights.costAudit || []).map((audit) => (
+                      <div
+                        key={`cost-${audit.tenant_id}`}
+                        className="rounded-2xl p-4 border bg-amber-500/5 border-amber-500/35 flex items-start gap-3"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                          <Icons.Coin />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-black text-amber-600 dark:text-amber-300">
+                              Audit Rasio Biaya Tinggi: {audit.branch_name}
+                            </p>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[10px] font-black owner-num">
+                              {audit.costRatioPct}% Omzet
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                            Total biaya <strong className="owner-num">{formatRp(audit.totalExpense)}</strong> (terbesar: <strong>{audit.topCategory}</strong> senilai <span className="owner-num">{formatRp(audit.topCategoryAmount)}</span>).
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="grid lg:grid-cols-12 gap-6 items-start">
-                  {/* KIRI 7 KOLOM: GRAFIK PERBANDINGAN + HASIL RISET MENDALAM AI */}
+                  {/* KIRI 7 KOLOM */}
                   <div className="lg:col-span-7 space-y-6">
                     <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-2xl p-5 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
@@ -975,7 +1071,7 @@ export default function OwnerDashboard() {
                       </div>
                     </div>
 
-                    {/* 3 TEMUAN RISET MENDALAM AI */}
+                    {/* TEMUAN RISET MENDALAM AI */}
                     <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-2xl p-5 sm:p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2.5">
@@ -987,7 +1083,7 @@ export default function OwnerDashboard() {
                               Hasil Riset Mendalam AI (Diagnostik Operasional)
                             </h3>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Dihitung otomatis dari tabel <span className="font-mono text-sky-500 dark:text-sky-300">orders</span>, <span className="font-mono text-sky-500 dark:text-sky-300">menus</span>, dan <span className="font-mono text-sky-500 dark:text-sky-300">device_id</span>
+                              Dihitung otomatis dari tabel <span className="font-mono text-sky-500 dark:text-sky-300">orders</span>, <span className="font-mono text-sky-500 dark:text-sky-300">menus</span>, <span className="font-mono text-sky-500 dark:text-sky-300">expenses</span>, dan <span className="font-mono text-sky-500 dark:text-sky-300">device_id</span>
                             </p>
                           </div>
                         </div>
@@ -1023,6 +1119,74 @@ export default function OwnerDashboard() {
                         })}
                       </div>
                     </div>
+
+                    {/* DETEKTOR MENU MATI (DEAD STOCK 30 HARI) */}
+                    {(aiInsights.deadStockMenus || []).length > 0 && (
+                      <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-amber-500/30 rounded-2xl p-5 sm:p-6">
+                        <div className="flex items-center justify-between gap-2 mb-4">
+                          <div>
+                            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-display">
+                              Detektor Menu Mati (0 Penjualan 30 Hari Terakhir)
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              Menu berstatus available berikut belum terjual sama sekali dalam 30 hari terakhir
+                            </p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-500 text-[10px] font-black">
+                            {aiInsights.deadStockMenus.length} Menu
+                          </span>
+                        </div>
+                        <div className="space-y-2.5">
+                          {aiInsights.deadStockMenus.slice(0, 5).map((dm) => {
+                            const actionId = `deadstock_${dm.id}`;
+                            const isDone = Boolean(executedActionIds[actionId]);
+                            const isBusy = executingActionId === actionId;
+                            return (
+                              <div
+                                key={dm.id}
+                                className="rounded-xl bg-slate-50 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 p-3 flex flex-wrap items-center justify-between gap-3"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{dm.name}</p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                    {dm.branch_name} · Stok: {dm.stock} pcs · Harga: <span className="owner-num">{formatRp(dm.price)}</span>
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={isDone || isBusy}
+                                  onClick={() =>
+                                    handleExecuteAiAction({
+                                      id: actionId,
+                                      action_type: 'promo_discount',
+                                      menu_id: dm.id,
+                                      discount_price: dm.suggested_discount_price,
+                                    })
+                                  }
+                                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${
+                                    isDone
+                                      ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 cursor-default'
+                                      : 'btn-copper text-white'
+                                  }`}
+                                >
+                                  {isDone ? (
+                                    <>
+                                      <Icons.Check />
+                                      <span>Promo Aktif</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Icons.Bolt />
+                                      <span>{isBusy ? 'Memproses...' : `Cuci Gudang (${formatRp(dm.suggested_discount_price)})`}</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* KANAN 5 KOLOM: RENCANA AKSI 1-KLIK + TANYA AI ADVISOR */}
@@ -1156,7 +1320,7 @@ export default function OwnerDashboard() {
                             type="text"
                             value={aiPromptInput}
                             onChange={(e) => setAiPromptInput(e.target.value)}
-                            placeholder="Contoh: Cabang mana yang paling butuh promo?"
+                            placeholder="Contoh: Cabang mana yang paling boros biaya bulan ini?"
                             className="flex-1 bg-slate-50 dark:bg-[#0B1221] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-400"
                           />
                           <button
@@ -1172,7 +1336,7 @@ export default function OwnerDashboard() {
                   </div>
                 </div>
 
-                {/* SECTION BAWAH: PENGELUARAN, BIAYA KARYAWAN, MENU TERLARIS, STOK, AKTIVITAS, DAFTAR CABANG */}
+                {/* SECTION BAWAH */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl p-6 flex flex-col">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white font-display mb-1">Pengeluaran</h2>
@@ -1221,7 +1385,7 @@ export default function OwnerDashboard() {
                       <div className="bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <Icons.Clock />
                           </div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Kasbon</span>
                         </div>
@@ -1435,9 +1599,9 @@ export default function OwnerDashboard() {
                         <Icons.Check />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-emerald-600 dark:text-emerald-300">Tidak Ditemukan Pembatalan Mencurigakan</p>
+                        <p className="text-sm font-black text-emerald-600 dark:text-emerald-300">Tidak Ditemukan Anomali Kasir</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Tidak ada transaksi berstatus CANCELLED dalam 30 hari terakhir pada cabang terpilih.
+                          Tidak ada transaksi dibatalkan atau order tunai menggantung mencurigakan dalam 30 hari terakhir.
                         </p>
                       </div>
                     </div>
@@ -1449,7 +1613,7 @@ export default function OwnerDashboard() {
                         return (
                           <div
                             key={alert.tenant_id}
-                            className="rounded-xl bg-rose-500/5 dark:bg-[#0B1221] border border-rose-500/40 p-4 space-y-2"
+                            className="rounded-xl bg-rose-500/5 dark:bg-[#0B1221] border border-rose-500/40 p-4 space-y-2.5"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="text-sm font-black text-rose-600 dark:text-rose-300">
@@ -1459,6 +1623,20 @@ export default function OwnerDashboard() {
                                 Rentang Jam: {minHour} – {maxHour} WIB
                               </span>
                             </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {alert.nightCashCancelCount > 0 && (
+                                <span className="px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-500 dark:text-rose-300 text-[10px] font-black">
+                                  {alert.nightCashCancelCount}x Cancel Tunai Jam Malam (mulai 20.00 WIB)
+                                </span>
+                              )}
+                              {alert.staleCashCount > 0 && (
+                                <span className="px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[10px] font-black">
+                                  {alert.staleCashCount} Order Tunai Menggantung lebih dari 2 Jam ({formatRp(alert.staleCashAmount)})
+                                </span>
+                              )}
+                            </div>
+
                             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                               Ditemukan <strong>{alert.count} pesanan dibatalkan ({alert.cashCount} di antaranya metode Tunai/Cash)</strong> dengan total nilai{' '}
                               <strong className="text-rose-500 dark:text-rose-300 owner-num">{formatRp(alert.totalAmount)}</strong>. Disarankan meninjau rekaman CCTV kasir pada jam tersebut untuk memastikan tidak ada pembayaran tunai yang dibatalkan sepihak.
@@ -1469,17 +1647,17 @@ export default function OwnerDashboard() {
                     </div>
                   )}
 
-                  {/* KDS SPEED MONITOR */}
-                  <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* KDS SPEED MONITOR + PEAK HOUR BOTTLENECK */}
+                  <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="rounded-xl bg-slate-50 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 p-4">
                       <p className="text-xs font-black text-sky-500 dark:text-sky-300 uppercase tracking-wider">
-                        Rata-Rata Kecepatan Penyajian Dapur (KDS)
+                        Rata-Rata Kecepatan Dapur (KDS)
                       </p>
                       <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-display owner-num">
                         {aiInsights.avgKdsMinutes} Menit / Pesanan
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                        Dihitung dari selisih waktu pesanan masuk hingga selesai dimasak di layar KDS.
+                        Selisih waktu pesanan masuk hingga selesai dimasak di layar KDS.
                       </p>
                     </div>
                     <div className="rounded-xl bg-slate-50 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 p-4">
@@ -1487,10 +1665,25 @@ export default function OwnerDashboard() {
                         Antrean Terlama Tercatat
                       </p>
                       <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-display owner-num">
-                        {aiInsights.maxKdsMin > 0 ? `${aiInsights.maxKdsMin} Menit (Meja ${aiInsights.slowestTable})` : 'Normal (< 15 Menit)'}
+                        {aiInsights.maxKdsMin > 0 ? `${aiInsights.maxKdsMin} Menit (Meja ${aiInsights.slowestTable})` : 'Normal (di bawah 15 Menit)'}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                         Cabang: {aiInsights.slowestBranch || selectedBranchLabel}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 p-4">
+                      <p className="text-xs font-black text-rose-500 dark:text-rose-300 uppercase tracking-wider">
+                        Jam Sibuk Dapur (Bottleneck)
+                      </p>
+                      <p className="text-lg font-black text-slate-900 dark:text-white mt-1 font-display owner-num">
+                        {aiInsights.kdsPeakBottleneck
+                          ? `${aiInsights.kdsPeakBottleneck.peakHourLabel} (${aiInsights.kdsPeakBottleneck.avgMinutes} mnt)`
+                          : 'Belum Ada Bottleneck'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        {aiInsights.kdsPeakBottleneck
+                          ? `Cabang padat: ${aiInsights.kdsPeakBottleneck.branchName} (${aiInsights.kdsPeakBottleneck.orderCount} pesanan)`
+                          : 'Kecepatan penyajian merata di semua jam.'}
                       </p>
                     </div>
                   </div>
@@ -1537,7 +1730,22 @@ export default function OwnerDashboard() {
                             #{idx + 1}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-black text-slate-900 dark:text-white truncate">{m.name}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-black text-slate-900 dark:text-white truncate">{m.name}</p>
+                              {m.promo_expires_at && (
+                                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[10px] font-bold">
+                                  Auto-stop:{' '}
+                                  {new Date(m.promo_expires_at).toLocaleString('id-ID', {
+                                    timeZone: 'Asia/Jakarta',
+                                    day: '2-digit',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}{' '}
+                                  WIB
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
                               {m.branch_name} · Kategori: {m.category} · Stok: {m.stock} pcs
                             </p>

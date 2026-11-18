@@ -12,15 +12,21 @@ const getPromoExpiresAt1630Wib = () => {
   const month = wibNow.getUTCMonth();
   const day = wibNow.getUTCDate();
 
-  // 16:30 WIB = 09:30 UTC pada tanggal WIB berjalan
   let targetUtcMs = Date.UTC(year, month, day, 9, 30, 0, 0);
-
-  // Jika sudah melewati 16:30 WIB hari ini, jadwalkan ke 16:30 WIB besok
   if (nowUtcMs >= targetUtcMs) {
     targetUtcMs += 24 * 60 * 60 * 1000;
   }
-
   return new Date(targetUtcMs).toISOString();
+};
+
+const getWibDateKey = (isoStr) => {
+  const ms = new Date(isoStr).getTime() + 7 * 60 * 60 * 1000;
+  return new Date(ms).toISOString().slice(0, 10);
+};
+
+const getWibHour = (isoStr) => {
+  const ms = new Date(isoStr).getTime() + 7 * 60 * 60 * 1000;
+  return new Date(ms).getUTCHours();
 };
 
 export async function GET(request) {
@@ -66,11 +72,17 @@ export async function GET(request) {
           avgBasket: 0,
           repeatRate: 0,
           avgKdsMinutes: 0,
+          maxKdsMin: 0,
           slowestTable: '-',
+          slowestBranch: '-',
           diagnostics: [],
           actionPlans: [],
           fraudAlerts: [],
           activePromos: [],
+          revenueAnomalies: [],
+          costAudit: [],
+          deadStockMenus: [],
+          kdsPeakBottleneck: null,
         },
       });
     }
@@ -81,7 +93,6 @@ export async function GET(request) {
       tenantNameMap[t.id] = t.name;
     });
 
-    // Ambil konfigurasi AI yang tersimpan di database (lintas perangkat)
     const tenantWithAi = tenants.find((t) => t.ai_api_key || t.ai_provider || t.ai_model) || tenants[0];
     const savedAiConfig = {
       provider: tenantWithAi?.ai_provider || 'gemini',
@@ -98,7 +109,6 @@ export async function GET(request) {
     let endDate = new Date();
     let labels = [];
 
-    // PENGAMANAN PARSING TANGGAL
     try {
       if (period === 'daily') {
         const safeDate = dateStr ? dateStr : new Date().toLocaleDateString('en-CA');
@@ -176,7 +186,7 @@ export async function GET(request) {
         .in('tenant_id', safeTargetIds)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(400),
+        .limit(600),
     ]);
 
     const rawPeriodOrders = orderRes.data || [];
@@ -243,15 +253,19 @@ export async function GET(request) {
     const operationalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
     const actualSalaryTx = empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
 
-    // Poin 1: Sinkronisasi Perhitungan Gaji Bulanan Opsi 2 (Anti Double-Counting)
     let pendingBaseSalary = 0;
+    const pendingSalaryByBranch = {};
     if (period === 'monthly') {
       const paidEmployeeIds = new Set(
         empTrans.filter((tx) => tx.type === 'Gaji').map((tx) => tx.employee_id)
       );
-      pendingBaseSalary = targetEmployees
+      targetEmployees
         .filter((emp) => emp.is_active && !paidEmployeeIds.has(emp.id))
-        .reduce((sum, emp) => sum + Number(emp.base_salary || 0), 0);
+        .forEach((emp) => {
+          const base = Number(emp.base_salary || 0);
+          pendingBaseSalary += base;
+          pendingSalaryByBranch[emp.tenant_id] = (pendingSalaryByBranch[emp.tenant_id] || 0) + base;
+        });
     }
 
     const salaryExpense = actualSalaryTx + pendingBaseSalary;
@@ -340,11 +354,14 @@ export async function GET(request) {
     const repeatDevices = Object.values(deviceCountMap).filter((c) => c > 1).length;
     const repeatRate = uniqueDevices > 0 ? Number(((repeatDevices / uniqueDevices) * 100).toFixed(1)) : 0;
 
+    // 1. KDS SPEED & PEAK-HOUR BOTTLENECK
     let kdsTotalMin = 0;
     let kdsCount = 0;
     let maxKdsMin = 0;
     let slowestTable = '-';
     let slowestBranch = '-';
+    const kdsByHour = {};
+
     completed30.forEach((o) => {
       if (o.created_at && o.updated_at) {
         const diffMin = (new Date(o.updated_at) - new Date(o.created_at)) / 60000;
@@ -356,38 +373,204 @@ export async function GET(request) {
             slowestTable = o.table_number || '-';
             slowestBranch = tenantNameMap[o.tenant_id] || 'Cabang';
           }
+          const h = getWibHour(o.created_at);
+          if (!kdsByHour[h]) {
+            kdsByHour[h] = { hour: h, totalMin: 0, count: 0, branchTotals: {} };
+          }
+          kdsByHour[h].totalMin += diffMin;
+          kdsByHour[h].count += 1;
+          const bName = tenantNameMap[o.tenant_id] || 'Cabang';
+          kdsByHour[h].branchTotals[bName] = (kdsByHour[h].branchTotals[bName] || 0) + 1;
         }
       }
     });
     const avgKdsMinutes = kdsCount > 0 ? Number((kdsTotalMin / kdsCount).toFixed(1)) : 8.5;
 
+    let kdsPeakBottleneck = null;
+    const kdsHourList = Object.values(kdsByHour)
+      .filter((item) => item.count >= 2)
+      .map((item) => ({
+        ...item,
+        avg: item.totalMin / item.count,
+      }))
+      .sort((a, b) => b.avg - a.avg);
+
+    const topBottleneck = kdsHourList[0] || Object.values(kdsByHour)
+      .map((item) => ({ ...item, avg: item.totalMin / item.count }))
+      .sort((a, b) => b.avg - a.avg)[0];
+
+    if (topBottleneck) {
+      const topBranchEntry = Object.entries(topBottleneck.branchTotals).sort((a, b) => b[1] - a[1])[0];
+      const nextHour = (topBottleneck.hour + 1) % 24;
+      kdsPeakBottleneck = {
+        peakHourLabel: `${String(topBottleneck.hour).padStart(2, '0')}.00 – ${String(nextHour).padStart(2, '0')}.00 WIB`,
+        avgMinutes: Number(topBottleneck.avg.toFixed(1)),
+        orderCount: topBottleneck.count,
+        branchName: topBranchEntry ? topBranchEntry[0] : 'Semua Cabang',
+      };
+    }
+
+    // 2. FRAUD WATCHDOG LANJUTAN (CANCELLED + CANCEL MALAM + ORDER TUNAI MENGGANTUNG > 2 JAM)
     const cancelledOrders = recent30Orders.filter(
       (o) => o.status === 'cancelled' || o.payment_status === 'CANCELLED'
     );
     const fraudByBranch = {};
-    cancelledOrders.forEach((o) => {
-      const bId = o.tenant_id;
+    const ensureFraudBranch = (bId) => {
       if (!fraudByBranch[bId]) {
         fraudByBranch[bId] = {
           tenant_id: bId,
           branch_name: tenantNameMap[bId] || 'Cabang',
           count: 0,
           cashCount: 0,
+          nightCashCancelCount: 0,
+          staleCashCount: 0,
+          staleCashAmount: 0,
           totalAmount: 0,
-          latestAt: o.updated_at || o.created_at,
+          latestAt: null,
           hours: [],
         };
       }
-      fraudByBranch[bId].count += 1;
-      if ((o.payment_method || '').toLowerCase() === 'cash') {
-        fraudByBranch[bId].cashCount += 1;
-      }
-      fraudByBranch[bId].totalAmount += Number(o.total_price || 0);
-      const dt = new Date(o.updated_at || o.created_at);
-      fraudByBranch[bId].hours.push(`${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`);
-    });
-    const fraudAlerts = Object.values(fraudByBranch).sort((a, b) => b.totalAmount - a.totalAmount);
+      return fraudByBranch[bId];
+    };
 
+    cancelledOrders.forEach((o) => {
+      const entry = ensureFraudBranch(o.tenant_id);
+      entry.count += 1;
+      const isCash = (o.payment_method || '').toLowerCase() === 'cash';
+      if (isCash) {
+        entry.cashCount += 1;
+      }
+      const dtIso = o.updated_at || o.created_at;
+      const wibHr = getWibHour(dtIso);
+      if (isCash && (wibHr >= 20 || wibHr < 5)) {
+        entry.nightCashCancelCount += 1;
+      }
+      entry.totalAmount += Number(o.total_price || 0);
+      if (!entry.latestAt || new Date(dtIso) > new Date(entry.latestAt)) {
+        entry.latestAt = dtIso;
+      }
+      const dt = new Date(new Date(dtIso).getTime() + 7 * 60 * 60 * 1000);
+      entry.hours.push(`${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`);
+    });
+
+    const twoHoursAgoMs = Date.now() - 2 * 3600 * 1000;
+    recent30Orders.forEach((o) => {
+      const isCash = (o.payment_method || '').toLowerCase() === 'cash';
+      const isClosed = o.status === 'completed' || o.status === 'cancelled' || o.payment_status === 'CANCELLED';
+      if (isCash && !isClosed && new Date(o.created_at).getTime() < twoHoursAgoMs) {
+        const entry = ensureFraudBranch(o.tenant_id);
+        entry.staleCashCount += 1;
+        entry.staleCashAmount += Number(o.total_price || 0);
+      }
+    });
+
+    const fraudAlerts = Object.values(fraudByBranch).sort(
+      (a, b) => (b.totalAmount + b.staleCashAmount) - (a.totalAmount + a.staleCashAmount)
+    );
+
+    // 3. DETEKSI ANOMALI OMZET PER CABANG (VS RATA-RATA HARIAN 30 HARI)
+    const rev30ByBranch = {};
+    completed30.forEach((o) => {
+      const bId = o.tenant_id;
+      if (!rev30ByBranch[bId]) {
+        rev30ByBranch[bId] = { totalRev: 0, days: new Set() };
+      }
+      rev30ByBranch[bId].totalRev += Number(o.total_price || 0);
+      rev30ByBranch[bId].days.add(getWibDateKey(o.created_at));
+    });
+
+    const periodDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 86400000));
+    const revenueAnomalies = [];
+    targetTenantIds.forEach((id) => {
+      const hist = rev30ByBranch[id];
+      if (!hist || hist.days.size < 2) return;
+      const avgDailyRev = hist.totalRev / hist.days.size;
+      const expectedRev = avgDailyRev * periodDays;
+      if (expectedRev <= 0) return;
+      const currentRev = branchStats[id]?.revenue || 0;
+      const diffPct = ((currentRev - expectedRev) / expectedRev) * 100;
+      if (diffPct <= -20 || diffPct >= 25) {
+        revenueAnomalies.push({
+          tenant_id: id,
+          branch_name: tenantNameMap[id] || 'Cabang',
+          currentRev,
+          expectedRev: Math.round(expectedRev),
+          diffPct: Number(diffPct.toFixed(1)),
+          status: diffPct <= -20 ? 'drop' : 'surge',
+        });
+      }
+    });
+
+    // 4. AUDIT RASIO BIAYA & GAJI PER CABANG
+    const costAudit = [];
+    targetTenantIds.forEach((id) => {
+      const rev = branchStats[id]?.revenue || 0;
+      const branchOpExps = expenses.filter((e) => e.tenant_id === id);
+      const opExp = branchOpExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const salExp =
+        empTrans.filter((t) => t.tenant_id === id).reduce((s, t) => s + Number(t.amount || 0), 0) +
+        (pendingSalaryByBranch[id] || 0);
+      const totExp = opExp + salExp;
+      if (totExp <= 0) return;
+
+      const catTotals = {};
+      branchOpExps.forEach((e) => {
+        const c = e.category || 'Operasional';
+        catTotals[c] = (catTotals[c] || 0) + Number(e.amount || 0);
+      });
+      if (salExp > 0) catTotals['Gaji & Karyawan'] = salExp;
+      const topCatEntry = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+
+      const costRatioPct = rev > 0 ? Number(((totExp / rev) * 100).toFixed(1)) : 100;
+      if ((rev > 0 && costRatioPct > 35) || (rev === 0 && totExp > 0)) {
+        costAudit.push({
+          tenant_id: id,
+          branch_name: tenantNameMap[id] || 'Cabang',
+          revenue: rev,
+          totalExpense: totExp,
+          costRatioPct,
+          topCategory: topCatEntry ? topCatEntry[0] : 'Operasional',
+          topCategoryAmount: topCatEntry ? topCatEntry[1] : totExp,
+        });
+      }
+    });
+
+    // 5. DETEKTOR MENU MATI (DEAD STOCK 30 HARI: 0 PENJUALAN)
+    const soldMenuIds = new Set();
+    const soldMenuNames = new Set();
+    completed30.forEach((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      items.forEach((i) => {
+        if (i?.menu_id) soldMenuIds.add(i.menu_id);
+        if (i?.id) soldMenuIds.add(i.id);
+        const nm = i?.name || i?.menu_name;
+        if (nm) soldMenuNames.add(String(nm).toLowerCase().trim());
+      });
+    });
+
+    const deadStockMenus = allMenus
+      .filter(
+        (m) =>
+          m.status === 'available' &&
+          Number(m.stock || 0) > 0 &&
+          m.category !== 'Paket Bundling' &&
+          !soldMenuIds.has(m.id) &&
+          !soldMenuNames.has(String(m.name || '').toLowerCase().trim())
+      )
+      .slice(0, 10)
+      .map((m) => ({
+        id: m.id,
+        tenant_id: m.tenant_id,
+        name: m.name,
+        branch_name: m.branch_name,
+        category: m.category,
+        stock: Number(m.stock),
+        price: Number(m.price),
+        discount_price: m.discount_price ? Number(m.discount_price) : null,
+        suggested_discount_price: Math.max(5000, Math.round((Number(m.price) * 0.75) / 1000) * 1000),
+      }));
+
+    // 6. SMART BASKET ANALYSIS & ACTION PLANS
     const pairCountMap = {};
     const singleMenuPriceMap = {};
     allMenus.forEach((m) => {
@@ -457,7 +640,6 @@ export async function GET(request) {
       ? Number(restockCandidate.price || 25000) * 15
       : 375000;
 
-    // Poin 6: Format jam soldout dari menus.updated_at jika tersedia
     let soldoutTimeInfo = '';
     if (restockCandidate && restockCandidate.updated_at) {
       const dt = new Date(restockCandidate.updated_at);
@@ -493,6 +675,29 @@ export async function GET(request) {
             : `Kombinasi ${bundleItemA} + ${bundleItemB} potensial dijadikan Paket Bundling seharga ${formatRpServer(recommendedBundlePrice)} di bagian Unggulan QR Meja untuk mendongkrak nilai struk.`,
       },
     ];
+
+    if (revenueAnomalies.length > 0) {
+      const topAnom = revenueAnomalies[0];
+      diagnostics.push({
+        code: '04',
+        badgeColor: topAnom.status === 'drop' ? 'rose' : 'sky',
+        title:
+          topAnom.status === 'drop'
+            ? `Anomali Omzet Turun di ${topAnom.branch_name} (${topAnom.diffPct}%)`
+            : `Lonjakan Omzet Positif di ${topAnom.branch_name} (+${topAnom.diffPct}%)`,
+        description: `Omzet ${topAnom.branch_name} tercatat ${formatRpServer(topAnom.currentRev)} dibanding rata-rata historis ${formatRpServer(topAnom.expectedRev)} untuk durasi periode yang sama.`,
+      });
+    }
+
+    if (costAudit.length > 0) {
+      const topCost = costAudit[0];
+      diagnostics.push({
+        code: '05',
+        badgeColor: 'amber',
+        title: `Rasio Biaya Tinggi di ${topCost.branch_name} (${topCost.costRatioPct}% dari Omzet)`,
+        description: `Total biaya tercatat ${formatRpServer(topCost.totalExpense)} dengan pos terbesar pada "${topCost.topCategory}" (${formatRpServer(topCost.topCategoryAmount)}). Disarankan menjaga rasio total biaya di bawah 35%.`,
+      });
+    }
 
     const actionPlans = [];
     if (promoCandidate) {
@@ -579,6 +784,10 @@ export async function GET(request) {
         actionPlans,
         fraudAlerts,
         activePromos,
+        revenueAnomalies,
+        costAudit,
+        deadStockMenus,
+        kdsPeakBottleneck,
       },
     });
   } catch (error) {
@@ -597,7 +806,6 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 0. SIMPAN KONFIGURASI AI KE DATABASE LINTAS PERANGKAT (POIN 4)
     if (action_type === 'save_ai_config') {
       const { provider, model, apiKey } = body;
       if (!manager_email) {
@@ -619,7 +827,6 @@ export async function POST(request) {
       });
     }
 
-    // 1. EKSEKUSI 1-KLIK: AKTIFKAN PROMO HARGA CORET (AUTO-STOP 16:30 WIB)
     if (action_type === 'promo_discount') {
       const { menu_id, discount_price } = body;
       if (!menu_id) {
@@ -651,7 +858,6 @@ export async function POST(request) {
       });
     }
 
-    // 2. EKSEKUSI 1-KLIK: NAIKKAN STOK OTOMATIS
     if (action_type === 'restock_menu') {
       const { menu_id, new_stock } = body;
       if (!menu_id) {
@@ -672,7 +878,6 @@ export async function POST(request) {
       });
     }
 
-    // 3. EKSEKUSI 1-KLIK: BUAT PAKET BUNDLING OTOMATIS
     if (action_type === 'create_bundle') {
       const { tenant_id, bundle_name, bundle_price, normal_price, description } = body;
       if (!tenant_id || !bundle_name) {
@@ -700,7 +905,6 @@ export async function POST(request) {
       });
     }
 
-    // 4. MATIKAN PROMO HARGA CORET DARI TAB MENU & PROMO AKTIF
     if (action_type === 'disable_promo') {
       const { menu_id } = body;
       if (!menu_id) {
@@ -722,14 +926,12 @@ export async function POST(request) {
       });
     }
 
-    // 5. TANYA-JAWAB EXECUTIVE AI ADVISOR (HEMAT TOKEN: RINGKASAN JSON KECIL)
     if (action_type === 'ask_ai') {
       const { question, ai_config, context_summary } = body;
       if (!question || !String(question).trim()) {
         return NextResponse.json({ error: 'Pertanyaan tidak boleh kosong' }, { status: 400 });
       }
 
-      // Cari konfigurasi AI dari database jika di request belum ada
       let dbProvider = '';
       let dbModel = '';
       let dbApiKey = '';
@@ -757,7 +959,7 @@ export async function POST(request) {
         '';
 
       const compactSummary = context_summary || { manager: manager_email, info: 'Ringkasan operasional NexaFlow' };
-      const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran multi-cabang di Indonesia. Jawab dalam Bahasa Indonesia yang ringkas, tajam, berbasis angka dari JSON berikut, dan berikan saran tindakan nyata (maksimal 3-4 kalimat). Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
+      const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran multi-cabang di Indonesia. Jawab dalam Bahasa Indonesia yang ringkas, tajam, berbasis angka dari JSON berikut (termasuk anomali omzet, rasio biaya, dead stock, bottleneck KDS, dan alert fraud jika ada), dan berikan saran tindakan nyata (maksimal 4 kalimat). Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
 
       if (!apiKey) {
         const fallbackRev = formatRpServer(compactSummary?.totalRevenue || 0);
@@ -780,7 +982,7 @@ export async function POST(request) {
                 parts: [{ text: `${systemPrompt}\n\nPertanyaan Owner: ${question}` }],
               },
             ],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 350 },
+            generationConfig: { temperature: 0.3, maxOutputTokens: 420 },
           }),
         });
         const data = await res.json();
@@ -813,7 +1015,7 @@ export async function POST(request) {
               { role: 'user', content: question },
             ],
             temperature: 0.3,
-            max_tokens: 350,
+            max_tokens: 420,
           }),
         });
         const data = await res.json();
