@@ -59,8 +59,21 @@ const getMenuStock = (menu) => {
   return { tracked, value, isOut, isLow };
 };
 
-const getEffectivePrice = (menu) => {
-  if (menu.discount_price && Number(menu.discount_price) > 0) {
+const isPromoActive = (menu, nowMs = Date.now()) => {
+  if (!menu || !menu.promo_expires_at) return true;
+  return new Date(menu.promo_expires_at).getTime() > nowMs;
+};
+
+const isDiscountActive = (menu, nowMs = Date.now()) => {
+  return Boolean(menu?.discount_price && Number(menu.discount_price) > 0 && isPromoActive(menu, nowMs));
+};
+
+const isFeaturedActive = (menu, nowMs = Date.now()) => {
+  return Boolean(menu?.is_featured && isPromoActive(menu, nowMs));
+};
+
+const getEffectivePrice = (menu, nowMs = Date.now()) => {
+  if (isDiscountActive(menu, nowMs)) {
     return Number(menu.discount_price);
   }
   return Number(menu.price);
@@ -76,7 +89,7 @@ const getDeviceId = () => {
   return id;
 };
 
-// 🔥 HELPER: Ekstrak alasan penolakan dari order_note
+// HELPER: Ekstrak alasan penolakan dari order_note
 const getRejectionReason = (order) => {
   if (!order || !order.order_note) return 'Ditolak oleh kasir';
   const match = order.order_note.match(/\[DITOLAK:\s*(.*?)\]/i);
@@ -117,6 +130,7 @@ function OrderContent() {
   const [pastOrders, setPastOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [popupNote, setPopupNote] = useState('');
@@ -142,7 +156,15 @@ function OrderContent() {
   const [timeLeft, setTimeLeft] = useState(600);
   const [sessionReady, setSessionReady] = useState(false);
 
-  // 🔥 SESSION INIT — deteksi new scan vs refresh, anti-bypass lock
+  // Ticker setiap 30 detik agar promo kadaluarsa (16:30 WIB) otomatis berhenti walau tab tidak di-refresh
+  useEffect(() => {
+    const promoTimer = setInterval(() => {
+      setNowTick(Date.now());
+    }, 30000);
+    return () => clearInterval(promoTimer);
+  }, []);
+
+  // SESSION INIT — deteksi new scan vs refresh, anti-bypass lock
   useEffect(() => {
     if (!tenantId || !tableNumber) return;
 
@@ -165,7 +187,7 @@ function OrderContent() {
     const visited = sessionStorage.getItem(visitKey);
 
     if (!visited) {
-      // ✅ New scan (fresh tab, QR fisik, bookmark baru)
+      // New scan (fresh tab, QR fisik, bookmark baru)
       sessionStorage.setItem(visitKey, 'true');
       sessionStorage.setItem(startKey, Date.now().toString());
       localStorage.removeItem(lockKey);
@@ -194,7 +216,7 @@ function OrderContent() {
     setSessionReady(true);
   }, [tenantId, tableNumber]);
 
-  // 🔥 TIMER — hanya berjalan di pra-order (belum ada pesanan)
+  // TIMER — hanya berjalan di pra-order (belum ada pesanan)
   useEffect(() => {
     if (!sessionReady) return;
     if (isLocked) return;
@@ -227,8 +249,8 @@ function OrderContent() {
     return () => clearInterval(interval);
   }, [sessionReady, isLocked, myOrders, tenantId, tableNumber]);
 
-  // 🔥 LOCK jika semua pesanan SESI INI sudah selesai / ditolak
-  // ✅ delay 2 detik agar user sempat lihat status "Selesai"
+  // LOCK jika semua pesanan SESI INI sudah selesai / ditolak
+  // delay 2 detik agar user sempat lihat status "Selesai"
   useEffect(() => {
     if (!sessionReady) return;
     if (isLocked) return;
@@ -375,23 +397,31 @@ function OrderContent() {
   useEffect(() => {
     if (cart.length === 0 || menus.length === 0) return;
     setCart(prev => {
-      let changed = false;
+      let stockChanged = false;
+      let priceChanged = false;
       const next = prev.map(item => {
         const menu = menus.find(m => m.id === item.id);
-        if (!menu) { changed = true; return { ...item, qty: 0 }; }
+        if (!menu) { stockChanged = true; return { ...item, qty: 0 }; }
         const stock = getMenuStock(menu);
-        if (stock.isOut) { changed = true; return { ...item, qty: 0 }; }
+        if (stock.isOut) { stockChanged = true; return { ...item, qty: 0 }; }
+        let updatedItem = item;
         if (stock.tracked && item.qty > stock.value) {
-          changed = true;
-          return { ...item, qty: Math.max(0, stock.value) };
+          stockChanged = true;
+          updatedItem = { ...updatedItem, qty: Math.max(0, stock.value) };
         }
-        return item;
+        const livePrice = getEffectivePrice(menu, nowTick);
+        if (Number(updatedItem.price) !== livePrice) {
+          priceChanged = true;
+          updatedItem = { ...updatedItem, price: livePrice };
+        }
+        return updatedItem;
       }).filter(i => i.qty > 0);
-      if (changed) showToast('Beberapa item disesuaikan dengan stok terkini');
-      return changed ? next : prev;
+      if (stockChanged) showToast('Beberapa item disesuaikan dengan stok terkini');
+      else if (priceChanged) showToast('Harga promo berakhir, harga keranjang disesuaikan');
+      return (stockChanged || priceChanged) ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [menus]);
+  }, [menus, nowTick]);
 
   const playReadySound = () => {
     if (!audioCtxRef.current) return;
@@ -551,12 +581,12 @@ function OrderContent() {
       return;
     }
 
-    const effectivePrice = getEffectivePrice(menu);
+    const effectivePrice = getEffectivePrice(menu, nowTick);
 
     setCart(prev => {
       const ex = prev.find(i => i.id === menu.id);
       if (ex) {
-        return prev.map(i => i.id === menu.id ? { ...i, qty: i.qty + 1, note: note || i.note } : i);
+        return prev.map(i => i.id === menu.id ? { ...i, price: effectivePrice, qty: i.qty + 1, note: note || i.note } : i);
       }
       return [...prev, { ...menu, price: effectivePrice, qty: 1, note: note }];
     });
@@ -721,7 +751,7 @@ function OrderContent() {
     );
   }
 
-  // 🔥 LAYAR SESI BERAKHIR — WAJIB SCAN QR ULANG DI MEJA (tanpa tombol apapun)
+  // LAYAR SESI BERAKHIR — WAJIB SCAN QR ULANG DI MEJA (tanpa tombol apapun)
   if (isLocked) {
     const allHist = [...(pastOrders || []), ...myOrders];
     const deduped = allHist.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
@@ -743,7 +773,7 @@ function OrderContent() {
             Waktu 10 menit habis, atau pesanan Anda telah selesai.
           </p>
 
-          {/* 📋 RIWAYAT PESANAN */}
+          {/* RIWAYAT PESANAN */}
           {historyOrders.length > 0 && (
             <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-5 text-left">
               <p className="text-[10px] font-black text-[#8C7A6B] uppercase tracking-wider mb-3 border-b border-[#E0D6CC] pb-2">Riwayat Pesanan</p>
@@ -776,7 +806,7 @@ function OrderContent() {
             </div>
           )}
 
-          {/* 🚨 INSTRUKSI WAJIB SCAN QR ULANG */}
+          {/* INSTRUKSI WAJIB SCAN QR ULANG */}
           <div className="bg-[#1A1512] rounded-2xl p-5 mb-5 border-2 border-[#2A1F17]">
             <div className="w-14 h-14 mx-auto mb-3 bg-cyan-500 rounded-2xl flex items-center justify-center text-[#1A1512] shadow-lg">
               <Icons.QrScan />
@@ -806,9 +836,9 @@ function OrderContent() {
     return matchCat && matchSearch;
   });
 
-  const recommendedMenus = menus.filter(m => (m.is_featured || m.is_new) && !getMenuStock(m).isOut);
+  const recommendedMenus = menus.filter(m => (isFeaturedActive(m, nowTick) || m.is_new) && !getMenuStock(m).isOut);
 
-  // ✅ gabung pastOrders + myOrders untuk tab Status
+  // gabung pastOrders + myOrders untuk tab Status
   const displayOrders = (() => {
     const all = [...(pastOrders || []), ...myOrders];
     const deduped = all.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
@@ -903,20 +933,21 @@ function OrderContent() {
               
               <div className="flex gap-5 overflow-x-auto px-6 pb-6 scrollbar-hide snap-x">
                 {recommendedMenus.map(menu => {
-                  const effectivePrice = getEffectivePrice(menu);
-                  const hasDiscount = menu.discount_price && Number(menu.discount_price) > 0;
+                  const effectivePrice = getEffectivePrice(menu, nowTick);
+                  const hasDiscount = isDiscountActive(menu, nowTick);
+                  const showFeaturedBadge = isFeaturedActive(menu, nowTick);
                   return (
                     <div key={menu.id} onClick={() => setSelectedMenu(menu)} className="snap-start shrink-0 w-64 bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group transition-transform duration-300 cursor-pointer">
                       <div className="relative h-48 w-full bg-[#F4EFE9] overflow-hidden">
                         {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold">No Image</div>}
                         
-                        {menu.is_featured && (
+                        {showFeaturedBadge && (
                           <div className="absolute top-3 left-3 bg-[#2A1F17] text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 tracking-widest uppercase border border-[#1A1512]">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-cyan-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                             Unggulan
                           </div>
                         )}
-                        {menu.is_new && !menu.is_featured && (
+                        {menu.is_new && !showFeaturedBadge && (
                           <div className="absolute top-3 left-3 bg-emerald-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 tracking-widest uppercase border border-emerald-700">
                             Baru
                           </div>
@@ -951,8 +982,8 @@ function OrderContent() {
                 const stock = getMenuStock(menu);
                 const isOut = stock.isOut;
                 const isLow = stock.isLow;
-                const effectivePrice = getEffectivePrice(menu);
-                const hasDiscount = menu.discount_price && Number(menu.discount_price) > 0;
+                const effectivePrice = getEffectivePrice(menu, nowTick);
+                const hasDiscount = isDiscountActive(menu, nowTick);
 
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group ${isOut ? 'opacity-60 grayscale' : ''}`}>
@@ -1233,8 +1264,9 @@ function OrderContent() {
       {selectedMenu && (() => {
         const selectedStock = getMenuStock(selectedMenu);
         const selectedCartItem = cart.find(c => c.id === selectedMenu.id);
-        const effectivePrice = getEffectivePrice(selectedMenu);
-        const hasDiscount = selectedMenu.discount_price && Number(selectedMenu.discount_price) > 0;
+        const effectivePrice = getEffectivePrice(selectedMenu, nowTick);
+        const hasDiscount = isDiscountActive(selectedMenu, nowTick);
+        const showFeaturedBadge = isFeaturedActive(selectedMenu, nowTick);
         
         return (
           <div className="fixed inset-0 bg-[#1A1512]/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
@@ -1248,7 +1280,7 @@ function OrderContent() {
                   )}
                   
                   <div className="absolute top-5 left-5 flex flex-wrap gap-2 max-w-[70%]">
-                    {selectedMenu.is_featured && (
+                    {showFeaturedBadge && (
                       <span className="bg-[#2A1F17] text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 tracking-widest uppercase border border-[#1A1512]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-cyan-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                         Unggulan

@@ -4,6 +4,25 @@ import { NextResponse } from 'next/server';
 const formatRpServer = (num) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
 
+const getPromoExpiresAt1630Wib = () => {
+  const nowUtcMs = Date.now();
+  const wibOffsetMs = 7 * 60 * 60 * 1000;
+  const wibNow = new Date(nowUtcMs + wibOffsetMs);
+  const year = wibNow.getUTCFullYear();
+  const month = wibNow.getUTCMonth();
+  const day = wibNow.getUTCDate();
+
+  // 16:30 WIB = 09:30 UTC pada tanggal WIB berjalan
+  let targetUtcMs = Date.UTC(year, month, day, 9, 30, 0, 0);
+
+  // Jika sudah melewati 16:30 WIB hari ini, jadwalkan ke 16:30 WIB besok
+  if (nowUtcMs >= targetUtcMs) {
+    targetUtcMs += 24 * 60 * 60 * 1000;
+  }
+
+  return new Date(targetUtcMs).toISOString();
+};
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -167,10 +186,31 @@ export async function GET(request) {
     const allEmployees = empRes.data || [];
     const targetEmployees = allEmployees.filter((e) => targetTenantIds.includes(e.tenant_id));
 
-    const allMenus = (allMenusRes.data || []).map((m) => ({
-      ...m,
-      branch_name: tenantNameMap[m.tenant_id] || 'Cabang',
-    }));
+    // Auto-cleanup promo yang sudah melewati promo_expires_at
+    const rawMenus = allMenusRes.data || [];
+    const expiredPromoIds = rawMenus
+      .filter((m) => m.promo_expires_at && new Date(m.promo_expires_at).getTime() <= Date.now())
+      .map((m) => m.id);
+
+    if (expiredPromoIds.length > 0) {
+      await supabaseAdmin
+        .from('menus')
+        .update({
+          is_featured: false,
+          discount_price: null,
+          promo_expires_at: null,
+        })
+        .in('id', expiredPromoIds);
+    }
+
+    const allMenus = rawMenus.map((m) => {
+      const isExpired = expiredPromoIds.includes(m.id);
+      return {
+        ...m,
+        ...(isExpired ? { is_featured: false, discount_price: null, promo_expires_at: null } : {}),
+        branch_name: tenantNameMap[m.tenant_id] || 'Cabang',
+      };
+    });
 
     const lowStockMenus = allMenus.filter((m) => Number(m.stock) <= 10);
     const unpaidInvoices = (invoiceRes.data || []).map((inv) => ({
@@ -467,7 +507,7 @@ export async function GET(request) {
         menu_id: promoCandidate.id,
         original_price: Number(promoCandidate.price),
         discount_price: promoDiscountPrice,
-        description: `AI akan mengaktifkan is_featured = true dan discount_price = ${promoDiscountPrice} pada menu ${promoCandidate.name} (${promoCandidate.branch_name}) agar tampil paling atas di HP pelanggan.`,
+        description: `AI akan mengaktifkan is_featured = true dan discount_price = ${promoDiscountPrice} pada menu ${promoCandidate.name} (${promoCandidate.branch_name}) agar tampil paling atas di HP pelanggan, lalu otomatis berhenti pada 16:30 WIB.`,
         buttonLabel: 'Eksekusi Promo 1-Klik Sekarang',
       });
     }
@@ -579,25 +619,35 @@ export async function POST(request) {
       });
     }
 
-    // 1. EKSEKUSI 1-KLIK: AKTIFKAN PROMO HARGA CORET
+    // 1. EKSEKUSI 1-KLIK: AKTIFKAN PROMO HARGA CORET (AUTO-STOP 16:30 WIB)
     if (action_type === 'promo_discount') {
       const { menu_id, discount_price } = body;
       if (!menu_id) {
         return NextResponse.json({ error: 'ID Menu tidak ditemukan' }, { status: 400 });
       }
+      const promoExpiresAt = getPromoExpiresAt1630Wib();
       const { error } = await supabaseAdmin
         .from('menus')
         .update({
           is_featured: true,
           discount_price: Number(discount_price),
           status: 'available',
+          promo_expires_at: promoExpiresAt,
         })
         .eq('id', menu_id);
 
       if (error) throw error;
+      const expWibLabel = new Date(promoExpiresAt).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
       return NextResponse.json({
         success: true,
-        message: 'Promo Harga Coret & Label Unggulan berhasil diaktifkan di layar QR pelanggan!',
+        promo_expires_at: promoExpiresAt,
+        message: `Promo Harga Coret & Label Unggulan aktif dan akan otomatis berhenti pada ${expWibLabel} WIB!`,
       });
     }
 
@@ -661,6 +711,7 @@ export async function POST(request) {
         .update({
           is_featured: false,
           discount_price: null,
+          promo_expires_at: null,
         })
         .eq('id', menu_id);
 
