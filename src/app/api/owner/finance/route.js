@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -29,6 +30,7 @@ export async function POST(request) {
     if (action === 'add_employee') {
       if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
       const { error } = await supabaseAdmin.from('employees').insert([{
+        id: crypto.randomUUID(),
         tenant_id: payload.tenant_id,
         name: payload.name,
         role: payload.role || 'Kasir',
