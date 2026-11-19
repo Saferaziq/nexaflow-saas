@@ -28,6 +28,8 @@ export default function OwnerFinance() {
   const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [showInactiveEmployees, setShowInactiveEmployees] = useState(false);
+
   const [expenseModal, setExpenseModal] = useState(false);
   const [formExpense, setFormExpense] = useState({ tenant_id: '', category: 'Bulanan', description: '', amount: '' });
 
@@ -46,7 +48,15 @@ export default function OwnerFinance() {
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: '',
+    message: '',
+    confirmText: 'Hapus',
+    isDanger: false,
+    onConfirm: null,
+    loading: false
+  });
 
   useEffect(() => {
     try {
@@ -264,16 +274,20 @@ export default function OwnerFinance() {
   };
 
   const handleDelete = (type, id) => {
+    const isExpense = type === 'expense';
     setConfirmModal({
       open: true,
-      title: type === 'expense' ? 'Hapus Pengeluaran' : 'Hapus Karyawan',
-      message: 'Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.',
+      title: isExpense ? 'Hapus Pengeluaran' : 'Nonaktifkan Karyawan',
+      message: isExpense
+        ? 'Yakin ingin menghapus data pengeluaran ini? Tindakan ini tidak dapat dibatalkan.'
+        : 'Karyawan akan dinonaktifkan dari daftar aktif, tetapi seluruh riwayat gaji, bonus, dan kasbon tetap tersimpan aman di laporan P&L.',
+      confirmText: isExpense ? 'Hapus' : 'Nonaktifkan',
       isDanger: true,
       loading: false,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, loading: true }));
         try {
-          const action = type === 'expense' ? 'delete_expense' : 'delete_employee';
+          const action = isExpense ? 'delete_expense' : 'delete_employee';
           const res = await fetch('/api/owner/finance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -283,14 +297,37 @@ export default function OwnerFinance() {
           if (res.ok) {
             showToast(data.message);
             fetchData(userEmail);
-            setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+            setConfirmModal({ open: false, title: '', message: '', confirmText: 'Hapus', isDanger: false, onConfirm: null, loading: false });
           } else throw new Error(data.error);
         } catch (err) {
           showToast(err.message, 'error');
-          setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
+          setConfirmModal({ open: false, title: '', message: '', confirmText: 'Hapus', isDanger: false, onConfirm: null, loading: false });
         }
       }
     });
+  };
+
+  const handleRestoreEmployee = async (emp) => {
+    try {
+      const res = await fetch('/api/owner/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'restore_employee',
+          manager_email: userEmail,
+          payload: { id: emp.id }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message);
+        fetchData(userEmail);
+      } else {
+        showToast(data.error || 'Gagal mengaktifkan karyawan', 'error');
+      }
+    } catch (err) {
+      showToast('Gagal menghubungi server', 'error');
+    }
   };
 
   const handleSendSalaryWA = (emp) => {
@@ -335,6 +372,18 @@ export default function OwnerFinance() {
 
   const totalPengeluaranBulanan = expensesMonthly.reduce((sum, ex) => sum + Number(ex.amount), 0) + totalGajiBulanIni;
   const totalPengeluaranHarian = expensesDaily.reduce((sum, ex) => sum + Number(ex.amount), 0);
+
+  const activeEmployees = useMemo(
+    () => employees.filter(emp => emp.is_active !== false),
+    [employees]
+  );
+
+  const inactiveEmployees = useMemo(
+    () => employees.filter(emp => emp.is_active === false),
+    [employees]
+  );
+
+  const displayedEmployees = showInactiveEmployees ? inactiveEmployees : activeEmployees;
 
   const lowStockCount = useMemo(
     () => menus.filter(m => Number(m.stock) <= 10).length,
@@ -618,8 +667,31 @@ export default function OwnerFinance() {
             {/* TAB 3: DATA KARYAWAN & GAJI */}
             {activeTab === 'employees' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-300">{employees.length} staf terdaftar lintas cabang</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowInactiveEmployees(false)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-black border-2 transition-colors ${
+                        !showInactiveEmployees
+                          ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500'
+                          : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#5C4B3E] dark:text-slate-300'
+                      }`}
+                    >
+                      Aktif ({activeEmployees.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowInactiveEmployees(true)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-black border-2 transition-colors ${
+                        showInactiveEmployees
+                          ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500'
+                          : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#5C4B3E] dark:text-slate-300'
+                      }`}
+                    >
+                      Nonaktif ({inactiveEmployees.length})
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -633,18 +705,22 @@ export default function OwnerFinance() {
                 </div>
 
                 <div className="space-y-3">
-                  {employees.map(emp => {
+                  {displayedEmployees.map(emp => {
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
                     const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
-                    const showSalaryReminder = isEndOfMonth && !hasBeenPaidThisMonth;
+                    const isActive = emp.is_active !== false;
+                    const showSalaryReminder = isActive && isEndOfMonth && !hasBeenPaidThisMonth;
 
                     return (
-                      <div key={emp.id} className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div key={emp.id} className={`owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${!isActive ? 'opacity-80' : ''}`}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-black text-[#1A1512] dark:text-white">{emp.name}</p>
+                            {!isActive && (
+                              <span className="px-2.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-black">Nonaktif</span>
+                            )}
                             {showSalaryReminder && (
                               <span className="px-2.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-black">Belum Digaji</span>
                             )}
@@ -670,18 +746,30 @@ export default function OwnerFinance() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-[#2563EB] text-xs font-black text-[#1A1512] dark:text-white">Gaji</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-amber-500 text-xs font-black text-[#1A1512] dark:text-white">Kasbon</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-emerald-500 text-xs font-black text-[#1A1512] dark:text-white">Bonus</button>
-                          <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
-                          <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
-                          <button onClick={() => handleDelete('employee', emp.id)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400" title="Hapus"><Icons.Trash /></button>
+                          {isActive ? (
+                            <>
+                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-[#2563EB] text-xs font-black text-[#1A1512] dark:text-white">Gaji</button>
+                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-amber-500 text-xs font-black text-[#1A1512] dark:text-white">Kasbon</button>
+                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-emerald-500 text-xs font-black text-[#1A1512] dark:text-white">Bonus</button>
+                              <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
+                              <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
+                              <button onClick={() => handleDelete('employee', emp.id)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400" title="Nonaktifkan"><Icons.Trash /></button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
+                              <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
+                              <button onClick={() => handleRestoreEmployee(emp)} className="px-3 py-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black">Aktifkan Kembali</button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
                   })}
-                  {employees.length === 0 && (
-                    <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-8 text-center text-xs font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada data karyawan.</div>
+                  {displayedEmployees.length === 0 && (
+                    <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-8 text-center text-xs font-bold text-[#5C4B3E] dark:text-slate-300">
+                      {showInactiveEmployees ? 'Tidak ada karyawan nonaktif.' : 'Belum ada data karyawan aktif.'}
+                    </div>
                   )}
                 </div>
               </div>
@@ -918,8 +1006,8 @@ export default function OwnerFinance() {
             <h3 className="text-base font-black text-[#1A1512] dark:text-white">{confirmModal.title}</h3>
             <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">{confirmModal.message}</p>
             <div className="flex gap-2 pt-2">
-              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-black">{confirmModal.loading ? 'Memproses...' : 'Hapus'}</button>
+              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', confirmText: 'Hapus', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-black">{confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}</button>
             </div>
           </div>
         </div>
