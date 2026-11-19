@@ -55,7 +55,7 @@ export async function POST(request) {
         address: payload.address,
         bank_name: payload.bank_name,
         bank_account: payload.bank_account
-      }).eq('id', payload.id);
+      }).eq('id', payload.id).in('tenant_id', tenantIds);
       if (error) throw error;
       return NextResponse.json({ success: true, message: 'Karyawan diperbarui!' });
     }
@@ -74,15 +74,26 @@ export async function POST(request) {
     }
 
     if (action === 'delete_employee') {
-      await supabaseAdmin
-        .from('employee_transactions')
-        .delete()
-        .eq('employee_id', payload.id)
+      const { error } = await supabaseAdmin
+        .from('employees')
+        .update({ is_active: false })
+        .eq('id', payload.id)
         .in('tenant_id', tenantIds);
-
-      const { error } = await supabaseAdmin.from('employees').delete().eq('id', payload.id).in('tenant_id', tenantIds);
       if (error) throw error;
-      return NextResponse.json({ success: true, message: 'Karyawan dihapus!' });
+      return NextResponse.json({
+        success: true,
+        message: 'Karyawan dinonaktifkan. Riwayat gaji & kasbon tetap tersimpan.'
+      });
+    }
+
+    if (action === 'restore_employee') {
+      const { error } = await supabaseAdmin
+        .from('employees')
+        .update({ is_active: true })
+        .eq('id', payload.id)
+        .in('tenant_id', tenantIds);
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Karyawan diaktifkan kembali!' });
     }
 
     if (action === 'update_menu_stock') {
