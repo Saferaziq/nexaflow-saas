@@ -10,7 +10,7 @@ const Icons = {
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
   Activity: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Refresh: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
   Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
@@ -18,7 +18,7 @@ const Icons = {
   Box: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
   File: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
   Coin: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="18"/><path d="M15 9h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9"/></svg>,
-  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   Close: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Bot: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 2a4 4 0 0 1 4 4v2h2a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-8a2 2 0 0 1 2-2h2V6a4 4 0 0 1 4-4z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>,
   Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
@@ -330,7 +330,6 @@ export default function OwnerDashboard() {
     return () => { if (interval) clearInterval(interval); };
   }, [period, dateDaily, dateWeekly, dateMonthly, selectedBranchId]);
 
-  // SUPABASE REALTIME SUBSCRIPTION (RESPONSIF TANPA DELAY)
   const branchIdsKey = useMemo(() => branches.map(b => b.id).sort().join(','), [branches]);
   useEffect(() => {
     if (!branchIdsKey) return;
@@ -745,51 +744,51 @@ export default function OwnerDashboard() {
       `}</style>
 
       <div className="flex min-h-screen">
-        {/* SIDEBAR TEGAS SELARAS KASIR */}
-        <aside className="hidden lg:flex lg:w-60 bg-[#2A1F17] text-white dark:bg-slate-900 border-r-2 border-[#1A1512] dark:border-slate-700 flex-col justify-between p-5 shrink-0 h-screen sticky top-0">
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 px-1">
-              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
+        {/* SIDEBAR AUTO-COLLAPSE ESPRESSO SELARAS KASIR */}
+        <aside className="group hidden lg:flex w-[80px] hover:w-64 transition-[width] duration-200 ease-out bg-[#2A1F17] text-white dark:bg-slate-900 border-r-2 border-[#1A1512] dark:border-slate-700 flex-col justify-between z-50 shrink-0 h-screen sticky top-0 overflow-hidden">
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="h-20 flex items-center px-5 border-b border-white/15 dark:border-slate-700 shrink-0 overflow-hidden">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
                 <img src="/logo-nexaflow-3d.png" alt="NexaFlow" className="w-full h-full object-contain" />
               </div>
-              <div>
+              <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                 <p className="text-base font-black tracking-tight text-white leading-none">NEXAFLOW</p>
                 <p className="text-[11px] font-extrabold text-amber-400 tracking-wider uppercase mt-1">Owner Panel</p>
               </div>
             </div>
 
-            <nav className="space-y-1.5">
-              <Link href="/owner" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black border border-blue-400/40">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                <span>Command Center AI</span>
+            <nav className="flex-1 px-3 py-5 space-y-1.5 overflow-y-auto overflow-x-hidden">
+              <Link href="/owner" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl bg-[#2563EB] text-white text-xs font-black border border-blue-400/40 whitespace-nowrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Command Center AI</span>
               </Link>
-              <Link href="/owner/finance" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                <span>Keuangan & Stok</span>
+              <Link href="/owner/finance" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Keuangan & Stok</span>
               </Link>
-              <Link href="/owner/reports" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                <span>Laporan Global P&L</span>
+              <Link href="/owner/reports" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Laporan Global P&L</span>
               </Link>
-              <Link href="/owner/settings" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
+              <Link href="/owner/settings" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
                 <Icons.Settings />
-                <span>Pengaturan & AI Key</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Pengaturan & AI Key</span>
               </Link>
             </nav>
           </div>
 
-          <div className="pt-4 border-t border-white/15 space-y-3">
-            <div className="px-1">
+          <div className="p-3 border-t border-white/15 dark:border-slate-700 space-y-3 shrink-0">
+            <div className="px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden">
               <p className="text-xs font-black text-white truncate">{userEmail || 'Owner'}</p>
-              <p className="text-[11px] font-bold text-[#D3C8BB] dark:text-slate-400 mt-0.5">{branches.length} Cabang Aktif</p>
+              <p className="text-[11px] font-bold text-amber-300 dark:text-slate-300 mt-0.5">{branches.length} Cabang Aktif</p>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors"
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors whitespace-nowrap"
             >
               <Icons.Logout />
-              <span>Logout</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Logout</span>
             </button>
           </div>
         </aside>
@@ -800,9 +799,9 @@ export default function OwnerDashboard() {
           <div className="lg:hidden bg-[#2A1F17] dark:bg-slate-900 border-b-2 border-[#1A1512] dark:border-slate-700 px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto">
             <div className="flex items-center gap-1.5">
               <Link href="/owner" className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-xs font-black whitespace-nowrap">Overview</Link>
-              <Link href="/owner/finance" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Keuangan</Link>
-              <Link href="/owner/reports" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Laporan</Link>
-              <Link href="/owner/settings" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Pengaturan</Link>
+              <Link href="/owner/finance" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Keuangan</Link>
+              <Link href="/owner/reports" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Laporan</Link>
+              <Link href="/owner/settings" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Pengaturan</Link>
             </div>
             <button type="button" onClick={handleLogout} className="px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-black shrink-0">
               Keluar
@@ -847,9 +846,9 @@ export default function OwnerDashboard() {
                   <input type="month" value={dateMonthly} onChange={(e) => handleDateChange(e, 'monthly')} className="bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3 py-2 text-xs font-extrabold text-[#1A1512] dark:text-white outline-none" />
                 )}
                 <div className="hidden md:flex bg-[#FAF6F2] dark:bg-slate-800 rounded-xl p-1 border-2 border-[#E0D6CC] dark:border-slate-600">
-                  <button onClick={() => handlePeriodChange('daily')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'daily' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-300'}`}>Harian</button>
-                  <button onClick={() => handlePeriodChange('weekly')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'weekly' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-300'}`}>Mingguan</button>
-                  <button onClick={() => handlePeriodChange('monthly')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'monthly' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-300'}`}>Bulanan</button>
+                  <button onClick={() => handlePeriodChange('daily')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'daily' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-200'}`}>Harian</button>
+                  <button onClick={() => handlePeriodChange('weekly')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'weekly' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-200'}`}>Mingguan</button>
+                  <button onClick={() => handlePeriodChange('monthly')} className={`px-3 py-1 rounded-lg text-xs font-black ${period === 'monthly' ? 'bg-[#2A1F17] text-white dark:bg-[#2563EB]' : 'text-[#5C4B3E] dark:text-slate-200'}`}>Bulanan</button>
                 </div>
               </div>
 
@@ -884,7 +883,7 @@ export default function OwnerDashboard() {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
                     activeAiTab === 'advisor'
                       ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500'
-                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'
                   }`}
                 >
                   <Icons.Bot />
@@ -897,7 +896,7 @@ export default function OwnerDashboard() {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
                     activeAiTab === 'audit'
                       ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500'
-                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'
                   }`}
                 >
                   <Icons.Shield />
@@ -913,7 +912,7 @@ export default function OwnerDashboard() {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
                     activeAiTab === 'promo'
                       ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500'
-                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                      : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'
                   }`}
                 >
                   <Icons.Tag />
@@ -926,7 +925,7 @@ export default function OwnerDashboard() {
 
               <Link
                 href="/owner/settings"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-extrabold text-[#1A1512] dark:text-slate-200"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-extrabold text-[#1A1512] dark:text-slate-100"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${aiConfig.apiKey ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>Mesin AI: {aiConfig.provider.toUpperCase()} ({aiConfig.model})</span>
@@ -943,10 +942,10 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-blue-800 dark:text-blue-300">Tagihan Langganan NexaFlow</p>
-                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-200 mt-1">
+                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-100 mt-1">
                         {unpaidInvoices.length} invoice belum dibayar · <span className="owner-num font-black">{formatRp(totalUnpaidInvoiceAmount)}</span>
                       </p>
-                      <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-400 mt-1 truncate">
+                      <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-300 mt-1 truncate">
                         {unpaidInvoices.slice(0, 2).map(inv => `${inv.branch_name} (${inv.period})`).join(', ')}
                       </p>
                     </div>
@@ -960,8 +959,8 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-rose-700 dark:text-rose-300">Peringatan Gaji Karyawan</p>
-                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-200 mt-1">{unpaidEmployees.length} karyawan belum menerima gaji bulan ini.</p>
-                      <Link href="/owner/finance" className="text-xs font-black text-rose-700 dark:text-rose-400 mt-1.5 inline-block underline">Proses Gaji →</Link>
+                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-100 mt-1">{unpaidEmployees.length} karyawan belum menerima gaji bulan ini.</p>
+                      <Link href="/owner/finance" className="text-xs font-black text-rose-700 dark:text-rose-300 mt-1.5 inline-block underline">Proses Gaji →</Link>
                     </div>
                   </div>
                 )}
@@ -973,8 +972,8 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-amber-800 dark:text-amber-300">Stok Menipis</p>
-                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-200 mt-1">{lowStockMenus.length} menu di bawah 10 pcs</p>
-                      <Link href="/owner/finance" className="text-xs font-black text-amber-800 dark:text-amber-400 mt-1.5 inline-block underline">Kelola Stok →</Link>
+                      <p className="text-xs font-bold text-[#1A1512] dark:text-slate-100 mt-1">{lowStockMenus.length} menu di bawah 10 pcs</p>
+                      <Link href="/owner/finance" className="text-xs font-black text-amber-800 dark:text-amber-300 mt-1.5 inline-block underline">Kelola Stok →</Link>
                     </div>
                   </div>
                 )}
@@ -1052,7 +1051,7 @@ export default function OwnerDashboard() {
                               {anom.diffPct > 0 ? `+${anom.diffPct}%` : `${anom.diffPct}%`}
                             </span>
                           </div>
-                          <p className="text-xs font-bold text-[#1A1512] dark:text-slate-200 mt-1">
+                          <p className="text-xs font-bold text-[#1A1512] dark:text-slate-100 mt-1">
                             Aktual <span className="owner-num font-black">{formatRp(anom.currentRev)}</span> vs rata-rata historis <span className="owner-num font-black">{formatRp(anom.expectedRev)}</span>.
                           </p>
                         </div>
@@ -1076,7 +1075,7 @@ export default function OwnerDashboard() {
                               {audit.costRatioPct}% Omzet
                             </span>
                           </div>
-                          <p className="text-xs font-bold text-[#1A1512] dark:text-slate-200 mt-1">
+                          <p className="text-xs font-bold text-[#1A1512] dark:text-slate-100 mt-1">
                             Total biaya <span className="owner-num font-black">{formatRp(audit.totalExpense)}</span> (terbesar: <strong>{audit.topCategory}</strong> senilai <span className="owner-num font-black">{formatRp(audit.topCategoryAmount)}</span>).
                           </p>
                         </div>
@@ -1396,7 +1395,7 @@ export default function OwnerDashboard() {
                             <div key={cat} className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}></span>
-                                <span className="font-extrabold text-[#1A1512] dark:text-slate-200 truncate">{cat}</span>
+                                <span className="font-extrabold text-[#1A1512] dark:text-slate-100 truncate">{cat}</span>
                               </div>
                               <span className="font-black text-[#1A1512] dark:text-white owner-num shrink-0 ml-2">{formatRp(amt)}</span>
                             </div>
@@ -1455,7 +1454,7 @@ export default function OwnerDashboard() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-xs font-black text-[#1A1512] dark:text-white truncate">Pesanan Masuk</p>
-                              <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-400 shrink-0">{timeAgo(act.created_at)}</p>
+                              <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-300 shrink-0">{timeAgo(act.created_at)}</p>
                             </div>
                             <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5 truncate">
                               {act.tenants?.name || 'Cabang'} · <span className="owner-num text-[#1A1512] dark:text-white">{formatRp(act.total_price)}</span>
@@ -1568,7 +1567,7 @@ export default function OwnerDashboard() {
                                   </div>
                                   <div className="min-w-0">
                                     <p className="font-black text-sm text-[#1A1512] dark:text-white truncate">{branch.name}</p>
-                                    <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-400">ID: {branch.id.split('-')[0]}</p>
+                                    <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-300">ID: {branch.id.split('-')[0]}</p>
                                   </div>
                                 </div>
                               </td>
