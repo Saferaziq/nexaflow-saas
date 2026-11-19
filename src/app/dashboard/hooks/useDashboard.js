@@ -5,6 +5,25 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { extractDominantColor } from '../helpers/color';
 
+const SAFE_TENANT_COLUMNS = [
+  'id',
+  'name',
+  'wa_number',
+  'address',
+  'logo_url',
+  'qris_string',
+  'banner_url',
+  'tax_percentage',
+  'notify_order_ready',
+  'is_open',
+  'is_active',
+  'is_pay_first',
+  'business_type',
+  'subscription_end_date'
+].join(', ');
+
+const normPayStatus = (val) => String(val || '').trim().toUpperCase();
+
 export function useDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -148,7 +167,7 @@ export function useDashboard() {
     if (data) {
       const waitingPaymentIds = new Set(data.filter(o =>
         o.status === 'pending' &&
-        ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
+        ['WAITING_QRIS', 'WAITING_CASH'].includes(normPayStatus(o.payment_status))
       ).map(o => o.id));
 
       const prevIds = prevOrderIdsRef.current;
@@ -183,7 +202,7 @@ export function useDashboard() {
   useEffect(() => {
     hasPendingOrderRef.current = orders.some(o =>
       o.status === 'pending' &&
-      ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
+      ['WAITING_QRIS', 'WAITING_CASH'].includes(normPayStatus(o.payment_status))
     );
   }, [orders]);
 
@@ -271,7 +290,7 @@ export function useDashboard() {
 
       const { data: userData, error: userErr } = await supabase
         .from('users')
-        .select('tenant_id, tenants(*)')
+        .select(`tenant_id, tenants(${SAFE_TENANT_COLUMNS})`)
         .eq('id', session.user.id)
         .single();
 
@@ -291,7 +310,11 @@ export function useDashboard() {
       let activeTenantId = userData.tenant_id;
 
       if (overrideTenantId) {
-        const { data: overrideData } = await supabase.from('tenants').select('*').eq('id', overrideTenantId).single();
+        const { data: overrideData } = await supabase
+          .from('tenants')
+          .select(SAFE_TENANT_COLUMNS)
+          .eq('id', overrideTenantId)
+          .single();
         if (overrideData) {
           activeTenantData = overrideData;
           activeTenantId = overrideTenantId;
@@ -652,7 +675,7 @@ export function useDashboard() {
     const updatePayload = { status };
     if (status === 'completed') {
       updatePayload.payment_status = 'PAID';
-      if (prevPaymentStatus !== 'PAID' && prevPaymentStatus !== 'paid') {
+      if (normPayStatus(prevPaymentStatus) !== 'PAID') {
         updatePayload.paid_at = new Date().toISOString();
       }
     }
@@ -786,7 +809,7 @@ export function useDashboard() {
       tax_percentage: settings.tax_percentage,
       notify_order_ready: settings.notify_order_ready,
       business_type: settings.business_type,
-    }).eq('id', tenantId).select();
+    }).eq('id', tenantId).select('id');
 
     if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
     if (data.length === 0) { showToast('Gagal simpan: Akses ditolak (RLS).', 'error'); return; }
@@ -965,10 +988,11 @@ export function useDashboard() {
 
   const displayOrders = useMemo(() => {
     return orders.filter(o => {
-      const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
+      const payStatus = normPayStatus(o.payment_status);
+      const isPaid = payStatus === 'PAID' || !payStatus;
 
       if (queueFilter === "unpaid") {
-        return ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status) && o.status === 'pending';
+        return ['WAITING_QRIS', 'WAITING_CASH'].includes(payStatus) && o.status === 'pending';
       }
       if (queueFilter === "active") {
         return ["pending", "cooking", "ready"].includes(o.status) && (!settings.is_pay_first || isPaid);
