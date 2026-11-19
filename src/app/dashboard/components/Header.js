@@ -9,6 +9,8 @@ export default function Header({
   setActiveTab,
   activeOrdersCount,
   realtimeStatus,
+  isKitchenOnline = false,
+  kitchenCount = 0,
   isFullscreen,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
@@ -41,6 +43,10 @@ export default function Header({
     { key: 'reports', label: 'Laporan', Icon: Icons.Chart },
     { key: 'settings', label: 'Pengaturan', Icon: Icons.Settings },
   ];
+
+  const kitchenTitle = isKitchenOnline
+    ? `Layar Dapur Online (${kitchenCount || 1} layar aktif)`
+    : 'Layar Dapur Offline — klik untuk membuka link KDS';
 
   return (
     <header className={`sticky top-0 z-50 print:hidden transition-colors duration-200 w-full ${headerClass}`}>
@@ -98,14 +104,30 @@ export default function Header({
 
             <button
               onClick={onOpenKitchen}
-              title="Layar Dapur (KDS)"
-              className={`flex items-center justify-center p-2 sm:px-3 sm:py-2.5 rounded-xl shadow-sm transition-colors text-xs font-black border-2 ${theme === 'light' ? 'bg-white hover:bg-[#FAF6F2] text-[#1A1512] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}
+              title={kitchenTitle}
+              className={`relative flex items-center justify-center p-2 sm:px-3 sm:py-2.5 rounded-xl shadow-sm transition-colors text-xs font-black border-2 ${
+                theme === 'light'
+                  ? isKitchenOnline
+                    ? 'bg-white hover:bg-[#FAF6F2] text-[#1A1512] border-emerald-500'
+                    : 'bg-white hover:bg-[#FAF6F2] text-[#1A1512] border-[#D4C5B8]'
+                  : isKitchenOnline
+                    ? 'bg-slate-800 hover:bg-slate-700 text-white border-emerald-500'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'
+              }`}
             >
               <Icons.Utensils />
               <span className="hidden xl:inline ml-1.5">Layar Dapur</span>
+              <span
+                className={`ml-1.5 w-2.5 h-2.5 rounded-full shrink-0 ${
+                  isKitchenOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                }`}
+              ></span>
             </button>
 
-            <div className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-500' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-500' : 'bg-amber-50 border-amber-500'}`}>
+            <div
+              title={realtimeStatus === 'online' ? 'Koneksi Realtime Online' : realtimeStatus === 'offline' ? 'Koneksi Realtime Offline' : 'Menghubungkan...'}
+              className={`hidden lg:flex items-center justify-center px-3 py-2.5 rounded-xl border-2 ${realtimeStatus === 'online' ? 'bg-emerald-50 border-emerald-500' : realtimeStatus === 'offline' ? 'bg-rose-50 border-rose-500' : 'bg-amber-50 border-amber-500'}`}
+            >
               <span className={`w-2.5 h-2.5 rounded-full ${realtimeStatus === 'online' ? 'bg-emerald-500 animate-pulse' : realtimeStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`}></span>
             </div>
 
@@ -140,6 +162,16 @@ export default function Header({
 
       {isMobileMenuOpen && (
         <div className={`lg:hidden border-t-2 p-4 space-y-2 absolute w-full shadow-xl z-50 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-900 border-slate-700'}`}>
+          <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl border-2 text-xs font-black ${
+            theme === 'light' ? 'bg-[#FAF6F2] border-[#E0D6CC] text-[#1A1512]' : 'bg-slate-800 border-slate-700 text-slate-200'
+          }`}>
+            <span>Status Layar Dapur</span>
+            <span className={`inline-flex items-center gap-1.5 ${isKitchenOnline ? 'text-emerald-600' : 'text-rose-500'}`}>
+              <span className={`w-2 h-2 rounded-full ${isKitchenOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+              {isKitchenOnline ? `Online (${kitchenCount || 1})` : 'Offline'}
+            </span>
+          </div>
+
           {navItems.map(({ key, label, Icon, badge }) => (
             <button
               key={key}
@@ -171,3 +203,4 @@ export default function Header({
     </header>
   );
 }
+
