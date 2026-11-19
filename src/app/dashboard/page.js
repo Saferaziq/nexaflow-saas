@@ -115,7 +115,9 @@ function DashboardContent() {
     <div onClick={d.unlockAudio} className={`min-h-screen w-full overflow-x-hidden font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#1A1512]' : 'bg-[#0a192f] text-white'}`}>
       <Header
         theme={d.theme} cafeName={d.cafeName} activeTab={activeTab} setActiveTab={setActiveTab}
-        activeOrdersCount={activeOrdersCount} realtimeStatus={d.realtimeStatus} isFullscreen={d.isFullscreen}
+        activeOrdersCount={activeOrdersCount} realtimeStatus={d.realtimeStatus}
+        isKitchenOnline={d.isKitchenOnline} kitchenCount={d.kitchenCount}
+        isFullscreen={d.isFullscreen}
         isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen}
         onToggleTheme={d.toggleTheme} onToggleFullscreen={d.toggleFullscreen}
         onLogout={d.handleLogout} onOpenKitchen={() => d.openKitchenLink(setKitchenModal)}
