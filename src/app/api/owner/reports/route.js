@@ -110,7 +110,9 @@ export async function GET(request) {
     ]);
 
     const rawOrders = ordersRes.data || [];
-    const validOrders = rawOrders.filter((o) => o.status !== 'cancelled');
+    const validOrders = rawOrders.filter(
+      (o) => String(o.status || '').toLowerCase() !== 'cancelled'
+    );
     const mappedOrders = validOrders.map((o) => ({
       ...o,
       branchName: tenants.find((x) => x.id === o.tenant_id)?.name || 'Cabang',
@@ -121,7 +123,11 @@ export async function GET(request) {
     const empList = empRes.data || [];
 
     const totalRevenue = validOrders
-      .filter((o) => o.payment_status === 'PAID' || o.status === 'completed')
+      .filter(
+        (o) =>
+          String(o.payment_status || '').trim().toUpperCase() === 'PAID' ||
+          String(o.status || '').trim().toLowerCase() === 'completed'
+      )
       .reduce((sum, o) => sum + Number(o.total_price || 0), 0);
 
     const dailyExpense = exps
