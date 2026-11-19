@@ -54,7 +54,7 @@ function DashboardContent() {
   if (d.isSuspended) {
     const waMessage = `Halo Admin NexaFlow, akun kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) sedang disuspend. Mohon bantu aktifkan kembali. Terima kasih.`;
     return (
-      <div className="min-h-screen bg-[#2A1F17] flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#2A1F17] flex items-center justify-center p-4 font-sans">
         <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500">
           <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-200 text-rose-600">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-12 h-12"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -98,7 +98,7 @@ function DashboardContent() {
 
   if (d.isExpired) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9] p-6">
+      <div className="min-h-screen w-full overflow-x-hidden flex items-center justify-center bg-[#F4EFE9] p-6">
         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border-2 border-rose-200">
           <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-rose-600 border-2 border-rose-200">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-8 h-8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -112,7 +112,7 @@ function DashboardContent() {
   }
 
   return (
-    <div onClick={d.unlockAudio} className={`min-h-screen font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#1A1512]' : 'bg-[#0a192f] text-white'}`}>
+    <div onClick={d.unlockAudio} className={`min-h-screen w-full overflow-x-hidden font-sans ${d.theme === 'light' ? 'bg-[#F4EFE9] text-[#1A1512]' : 'bg-[#0a192f] text-white'}`}>
       <Header
         theme={d.theme} cafeName={d.cafeName} activeTab={activeTab} setActiveTab={setActiveTab}
         activeOrdersCount={activeOrdersCount} realtimeStatus={d.realtimeStatus} isFullscreen={d.isFullscreen}
@@ -123,15 +123,15 @@ function DashboardContent() {
       />
 
       {!d.audioUnlocked && (
-        <div className="w-full bg-amber-500 text-[#1A1512] text-center py-3 px-4 text-sm font-black shadow-md animate-pulse cursor-pointer border-b-2 border-amber-700" onClick={d.unlockAudio}>
+        <div className="w-full bg-amber-500 text-[#1A1512] text-center py-3 px-4 text-xs sm:text-sm font-black shadow-md animate-pulse cursor-pointer border-b-2 border-amber-700" onClick={d.unlockAudio}>
           Klik di sini untuk mengaktifkan suara notifikasi pesanan
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24">
+      <main className="max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 pb-24">
         <StatsCards theme={d.theme} stats={stats} rp={d.rp} />
 
-        <div className="mt-6">
+        <div className="mt-5 sm:mt-6">
           <TabContent
             activeTab={activeTab} theme={d.theme} d={d} rp={d.rp}
             displayOrders={d.displayOrders || []} queueFilter={d.queueFilter} setQueueFilter={d.setQueueFilter}
