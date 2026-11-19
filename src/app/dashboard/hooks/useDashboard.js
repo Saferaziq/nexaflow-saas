@@ -18,8 +18,8 @@ export function useDashboard() {
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [settings, setSettings] = useState({ 
-    name: '', wa: '', address: '', logo_url: '', qris_string: '', 
+  const [settings, setSettings] = useState({
+    name: '', wa: '', address: '', logo_url: '', qris_string: '',
     banner_url: '', tax_percentage: 11, notify_order_ready: true,
     is_pay_first: true, business_type: 'kafe'
   });
@@ -34,7 +34,7 @@ export function useDashboard() {
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [cancelModal, setCancelModal] = useState({ open: false, orderId: null, reason: '' });
 
@@ -53,7 +53,7 @@ export function useDashboard() {
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const hasPendingOrderRef = useRef(false);
-  
+
   const ordersRef = useRef([]);
   ordersRef.current = orders;
   const menusRef = useRef([]);
@@ -71,12 +71,15 @@ export function useDashboard() {
   };
 
   const unlockAudio = () => {
-    if (!audioCtxRef.current) {
-      try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { }
-    }
-    if (audioCtxRef.current?.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
+    try {
+      if (!audioCtxRef.current) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioCtxRef.current = new AudioCtx();
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    } catch { }
     setAudioUnlocked(true);
   };
 
@@ -84,7 +87,7 @@ export function useDashboard() {
     if (!audioCtxRef.current) return;
     try {
       const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const playOne = (t) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -103,7 +106,9 @@ export function useDashboard() {
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    localStorage.setItem('nexaflow_theme', newTheme);
+    try {
+      localStorage.setItem('nexaflow_theme', newTheme);
+    } catch { }
   };
 
   const toggleFullscreen = async () => {
@@ -121,7 +126,7 @@ export function useDashboard() {
   const fetchTables = async (tId) => {
     const { data } = await supabase.from('tables').select('*').eq('tenant_id', tId);
     if (data) {
-      const sorted = [...data].sort((a, b) => 
+      const sorted = [...data].sort((a, b) =>
         a.table_number.localeCompare(b.table_number, undefined, { numeric: true, sensitivity: 'base' })
       );
       setTables(sorted);
@@ -131,20 +136,20 @@ export function useDashboard() {
   const fetchOrders = async (tId) => {
     if (!tId) return;
     const cutoff = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     const { data } = await supabase
       .from('orders')
       .select('*')
       .eq('tenant_id', tId)
       .or(`status.in.(pending,cooking,ready),created_at.gte.${cutoff}`)
       .order('created_at', { ascending: false });
-    
+
     if (data) {
-      const waitingPaymentIds = new Set(data.filter(o => 
-        o.status === 'pending' && 
+      const waitingPaymentIds = new Set(data.filter(o =>
+        o.status === 'pending' &&
         ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
       ).map(o => o.id));
-      
+
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
         const newOnes = [...waitingPaymentIds].filter(id => !prevIds.has(id));
@@ -175,8 +180,8 @@ export function useDashboard() {
   };
 
   useEffect(() => {
-    hasPendingOrderRef.current = orders.some(o => 
-      o.status === 'pending' && 
+    hasPendingOrderRef.current = orders.some(o =>
+      o.status === 'pending' &&
       ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status)
     );
   }, [orders]);
@@ -191,7 +196,11 @@ export function useDashboard() {
   }, []);
 
   useEffect(() => {
-    setTheme(localStorage.getItem('nexaflow_theme') || 'light');
+    try {
+      setTheme(localStorage.getItem('nexaflow_theme') || 'light');
+    } catch {
+      setTheme('light');
+    }
     const today = new Date().toISOString().split('T')[0];
     setReportDateStr(today);
     setReportStartDateStr(today);
@@ -324,10 +333,10 @@ export function useDashboard() {
         presenceChannel.subscribe(async (s) => {
           if (s === 'SUBSCRIBED') {
             try {
-              await presenceChannel.track({ 
-                tenant_id: tId, 
-                user_email: session.user.email, 
-                online_at: new Date().toISOString() 
+              await presenceChannel.track({
+                tenant_id: tId,
+                user_email: session.user.email,
+                online_at: new Date().toISOString()
               });
             } catch (err) {
               console.error('[Kasir Presence] Track Error:', err);
@@ -374,8 +383,8 @@ export function useDashboard() {
     askConfirm('Konfirmasi Pembayaran', 'Pastikan uang sudah diterima (Cash) atau mutasi sudah masuk (QRIS). Lanjutkan?', async () => {
       const prevOrder = ordersRef.current.find(o => o.id === orderId);
       if (!prevOrder) return;
-      
-      setOrders(prev => prev.map(o => 
+
+      setOrders(prev => prev.map(o =>
         o.id === orderId ? { ...o, payment_status: 'PAID', paid_at: new Date().toISOString() } : o
       ));
 
@@ -385,20 +394,20 @@ export function useDashboard() {
       }).eq('id', orderId);
 
       if (error) {
-        setOrders(prev => prev.map(o => 
+        setOrders(prev => prev.map(o =>
           o.id === orderId ? { ...o, payment_status: prevOrder.payment_status, paid_at: prevOrder.paid_at } : o
         ));
         showToast('Gagal konfirmasi: ' + error.message, 'error');
         return;
       }
-      
+
       showToast('Pembayaran dikonfirmasi. Pesanan diteruskan ke dapur!', 'success');
     }, false);
   };
 
   const getLocalDateStr = (dateStr) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
   };
 
   const reportData = useMemo(() => {
@@ -478,7 +487,7 @@ export function useDashboard() {
     const totalOrders = filtered.length;
     const avgOrder = totalOrders > 0 ? revenue / totalOrders : 0;
 
-    const reportStats = { 
+    const reportStats = {
       totalOrders, revenue, avgOrder, totalItems,
       revenueQRIS, revenueCash, countQRIS, countCash,
       statusCount,
@@ -494,11 +503,11 @@ export function useDashboard() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); 
-      
+      const dStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+
       const dayOrders = orders.filter(o => o.status !== 'cancelled' && getLocalDateStr(o.created_at) === dStr);
       const dayRev = dayOrders.reduce((sum, o) => sum + Number(o.total_price || 0), 0);
-      
+
       if (dayRev > maxChartRev) maxChartRev = dayRev;
       totalChartRev += dayRev;
       chartData.push({
@@ -541,22 +550,21 @@ export function useDashboard() {
     showToast('Laporan CSV berhasil diunduh', 'success');
   };
 
-  // 🔥 UPDATE HANDLE PRINT REPORT: Menerima data expense dari TabReports 🔥
   const handlePrintReport = async (filteredExpenses = [], totalExpense = 0, netProfit = 0) => {
     try {
       const printModule = await import('../helpers/print');
       const printFn = printModule.printReport;
       if (printFn) {
-        printFn({ 
-          reportStats: reportData.reportStats, 
-          topMenus: reportData.topMenus, 
+        printFn({
+          reportStats: reportData.reportStats,
+          topMenus: reportData.topMenus,
           reportLabel: reportData.label,
-          settings, 
+          settings,
           userEmail,
           reportNow: new Date(),
-          filteredExpenses, // <-- Kirim data pengeluaran
-          totalExpense,     // <-- Kirim total
-          netProfit         // <-- Kirim laba bersih
+          filteredExpenses,
+          totalExpense,
+          netProfit
         });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
@@ -617,20 +625,20 @@ export function useDashboard() {
 
     const updatePayload = { status };
     if (status === 'completed') {
-      updatePayload.payment_status = 'PAID'; 
+      updatePayload.payment_status = 'PAID';
       if (prevPaymentStatus !== 'PAID' && prevPaymentStatus !== 'paid') {
         updatePayload.paid_at = new Date().toISOString();
       }
     }
 
-    setOrders(prev => prev.map(o => 
+    setOrders(prev => prev.map(o =>
       o.id === id ? { ...o, ...updatePayload } : o
     ));
 
     const { error } = await supabase.from('orders').update(updatePayload).eq('id', id);
-    
+
     if (error) {
-      setOrders(prev => prev.map(o => 
+      setOrders(prev => prev.map(o =>
         o.id === id ? { ...o, status: prevStatus, ...(status === 'completed' ? { payment_status: prevPaymentStatus, paid_at: prevOrder.paid_at } : {}) } : o
       ));
       showToast('Gagal update status: ' + error.message, 'error');
@@ -651,13 +659,13 @@ export function useDashboard() {
 
     const currentOrder = ordersRef.current.find(o => o.id === orderId);
     if (!currentOrder) return;
-    
+
     const prevStatus = currentOrder.status;
     const prevPaymentStatus = currentOrder.payment_status;
     const prevNote = currentOrder.order_note;
     const finalNote = `[DITOLAK: ${reason.trim()}]${prevNote ? ' ' + prevNote : ''}`;
 
-    setOrders(prev => prev.map(o => 
+    setOrders(prev => prev.map(o =>
       o.id === orderId ? { ...o, status: 'cancelled', payment_status: 'CANCELLED', order_note: finalNote } : o
     ));
 
@@ -674,20 +682,20 @@ export function useDashboard() {
       fetchMenus(tenantId);
     }
 
-    const { error } = await supabase.from('orders').update({ 
-      status: 'cancelled', 
+    const { error } = await supabase.from('orders').update({
+      status: 'cancelled',
       payment_status: 'CANCELLED',
       order_note: finalNote
     }).eq('id', orderId);
-    
+
     if (error) {
-      setOrders(prev => prev.map(o => 
+      setOrders(prev => prev.map(o =>
         o.id === orderId ? { ...o, status: prevStatus, payment_status: prevPaymentStatus, order_note: prevNote } : o
       ));
       showToast('Gagal batalkan: ' + error.message, 'error');
       return;
     }
-    
+
     showToast('Pesanan ditolak dan dibatalkan', 'warning');
   };
 
@@ -706,11 +714,11 @@ export function useDashboard() {
   const toggleMenuStatus = async (menu) => {
     const ns = menu.status === 'available' ? 'soldout' : 'available';
     const prevMenus = menusRef.current;
-    
+
     setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, status: ns } : m));
-    
+
     const { error } = await supabase.from('menus').update({ status: ns }).eq('id', menu.id);
-    
+
     if (error) {
       setMenus(prevMenus);
       showToast('Gagal ubah status: ' + error.message, 'error');
@@ -722,16 +730,16 @@ export function useDashboard() {
   const handleUpdateStock = async (menuId, currentStock, change) => {
     const newStock = Math.max(0, Number(currentStock || 0) + change);
     const prevMenus = menusRef.current;
-    
+
     let updatePayload = { stock: newStock };
     if (Number(currentStock || 0) <= 0 && newStock > 0) {
       updatePayload.status = 'available';
     }
 
     setMenus(prev => prev.map(m => m.id === menuId ? { ...m, ...updatePayload } : m));
-    
+
     const { error } = await supabase.from('menus').update(updatePayload).eq('id', menuId);
-    
+
     if (error) {
       setMenus(prevMenus);
       showToast('Gagal update stok: ' + error.message, 'error');
@@ -743,12 +751,12 @@ export function useDashboard() {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     const { data, error } = await supabase.from('tenants').update({
-      name: settings.name, 
-      wa_number: settings.wa, 
+      name: settings.name,
+      wa_number: settings.wa,
       address: settings.address,
-      logo_url: settings.logo_url, 
+      logo_url: settings.logo_url,
       qris_string: settings.qris_string,
-      banner_url: settings.banner_url, 
+      banner_url: settings.banner_url,
       tax_percentage: settings.tax_percentage,
       business_type: settings.business_type,
     }).eq('id', tenantId).select();
@@ -763,23 +771,23 @@ export function useDashboard() {
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     const payload = {
-      tenant_id: tenantId, 
-      name: currentMenu.name, 
+      tenant_id: tenantId,
+      name: currentMenu.name,
       category: currentMenu.category,
-      price: parseFloat(currentMenu.price), 
+      price: parseFloat(currentMenu.price),
       description: currentMenu.desc,
-      status: currentMenu.status, 
+      status: currentMenu.status,
       image_url: currentMenu.image_url,
       stock: parseInt(currentMenu.stock, 10) || 0,
       is_featured: currentMenu.is_featured || false,
       is_new: currentMenu.is_new || false,
       discount_price: currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null,
     };
-    
+
     if (isEdit) {
       const prevMenus = menusRef.current;
       setMenus(prev => prev.map(m => m.id === currentMenu.id ? { ...m, ...payload } : m));
-      
+
       const { error } = await supabase.from('menus').update(payload).eq('id', currentMenu.id);
       if (error) {
         setMenus(prevMenus);
@@ -794,8 +802,8 @@ export function useDashboard() {
       }
       setMenus(prev => [data, ...prev]);
     }
-    
-    resetFn({ 
+
+    resetFn({
       id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0,
       is_featured: false, is_new: false, discount_price: ''
     });
@@ -857,17 +865,17 @@ export function useDashboard() {
       showToast('Menyiapkan gambar QR...', 'info');
       const orderUrl = `${baseUrl}/order?tenant=${tenantId}&table=${table.table_number}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=30&data=${encodeURIComponent(orderUrl)}`;
-      
+
       const canvas = document.createElement('canvas');
-      canvas.width = 1500; 
+      canvas.width = 1500;
       canvas.height = 1950;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; 
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (settings.logo_url) {
         const logoImg = new Image();
-        logoImg.crossOrigin = 'Anonymous'; 
+        logoImg.crossOrigin = 'Anonymous';
         logoImg.src = settings.logo_url;
         await new Promise((resolve) => {
           logoImg.onload = () => { ctx.drawImage(logoImg, 600, 100, 300, 300); resolve(); };
@@ -875,45 +883,45 @@ export function useDashboard() {
         });
       }
 
-      ctx.fillStyle = '#2A1F17'; 
-      ctx.font = 'bold 70px Arial'; 
+      ctx.fillStyle = '#2A1F17';
+      ctx.font = 'bold 70px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(settings.name.toUpperCase(), 750, 520);
 
       const qrImg = new Image();
-      qrImg.crossOrigin = 'Anonymous'; 
+      qrImg.crossOrigin = 'Anonymous';
       qrImg.src = qrApiUrl;
       await new Promise((resolve, reject) => {
         qrImg.onload = () => { ctx.drawImage(qrImg, 250, 620, 1000, 1000); resolve(); };
         qrImg.onerror = reject;
       });
 
-      ctx.fillStyle = '#2A1F17'; 
+      ctx.fillStyle = '#2A1F17';
       ctx.font = 'bold 100px Arial';
       ctx.fillText(`MEJA ${table.table_number}`, 750, 1780);
-      
-      ctx.fillStyle = '#5C4B3E'; 
+
+      ctx.fillStyle = '#5C4B3E';
       ctx.font = 'bold 40px Arial';
       ctx.fillText('Scan untuk memesan menu', 750, 1860);
-      
-      ctx.fillStyle = '#888888'; 
+
+      ctx.fillStyle = '#888888';
       ctx.font = '28px Arial';
       ctx.fillText('Jika QR tidak terbaca, silakan hubungi kasir', 750, 1915);
 
       canvas.toBlob((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = blobUrl; 
+        link.href = blobUrl;
         link.download = `QR_Meja_${table.table_number}.png`;
-        document.body.appendChild(link); 
-        link.click(); 
+        document.body.appendChild(link);
+        link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
         showToast(`QR Meja ${table.table_number} berhasil diunduh`, 'success');
       }, 'image/png');
 
     } catch (error) {
-      console.error(error); 
+      console.error(error);
       showToast('Gagal membuat gambar QR.', 'error');
     }
   };
@@ -921,7 +929,7 @@ export function useDashboard() {
   const displayOrders = useMemo(() => {
     return orders.filter(o => {
       const isPaid = (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
-      
+
       if (queueFilter === "unpaid") {
         return ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status) && o.status === 'pending';
       }
@@ -941,9 +949,9 @@ export function useDashboard() {
     setTheme, setSettings, setMenus, setOrders, setTables, setExpenses, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
-    handleUpdateStock, 
-    handleToggleCafeStatus, 
-    handleTogglePayFirst, 
+    handleUpdateStock,
+    handleToggleCafeStatus,
+    handleTogglePayFirst,
     handleConfirmPayment,
     handleSaveSettings, handleSaveMenu, handleAddTable, openKitchenLink, handlePrintBill, handlePrintDaily, handleDownloadQR,
     fetchMenus, fetchOrders, fetchTables, fetchExpenses, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
@@ -953,7 +961,7 @@ export function useDashboard() {
     reportLabel: reportData.label, reportStats: reportData.reportStats, topMenus: reportData.topMenus,
     chartData: reportData.chartData, maxChartRev: reportData.maxChartRev, totalChartRev: reportData.totalChartRev,
     showDailyBreakdown: false, activeDays: [], onExportCSV: handleExportCSV, onPrintReport: handlePrintReport,
-    
+
     cancelModal, setCancelModal, executeCancelOrder
   };
 }

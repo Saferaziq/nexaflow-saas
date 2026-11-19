@@ -172,15 +172,23 @@ export default function OwnerDashboard() {
   };
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('nexaflow_theme');
-    if (savedTheme === 'dark') setIsDarkMode(true);
-    else setIsDarkMode(false);
+    try {
+      const savedTheme = localStorage.getItem('nexaflow_theme');
+      if (savedTheme === 'dark') setIsDarkMode(true);
+      else setIsDarkMode(false);
+    } catch (e) {
+      // noop
+    }
   }, []);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-    localStorage.setItem('nexaflow_theme', isDarkMode ? 'dark' : 'light');
+    try {
+      localStorage.setItem('nexaflow_theme', isDarkMode ? 'dark' : 'light');
+    } catch (e) {
+      // noop
+    }
   }, [isDarkMode]);
 
   useEffect(() => {

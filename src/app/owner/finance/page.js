@@ -49,15 +49,23 @@ export default function OwnerFinance() {
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('nexaflow_theme');
-    if (savedTheme === 'dark') setIsDarkMode(true);
-    else setIsDarkMode(false);
+    try {
+      const savedTheme = localStorage.getItem('nexaflow_theme');
+      if (savedTheme === 'dark') setIsDarkMode(true);
+      else setIsDarkMode(false);
+    } catch (e) {
+      // noop
+    }
   }, []);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-    localStorage.setItem('nexaflow_theme', isDarkMode ? 'dark' : 'light');
+    try {
+      localStorage.setItem('nexaflow_theme', isDarkMode ? 'dark' : 'light');
+    } catch (e) {
+      // noop
+    }
   }, [isDarkMode]);
 
   const showToast = (message, type = 'success') => {
