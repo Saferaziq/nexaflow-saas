@@ -65,113 +65,29 @@ export default function OwnerReports() {
   }, [isDarkMode]);
 
   const fetchReports = async (email, currentPeriod, currentDate, branchId = selectedBranchId) => {
+    if (!email) return;
     setIsLoading(true);
     try {
-      const { data: t } = await supabase.from('tenants').select('id, name').eq('manager_email', email);
-      if (!t || t.length === 0) {
-        setTenants([]);
-        setReports([]);
-        setPlData({
-          revenue: 0,
-          dailyExpense: 0,
-          monthlyExpense: 0,
-          salaryExpense: 0,
-          actualSalaryTx: 0,
-          pendingBaseSalary: 0,
-          totalExpense: 0,
-          netProfit: 0,
-        });
-        setIsLoading(false);
-        return;
-      }
-      setTenants(t);
-
-      const allTenantIds = t.map(x => x.id);
-      const targetTenantIds = branchId && branchId !== 'all'
-        ? allTenantIds.filter(id => id === branchId)
-        : allTenantIds;
-
-      let startDate = new Date();
-      let endDate = new Date();
-
-      if (currentPeriod === 'daily') {
-        startDate = new Date(currentDate); startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(currentDate); endDate.setHours(23, 59, 59, 999);
-      } else if (currentPeriod === 'monthly') {
-        const [year, month] = currentDate.split('-');
-        startDate = new Date(year, month - 1, 1);
-        endDate = new Date(year, month, 0, 23, 59, 59);
-      } else if (currentPeriod === 'weekly') {
-        const [year, week] = currentDate.split('-W');
-        const simple = new Date(year, 0, 1 + (week - 1) * 7);
-        const dow = simple.getDay();
-        startDate = new Date(simple);
-        if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
-        else startDate.setDate(simple.getDate() + 8 - simple.getDay());
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
-      }
-
-      const startStr = startDate.toISOString();
-      const endStr = endDate.toISOString();
-      const safeTargetIds = targetTenantIds.length > 0 ? targetTenantIds : ['00000000-0000-0000-0000-000000000000'];
-
-      const [ordersRes, expensesRes, empTxRes, empRes] = await Promise.all([
-        supabase.from('orders').select('id, tenant_id, customer_name, total_price, created_at, status, payment_status').in('tenant_id', safeTargetIds).gte('created_at', startStr).lte('created_at', endStr).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('id, tenant_id, category, amount, expense_date').in('tenant_id', safeTargetIds).gte('expense_date', startStr).lte('expense_date', endStr),
-        supabase.from('employee_transactions').select('id, employee_id, tenant_id, type, amount, transaction_date').in('tenant_id', safeTargetIds).gte('transaction_date', startStr).lte('transaction_date', endStr),
-        supabase.from('employees').select('id, tenant_id, name, base_salary, is_active').in('tenant_id', safeTargetIds),
-      ]);
-
-      const rawOrders = ordersRes.data || [];
-      const validOrders = rawOrders.filter(o => o.status !== 'cancelled');
-      const mappedOrders = validOrders.map(o => ({
-        ...o,
-        branchName: t.find(x => x.id === o.tenant_id)?.name || 'Cabang',
-      }));
-      setReports(mappedOrders);
-
-      const exps = expensesRes.data || [];
-      const empTx = empTxRes.data || [];
-      const empList = empRes.data || [];
-
-      const totalRevenue = validOrders.filter(o => o.payment_status === 'PAID' || o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price), 0);
-
-      const dailyExpense = exps
-        .filter(e => e.category === 'Harian')
-        .reduce((sum, e) => sum + Number(e.amount), 0);
-      const monthlyExpense = exps
-        .filter(e => e.category !== 'Harian')
-        .reduce((sum, e) => sum + Number(e.amount), 0);
-
-      const actualSalaryTx = empTx.reduce((sum, e) => sum + Number(e.amount), 0);
-
-      let pendingBaseSalary = 0;
-      if (currentPeriod === 'monthly') {
-        const paidEmployeeIds = new Set(
-          empTx.filter(tx => tx.type === 'Gaji').map(tx => tx.employee_id)
+      const res = await fetch(
+        `/api/owner/reports?manager_email=${encodeURIComponent(email)}&period=${encodeURIComponent(currentPeriod)}&date_str=${encodeURIComponent(currentDate)}&branch_id=${encodeURIComponent(branchId)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTenants(data.tenants || []);
+        setReports(data.reports || []);
+        setPlData(
+          data.plData || {
+            revenue: 0,
+            dailyExpense: 0,
+            monthlyExpense: 0,
+            salaryExpense: 0,
+            actualSalaryTx: 0,
+            pendingBaseSalary: 0,
+            totalExpense: 0,
+            netProfit: 0,
+          }
         );
-        pendingBaseSalary = empList
-          .filter(emp => emp.is_active && !paidEmployeeIds.has(emp.id))
-          .reduce((sum, emp) => sum + Number(emp.base_salary || 0), 0);
       }
-
-      const salaryExpense = actualSalaryTx + pendingBaseSalary;
-      const totalExpense = dailyExpense + monthlyExpense + salaryExpense;
-      const netProfit = totalRevenue - totalExpense;
-
-      setPlData({
-        revenue: totalRevenue,
-        dailyExpense,
-        monthlyExpense,
-        salaryExpense,
-        actualSalaryTx,
-        pendingBaseSalary,
-        totalExpense,
-        netProfit,
-      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -357,7 +273,7 @@ export default function OwnerReports() {
                 onChange={handleBranchChange}
                 className="bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3 py-2 text-xs font-extrabold text-[#1A1512] dark:text-white outline-none max-w-[200px]"
               >
-                <option value="all">Semua Cabang</option>
+                <option value="all">Semua Cabang ({tenants.length})</option>
                 {tenants.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
