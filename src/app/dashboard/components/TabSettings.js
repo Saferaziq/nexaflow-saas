@@ -50,23 +50,35 @@ export default function TabSettings({
     }, 1500);
   };
 
-  const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
-  const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
-  const cardClass = theme === 'light' ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
-  const inputClass = `w-full border-2 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`;
+  const isLight = theme === 'light';
+  const textMainClass = isLight ? 'text-[#2A1F17]' : 'text-white';
+  const textSubClass = isLight ? 'text-[#5C4B3E]' : 'text-slate-300';
+  const cardClass = isLight ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
+  const inputClass = `w-full border-2 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${isLight ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white placeholder-slate-400'}`;
 
   return (
-    <div className={`max-w-3xl mx-auto rounded-[2rem] p-8 shadow-sm border-2 ${cardClass}`}>
+    <div className={`max-w-3xl mx-auto rounded-[2rem] p-6 sm:p-8 shadow-sm border-2 ${cardClass}`}>
       <h2 className={`font-black text-2xl mb-6 ${textMainClass}`}>Pengaturan Kafe</h2>
 
-      {/* STATUS KAFE (BUKA/TUTUP) */}
-      <div className={`mb-8 p-6 rounded-3xl border-4 ${isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`}>
+      <div className={`mb-8 p-6 rounded-3xl border-4 ${
+        isOpen
+          ? isLight ? 'bg-emerald-50 border-emerald-300' : 'bg-emerald-950/50 border-emerald-700'
+          : isLight ? 'bg-rose-50 border-rose-300' : 'bg-rose-950/50 border-rose-700'
+      }`}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
           <div>
-            <h3 className={`font-black text-2xl mb-1 ${isOpen ? 'text-emerald-800' : 'text-rose-800'}`}>
+            <h3 className={`font-black text-2xl mb-1 ${
+              isOpen
+                ? isLight ? 'text-emerald-800' : 'text-emerald-300'
+                : isLight ? 'text-rose-800' : 'text-rose-300'
+            }`}>
               {isOpen ? 'KAFE SEDANG BUKA' : 'KAFE SEDANG TUTUP'}
             </h3>
-            <p className={`text-xs font-semibold ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <p className={`text-xs font-semibold ${
+              isOpen
+                ? isLight ? 'text-emerald-700' : 'text-emerald-200'
+                : isLight ? 'text-rose-700' : 'text-rose-200'
+            }`}>
               {isOpen
                 ? 'Pelanggan bisa memesan dari HP mereka melalui scan QR.'
                 : 'Pelanggan tidak bisa memesan. Menu akan tampil dengan layar "TUTUP".'}
@@ -136,12 +148,12 @@ export default function TabSettings({
           />
         </div>
 
-        <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className={`border-t-2 border-dashed pt-6 ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Logo Kafe</label>
           <div className="flex items-center gap-4">
-            <div className={`w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+            <div className={`w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center border-2 ${isLight ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
               {settings.logo_url
-                ? <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain mix-blend-multiply" />
+                ? <img src={settings.logo_url} alt="Logo" className={`w-full h-full object-contain ${isLight ? 'mix-blend-multiply' : ''}`} />
                 : <Icons.Utensils />}
             </div>
             <div className="flex-1">
@@ -156,7 +168,7 @@ export default function TabSettings({
                 type="button"
                 onClick={() => logoInputRef.current?.click()}
                 disabled={uploadingLogo || uploadingBanner}
-                className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
+                className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${isLight ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
               >
                 {uploadingLogo ? 'Mengupload...' : 'Upload Logo'}
               </button>
@@ -164,9 +176,9 @@ export default function TabSettings({
           </div>
         </div>
 
-        <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className={`border-t-2 border-dashed pt-6 ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Banner Kafe</label>
-          <div className={`w-full h-32 rounded-2xl overflow-hidden flex items-center justify-center border-2 mb-3 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+          <div className={`w-full h-32 rounded-2xl overflow-hidden flex items-center justify-center border-2 mb-3 ${isLight ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
             {settings.banner_url
               ? <img src={settings.banner_url} alt="Banner" className="w-full h-full object-cover" />
               : <Icons.Chart />}
@@ -182,13 +194,13 @@ export default function TabSettings({
             type="button"
             onClick={() => bannerInputRef.current?.click()}
             disabled={uploadingLogo || uploadingBanner}
-            className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${theme === 'light' ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
+            className={`w-full py-3 rounded-xl text-sm font-extrabold transition-colors border-2 ${isLight ? 'bg-[#F4EFE9] hover:bg-[#E8DFD3] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'} disabled:opacity-50`}
           >
             {uploadingBanner ? 'Mengupload...' : 'Upload Banner'}
           </button>
         </div>
 
-        <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className={`border-t-2 border-dashed pt-6 ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Persentase PPN (%)</label>
           <input
             type="number"
@@ -204,7 +216,7 @@ export default function TabSettings({
           </p>
         </div>
 
-        <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+        <div className={`border-t-2 border-dashed pt-6 ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
           <textarea
             value={settings.qris_string}
@@ -221,14 +233,13 @@ export default function TabSettings({
         <button
           type="submit"
           disabled={uploadingLogo || uploadingBanner}
-          className={`w-full font-extrabold py-4 rounded-2xl shadow-lg transition-all mt-4 border-2 ${theme === 'light' ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-600'} disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`w-full font-extrabold py-4 rounded-2xl shadow-lg transition-all mt-4 border-2 ${isLight ? 'bg-[#2A1F17] hover:bg-[#1A120D] text-white border-[#2A1F17]' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {uploadingLogo || uploadingBanner ? 'Tunggu Upload Selesai...' : 'Simpan Pengaturan'}
         </button>
       </form>
 
-      {/* PAY FIRST TOGGLE */}
-      <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+      <div className={`mt-8 pt-6 border-t-2 border-dashed ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className={`font-black text-lg ${textMainClass}`}>Wajib Bayar Dulu (Pay First)</h3>
@@ -240,7 +251,7 @@ export default function TabSettings({
             type="button"
             onClick={(e) => { e.preventDefault(); onTogglePayFirst && onTogglePayFirst(); }}
             className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 ${
-              settings.is_pay_first ? 'bg-[var(--primary-color)]' : theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-600'
+              settings.is_pay_first ? 'bg-[var(--primary-color)]' : isLight ? 'bg-[#D4C5B8]' : 'bg-slate-600'
             }`}
           >
             <span
@@ -252,8 +263,7 @@ export default function TabSettings({
         </div>
       </div>
 
-      {/* Notifikasi Pesanan Siap */}
-      <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+      <div className={`mt-8 pt-6 border-t-2 border-dashed ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className={`font-black text-lg ${textMainClass}`}>Notifikasi Pesanan Siap</h3>
@@ -266,7 +276,7 @@ export default function TabSettings({
             type="button"
             onClick={() => setSettings({ ...settings, notify_order_ready: !settings.notify_order_ready })}
             className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 ${
-              settings.notify_order_ready ? 'bg-[var(--primary-color)]' : theme === 'light' ? 'bg-[#D4C5B8]' : 'bg-slate-600'
+              settings.notify_order_ready ? 'bg-[var(--primary-color)]' : isLight ? 'bg-[#D4C5B8]' : 'bg-slate-600'
             }`}
           >
             <span
@@ -278,10 +288,9 @@ export default function TabSettings({
         </div>
       </div>
 
-      {/* KONFIGURASI PRINTER */}
-      <div className={`mt-8 pt-8 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
+      <div className={`mt-8 pt-8 border-t-2 border-dashed ${isLight ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-center gap-2 mb-4">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center border-2 ${isLight ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
           </div>
           <div>
@@ -293,55 +302,55 @@ export default function TabSettings({
         <div className="mb-4">
           <label className={`block text-[11px] font-black uppercase tracking-widest mb-3 ${textSubClass}`}>Tipe Koneksi Printer</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'browser' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
+            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'browser' ? (isLight ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (isLight ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-200')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'browser'} onChange={() => setPrinterMode('browser')} className="w-4 h-4 accent-white" />
               <div>
                 <p className="font-black text-sm">Browser Default</p>
-                <p className="text-[10px] font-bold opacity-70 mt-0.5">Munculkan pop-up Print</p>
+                <p className="text-[10px] font-bold opacity-80 mt-0.5">Munculkan pop-up Print</p>
               </div>
             </label>
 
-            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'rawbt' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
+            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'rawbt' ? (isLight ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (isLight ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-200')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'rawbt'} onChange={() => setPrinterMode('rawbt')} className="w-4 h-4 accent-white" />
               <div>
                 <p className="font-black text-sm">RawBT (Android)</p>
-                <p className="text-[10px] font-bold opacity-70 mt-0.5">Silent Print via Bluetooth</p>
+                <p className="text-[10px] font-bold opacity-80 mt-0.5">Silent Print via Bluetooth</p>
               </div>
             </label>
 
-            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'qztray' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
+            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'qztray' ? (isLight ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (isLight ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-200')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'qztray'} onChange={() => setPrinterMode('qztray')} className="w-4 h-4 accent-white" />
               <div>
                 <p className="font-black text-sm">QZ Tray (Windows)</p>
-                <p className="text-[10px] font-bold opacity-70 mt-0.5">Silent Print via USB/LAN</p>
+                <p className="text-[10px] font-bold opacity-80 mt-0.5">Silent Print via USB/LAN</p>
               </div>
             </label>
 
-            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'brraw' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
+            <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'brraw' ? (isLight ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (isLight ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-200')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'brraw'} onChange={() => setPrinterMode('brraw')} className="w-4 h-4 accent-white" />
               <div>
                 <p className="font-black text-sm">BR RawPrinter (iPad)</p>
-                <p className="text-[10px] font-bold opacity-70 mt-0.5">Wajib install aplikasi pihak ke-3</p>
+                <p className="text-[10px] font-bold opacity-80 mt-0.5">Wajib install aplikasi pihak ke-3</p>
               </div>
             </label>
           </div>
         </div>
 
         {printerMode === 'brraw' && (
-          <div className={`mb-4 p-3 rounded-xl border-2 flex gap-3 ${theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-blue-900/20 border-blue-700 text-blue-200'}`}>
+          <div className={`mb-4 p-3 rounded-xl border-2 flex gap-3 ${isLight ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-blue-900/30 border-blue-700 text-blue-200'}`}>
             <div className="shrink-0 mt-0.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <div>
               <p className="text-xs font-black">Khusus Pengguna iPad</p>
-              <p className="text-[11px] font-bold mt-1 opacity-80 leading-relaxed">
+              <p className="text-[11px] font-bold mt-1 opacity-85 leading-relaxed">
                 Unduh aplikasi <strong>BR RawPrinter</strong> di App Store. Pastikan printer Bluetooth sudah terhubung ke aplikasi tersebut sebelum melakukan Test Print.
               </p>
             </div>
           </div>
         )}
 
-        <div className={`rounded-xl border-2 p-4 mb-4 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+        <div className={`rounded-xl border-2 p-4 mb-4 ${isLight ? 'bg-white border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
             <div>
               <p className={`text-sm font-black ${textMainClass}`}>Uji Koneksi Printer</p>
@@ -351,7 +360,7 @@ export default function TabSettings({
               type="button"
               onClick={handleTestPrint}
               disabled={testStatus === 'testing'}
-              className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-sm transition-transform active:scale-95 border-2 flex items-center justify-center gap-2 ${theme === 'light' ? 'bg-[#3A2A20] hover:bg-black text-white border-black' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500'}`}
+              className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-sm transition-transform active:scale-95 border-2 flex items-center justify-center gap-2 ${isLight ? 'bg-[#3A2A20] hover:bg-black text-white border-black' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500'}`}
             >
               {testStatus === 'testing' ? (
                 <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -363,20 +372,20 @@ export default function TabSettings({
           </div>
 
           {testStatus === 'success' && (
-            <div className={`mt-2 p-2.5 rounded-lg border-2 flex items-center gap-3 ${theme === 'light' ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-emerald-900/20 border-emerald-700 text-emerald-300'}`}>
+            <div className={`mt-2 p-2.5 rounded-lg border-2 flex items-center gap-3 ${isLight ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-emerald-900/30 border-emerald-700 text-emerald-300'}`}>
               <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               <div>
                 <p className="text-xs font-black">Printer Terhubung!</p>
-                <p className="text-[10px] font-bold opacity-80 mt-0.5">Test print berhasil dikirim.</p>
+                <p className="text-[10px] font-bold opacity-85 mt-0.5">Test print berhasil dikirim.</p>
               </div>
             </div>
           )}
         </div>
 
         {printerSavedMsg && (
-          <div className="mb-3 p-3 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-emerald-800 text-xs font-black">
+          <div className={`mb-3 p-3 rounded-xl border-2 text-xs font-black ${isLight ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-emerald-950/50 border-emerald-700 text-emerald-300'}`}>
             {printerSavedMsg}
           </div>
         )}
