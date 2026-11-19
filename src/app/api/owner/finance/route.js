@@ -74,6 +74,12 @@ export async function POST(request) {
     }
 
     if (action === 'delete_employee') {
+      await supabaseAdmin
+        .from('employee_transactions')
+        .delete()
+        .eq('employee_id', payload.id)
+        .in('tenant_id', tenantIds);
+
       const { error } = await supabaseAdmin.from('employees').delete().eq('id', payload.id).in('tenant_id', tenantIds);
       if (error) throw error;
       return NextResponse.json({ success: true, message: 'Karyawan dihapus!' });
