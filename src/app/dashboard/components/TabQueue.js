@@ -11,6 +11,7 @@ export default function TabQueue({
   onCancelOrder,
   onPrintBill,
   onConfirmPayment,
+  printingOrderId,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
   const cardClass = theme === 'light' ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
@@ -51,15 +52,17 @@ export default function TabQueue({
 
       {displayOrders.length === 0 ? (
         <div className={`rounded-xl p-20 text-center shadow-sm border-2 ${cardClass}`}>
-          <div className="text-6xl mb-4 opacity-50">📋</div>
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#F4EFE9] dark:bg-slate-800 flex items-center justify-center text-[#8C7A6B]">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-7 h-7"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+          </div>
           <p className={`font-black text-xl ${textMainClass}`}>Tidak ada pesanan</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {displayOrders.map((order) => {
             const isWaitingPayment = ['WAITING_QRIS', 'WAITING_CASH'].includes(order.payment_status);
-            const isPaid = ['PAID', 'paid'].includes(order.payment_status) || !order.payment_status;
-            
+            const isPrinting = printingOrderId === order.id;
+
             let statusLabel = null;
             if (isWaitingPayment) statusLabel = <div className="absolute top-0 right-0 bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg border-b-2 border-l-2 border-amber-300">Menunggu Bayar</div>;
             else if (order.status === 'pending') statusLabel = <div className="absolute top-0 right-0 bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg border-b-2 border-l-2 border-slate-300">Antrian</div>;
@@ -75,7 +78,6 @@ export default function TabQueue({
 
                 <div className="flex justify-between items-start mb-4 mt-2">
                   <div>
-                    {/* 🔥 TAMBAHAN: BADGE NOMOR ANTREAN 🔥 */}
                     <div className="mb-1">
                       <span className="bg-[#3A2A20] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
                         Antrean #{order.queue_number || '-'}
@@ -92,8 +94,8 @@ export default function TabQueue({
                     </span>
                     {order.payment_method && (
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded border-2 ${
-                        order.payment_method === 'QRIS' 
-                          ? 'bg-cyan-50 text-cyan-700 border-cyan-300' 
+                        order.payment_method === 'QRIS'
+                          ? 'bg-cyan-50 text-cyan-700 border-cyan-300'
                           : 'bg-emerald-50 text-emerald-700 border-emerald-300'
                       }`}>
                         {order.payment_method}
@@ -103,10 +105,10 @@ export default function TabQueue({
                 </div>
 
                 <div className="flex-1 space-y-3 mb-4">
-                  {order.items.map((item, idx) => (
+                  {(order.items || []).map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm items-center">
                       <span className="font-bold text-[#2A1F17] dark:text-slate-200">
-                        <span className={`font-black px-1.5 py-0.5 rounded border mr-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]' : 'bg-slate-800 border-slate-600 text-white'}`}>{item.qty}x</span> 
+                        <span className={`font-black px-1.5 py-0.5 rounded border mr-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]' : 'bg-slate-800 border-slate-600 text-white'}`}>{item.qty}x</span>
                         {item.name}
                       </span>
                       <span className="font-black text-[#2A1F17] dark:text-white">
@@ -133,17 +135,32 @@ export default function TabQueue({
                         onClick={() => onConfirmPayment(order.id)}
                         className="col-span-2 w-full bg-cyan-500 text-white font-black py-3 rounded-lg border-2 border-cyan-600 hover:bg-cyan-600 transition-all text-sm uppercase tracking-wide shadow-sm"
                       >
-                        💰 Konfirmasi Lunas
+                        Konfirmasi Lunas
                       </button>
                     )}
 
                     {!isWaitingPayment && (
                       <>
                         <button
+                          type="button"
+                          disabled={isPrinting}
                           onClick={() => onPrintBill(order)}
-                          className={`col-span-2 w-full font-bold py-2.5 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wide ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-slate-700 hover:bg-slate-50' : 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700'}`}
+                          className={`col-span-2 w-full font-bold py-2.5 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wide disabled:opacity-60 ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-slate-700 hover:bg-slate-50' : 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700'}`}
                         >
-                          🖨️ Cetak Bill
+                          {isPrinting ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              <span>Menyiapkan Bill...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                              <span>Cetak Bill</span>
+                            </>
+                          )}
                         </button>
 
                         {order.status === 'pending' && (
@@ -172,14 +189,14 @@ export default function TabQueue({
                         )}
                       </>
                     )}
-                    
+
                     {order.status !== 'completed' && order.status !== 'cancelled' && (
-                       <button
-                          onClick={() => onCancelOrder(order.id)}
-                          className="col-span-2 w-full bg-rose-50 text-rose-600 font-bold py-2.5 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-all text-xs uppercase tracking-wide mt-2"
-                        >
-                          Tolak Pesanan
-                        </button>
+                      <button
+                        onClick={() => onCancelOrder(order.id)}
+                        className="col-span-2 w-full bg-rose-50 text-rose-600 font-bold py-2.5 rounded-lg border-2 border-rose-300 hover:bg-rose-500 hover:text-white transition-all text-xs uppercase tracking-wide mt-2"
+                      >
+                        Tolak Pesanan
+                      </button>
                     )}
                   </div>
                 </div>
