@@ -249,13 +249,36 @@ export function useDashboard() {
     let channel, presenceChannel, isMounted = true;
     let pollingInterval = null;
 
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' && isMounted) {
+        router.push('/login');
+      }
+    });
+
     const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          session = refreshed?.session || null;
+        } catch {
+          session = null;
+        }
+      }
       if (!session) return router.push('/login');
       if (!isMounted) return;
       setUserEmail(session.user.email);
 
-      const { data: userData } = await supabase.from('users').select('tenant_id, tenants(*)').eq('id', session.user.id).single();
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('tenant_id, tenants(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (userErr && !userData) {
+        showToast('Koneksi bermasalah saat memuat profil. Silakan coba muat ulang.', 'warning');
+        return;
+      }
 
       if (!userData || !userData.tenants) {
         if (session.user.email === 'dinamis.id.shop@gmail.com') return router.push('/admin');
@@ -356,6 +379,7 @@ export function useDashboard() {
     fetchData();
     return () => {
       isMounted = false;
+      if (authSubscription?.subscription) authSubscription.subscription.unsubscribe();
       if (pollingInterval) clearInterval(pollingInterval);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (channel) supabase.removeChannel(channel);
