@@ -18,19 +18,28 @@ export default function TabSettings({
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
 
-  // 🔥 STATE UNTUK PRINTER CONFIG
   const [printerMode, setPrinterMode] = useState('browser');
-  const [testStatus, setTestStatus] = useState('idle'); // idle | testing | success
+  const [testStatus, setTestStatus] = useState('idle');
+  const [printerSavedMsg, setPrinterSavedMsg] = useState('');
 
   useEffect(() => {
-    const savedMode = localStorage.getItem('nexaflow_printer_mode');
-    if (savedMode) setPrinterMode(savedMode);
+    try {
+      const savedMode = localStorage.getItem('nexaflow_printer_mode');
+      if (savedMode) setPrinterMode(savedMode);
+    } catch (e) {
+      // noop
+    }
   }, []);
 
   const handleSavePrinter = () => {
-    localStorage.setItem('nexaflow_printer_mode', printerMode);
+    try {
+      localStorage.setItem('nexaflow_printer_mode', printerMode);
+      setPrinterSavedMsg('Konfigurasi printer berhasil disimpan di perangkat ini.');
+    } catch (e) {
+      setPrinterSavedMsg('Mode printer aktif untuk sesi ini.');
+    }
     setTestStatus('idle');
-    alert('Konfigurasi printer berhasil disimpan di perangkat ini.');
+    setTimeout(() => setPrinterSavedMsg(''), 3500);
   };
 
   const handleTestPrint = () => {
@@ -50,7 +59,7 @@ export default function TabSettings({
     <div className={`max-w-3xl mx-auto rounded-[2rem] p-8 shadow-sm border-2 ${cardClass}`}>
       <h2 className={`font-black text-2xl mb-6 ${textMainClass}`}>Pengaturan Kafe</h2>
 
-      {/* 🔥 STATUS KAFE (BUKA/TUTUP) */}
+      {/* STATUS KAFE (BUKA/TUTUP) */}
       <div className={`mb-8 p-6 rounded-3xl border-4 ${isOpen ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
           <div>
@@ -58,8 +67,8 @@ export default function TabSettings({
               {isOpen ? 'KAFE SEDANG BUKA' : 'KAFE SEDANG TUTUP'}
             </h3>
             <p className={`text-xs font-semibold ${isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
-              {isOpen 
-                ? 'Pelanggan bisa memesan dari HP mereka melalui scan QR.' 
+              {isOpen
+                ? 'Pelanggan bisa memesan dari HP mereka melalui scan QR.'
                 : 'Pelanggan tidak bisa memesan. Menu akan tampil dengan layar "TUTUP".'}
             </p>
           </div>
@@ -76,8 +85,6 @@ export default function TabSettings({
       </div>
 
       <form onSubmit={onSave} className="space-y-6">
-
-        {/* Nama & WA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Nama Kafe</label>
@@ -101,7 +108,6 @@ export default function TabSettings({
           </div>
         </div>
 
-        {/* 🔥 JENIS BIDANG USAHA */}
         <div>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Jenis Bidang Usaha</label>
           <select
@@ -119,7 +125,6 @@ export default function TabSettings({
           </p>
         </div>
 
-        {/* Alamat */}
         <div>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Alamat</label>
           <input
@@ -131,7 +136,6 @@ export default function TabSettings({
           />
         </div>
 
-        {/* Upload Logo */}
         <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Logo Kafe</label>
           <div className="flex items-center gap-4">
@@ -160,7 +164,6 @@ export default function TabSettings({
           </div>
         </div>
 
-        {/* Upload Banner */}
         <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Banner Kafe</label>
           <div className={`w-full h-32 rounded-2xl overflow-hidden flex items-center justify-center border-2 mb-3 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
@@ -185,7 +188,6 @@ export default function TabSettings({
           </button>
         </div>
 
-        {/* PPN */}
         <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Persentase PPN (%)</label>
           <input
@@ -202,7 +204,6 @@ export default function TabSettings({
           </p>
         </div>
 
-        {/* QRIS */}
         <div className={`border-t-2 border-dashed pt-6 ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
           <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>QRIS Bank/E-Wallet (Untuk Cetak Bill)</label>
           <textarea
@@ -217,7 +218,6 @@ export default function TabSettings({
           </p>
         </div>
 
-        {/* TOMBOL SIMPAN PENGATURAN UTAMA */}
         <button
           type="submit"
           disabled={uploadingLogo || uploadingBanner}
@@ -225,10 +225,9 @@ export default function TabSettings({
         >
           {uploadingLogo || uploadingBanner ? 'Tunggu Upload Selesai...' : 'Simpan Pengaturan'}
         </button>
-
       </form>
 
-      {/* 🔥 FITUR BARU: PAY FIRST TOGGLE */}
+      {/* PAY FIRST TOGGLE */}
       <div className={`mt-8 pt-6 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -259,7 +258,7 @@ export default function TabSettings({
           <div>
             <h3 className={`font-black text-lg ${textMainClass}`}>Notifikasi Pesanan Siap</h3>
             <p className={`text-xs font-semibold mt-1 max-w-md ${textSubClass}`}>
-              Jika diaktifkan, pelanggan akan menerima notifikasi suara berulang saat pesanan berstatus &quot;Siap&quot;. 
+              Jika diaktifkan, pelanggan akan menerima notifikasi suara berulang saat pesanan berstatus "Siap".
               Matikan jika kafe Anda menggunakan sistem pengantaran (delivery).
             </p>
           </div>
@@ -279,7 +278,7 @@ export default function TabSettings({
         </div>
       </div>
 
-      {/* 🔥 FITUR BARU: KONFIGURASI PRINTER */}
+      {/* KONFIGURASI PRINTER */}
       <div className={`mt-8 pt-8 border-t-2 border-dashed ${theme === 'light' ? 'border-[#D4C5B8]' : 'border-slate-700'}`}>
         <div className="flex items-center gap-2 mb-4">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center border-2 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#3A2A20]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>
@@ -291,12 +290,9 @@ export default function TabSettings({
           </div>
         </div>
 
-        {/* Pilih Tipe Koneksi */}
         <div className="mb-4">
           <label className={`block text-[11px] font-black uppercase tracking-widest mb-3 ${textSubClass}`}>Tipe Koneksi Printer</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            
-            {/* Opsi 1: Browser */}
             <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'browser' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'browser'} onChange={() => setPrinterMode('browser')} className="w-4 h-4 accent-white" />
               <div>
@@ -305,7 +301,6 @@ export default function TabSettings({
               </div>
             </label>
 
-            {/* Opsi 2: RawBT */}
             <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'rawbt' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'rawbt'} onChange={() => setPrinterMode('rawbt')} className="w-4 h-4 accent-white" />
               <div>
@@ -314,7 +309,6 @@ export default function TabSettings({
               </div>
             </label>
 
-            {/* Opsi 3: QZ Tray */}
             <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'qztray' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'qztray'} onChange={() => setPrinterMode('qztray')} className="w-4 h-4 accent-white" />
               <div>
@@ -323,7 +317,6 @@ export default function TabSettings({
               </div>
             </label>
 
-            {/* Opsi 4: BR RawPrinter */}
             <label className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${printerMode === 'brraw' ? (theme === 'light' ? 'bg-[#3A2A20] border-[#2A1F17] text-white' : 'bg-slate-700 border-slate-500 text-white') : (theme === 'light' ? 'bg-white border-[#D4C5B8] hover:border-[#3A2A20] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 hover:border-slate-400 text-slate-300')}`}>
               <input type="radio" name="printerMode" checked={printerMode === 'brraw'} onChange={() => setPrinterMode('brraw')} className="w-4 h-4 accent-white" />
               <div>
@@ -331,11 +324,9 @@ export default function TabSettings({
                 <p className="text-[10px] font-bold opacity-70 mt-0.5">Wajib install aplikasi pihak ke-3</p>
               </div>
             </label>
-
           </div>
         </div>
 
-        {/* Info Box iPad */}
         {printerMode === 'brraw' && (
           <div className={`mb-4 p-3 rounded-xl border-2 flex gap-3 ${theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-blue-900/20 border-blue-700 text-blue-200'}`}>
             <div className="shrink-0 mt-0.5">
@@ -350,15 +341,15 @@ export default function TabSettings({
           </div>
         )}
 
-        {/* Test Print Area */}
         <div className={`rounded-xl border-2 p-4 mb-4 ${theme === 'light' ? 'bg-white border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
             <div>
               <p className={`text-sm font-black ${textMainClass}`}>Uji Koneksi Printer</p>
               <p className={`text-[11px] font-bold mt-0.5 ${textSubClass}`}>Pastikan printer menyala dan terhubung.</p>
             </div>
-            <button 
-              onClick={handleTestPrint} 
+            <button
+              type="button"
+              onClick={handleTestPrint}
               disabled={testStatus === 'testing'}
               className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-sm transition-transform active:scale-95 border-2 flex items-center justify-center gap-2 ${theme === 'light' ? 'bg-[#3A2A20] hover:bg-black text-white border-black' : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500'}`}
             >
@@ -371,7 +362,6 @@ export default function TabSettings({
             </button>
           </div>
 
-          {/* Status Indicator */}
           {testStatus === 'success' && (
             <div className={`mt-2 p-2.5 rounded-lg border-2 flex items-center gap-3 ${theme === 'light' ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-emerald-900/20 border-emerald-700 text-emerald-300'}`}>
               <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0">
@@ -385,7 +375,12 @@ export default function TabSettings({
           )}
         </div>
 
-        {/* Tombol Simpan Konfigurasi Printer */}
+        {printerSavedMsg && (
+          <div className="mb-3 p-3 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-emerald-800 text-xs font-black">
+            {printerSavedMsg}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleSavePrinter}
@@ -395,7 +390,6 @@ export default function TabSettings({
           Simpan Konfigurasi Printer
         </button>
       </div>
-
     </div>
   );
 }
