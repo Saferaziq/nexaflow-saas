@@ -758,6 +758,7 @@ export function useDashboard() {
       qris_string: settings.qris_string,
       banner_url: settings.banner_url,
       tax_percentage: settings.tax_percentage,
+      notify_order_ready: settings.notify_order_ready,
       business_type: settings.business_type,
     }).eq('id', tenantId).select();
 
