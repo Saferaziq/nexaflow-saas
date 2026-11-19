@@ -10,7 +10,7 @@ export default function TabContent({
   activeTab, theme, d, rp, displayOrders, queueFilter, setQueueFilter,
   menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
   newTableNum, setNewTableNum, onOpenAddMenu, onOpenEditMenu, onAddTable,
-  onDownloadQR, onPrintBill, reportMode, setReportMode, reportDateStr, setReportDateStr,
+  onDownloadQR, onPrintBill, printingOrderId, reportMode, setReportMode, reportDateStr, setReportDateStr,
   reportMonth, setReportMonth, reportYear, setReportYear, reportStartDateStr, setReportStartDateStr,
   reportEndDateStr, setReportEndDateStr, reportLabel, reportStats, topMenus, chartData,
   maxChartRev, totalChartRev, activeDays, handleExportCSV, handlePrintReport,
@@ -18,7 +18,7 @@ export default function TabContent({
   isOpen, onToggleCafeStatus,
 }) {
   if (activeTab === 'queue') {
-    return <TabQueue theme={theme} displayOrders={displayOrders} queueFilter={queueFilter} setQueueFilter={setQueueFilter} nowTick={d.nowTick} rp={rp} onUpdateOrderStatus={d.handleUpdateOrderStatus} onCancelOrder={d.handleCancelOrder} onPrintBill={onPrintBill} onConfirmPayment={d.handleConfirmPayment} />;
+    return <TabQueue theme={theme} displayOrders={displayOrders} queueFilter={queueFilter} setQueueFilter={setQueueFilter} nowTick={d.nowTick} rp={rp} onUpdateOrderStatus={d.handleUpdateOrderStatus} onCancelOrder={d.handleCancelOrder} onPrintBill={onPrintBill} onConfirmPayment={d.handleConfirmPayment} printingOrderId={printingOrderId} />;
   }
 
   if (activeTab === 'menu') {
