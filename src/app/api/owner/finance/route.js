@@ -5,14 +5,17 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { action, manager_email, payload } = body;
+    const cleanManagerEmail = String(manager_email || '').trim();
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Ambil tenant milik manager ini
-    const { data: tenants } = await supabaseAdmin.from('tenants').select('id').eq('manager_email', manager_email);
+    const { data: tenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .ilike('manager_email', cleanManagerEmail);
     if (!tenants || tenants.length === 0) throw new Error('Tenant tidak ditemukan');
     const tenantIds = tenants.map(t => t.id);
 
@@ -25,7 +28,17 @@ export async function POST(request) {
 
     if (action === 'add_employee') {
       if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
-      const { error } = await supabaseAdmin.from('employees').insert([payload]);
+      const { error } = await supabaseAdmin.from('employees').insert([{
+        tenant_id: payload.tenant_id,
+        name: payload.name,
+        role: payload.role || 'Kasir',
+        base_salary: Number(payload.base_salary || 0),
+        wa_number: payload.wa_number || '',
+        address: payload.address || '',
+        bank_name: payload.bank_name || '',
+        bank_account: payload.bank_account || '',
+        is_active: true,
+      }]);
       if (error) throw error;
       return NextResponse.json({ success: true, message: 'Karyawan ditambahkan!' });
     }
@@ -64,7 +77,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'Karyawan dihapus!' });
     }
 
-    // Poin 5: Fitur Tambah / Kelola Stok Khusus Owner (Anti-Manipulasi Kasir)
     if (action === 'update_menu_stock') {
       if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
       const nextStock = Math.max(0, Number(payload.new_stock || 0));
@@ -94,14 +106,17 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const manager_email = searchParams.get('manager_email');
+    const manager_email = String(searchParams.get('manager_email') || '').trim();
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    const { data: tenants } = await supabaseAdmin.from('tenants').select('id, name').eq('manager_email', manager_email);
+    const { data: tenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id, name')
+      .ilike('manager_email', manager_email);
     if (!tenants || tenants.length === 0) return NextResponse.json({ expenses: [], employees: [], transactions: [], menus: [], tenants: [] });
     const tenantIds = tenants.map(t => t.id);
 
