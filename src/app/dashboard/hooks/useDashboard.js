@@ -50,6 +50,8 @@ export function useDashboard() {
   const [theme, setTheme] = useState('light');
   const [nowTick, setNowTick] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
+  const [isKitchenOnline, setIsKitchenOnline] = useState(false);
+  const [kitchenCount, setKitchenCount] = useState(0);
   const [toasts, setToasts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, danger: false });
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -73,6 +75,7 @@ export function useDashboard() {
   const prevOrderIdsRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const hasPendingOrderRef = useRef(false);
+  const presenceSessionKeyRef = useRef(`kasir-${Math.random().toString(36).slice(2, 10)}`);
 
   const ordersRef = useRef([]);
   ordersRef.current = orders;
@@ -267,6 +270,8 @@ export function useDashboard() {
 
     let channel, presenceChannel, isMounted = true;
     let pollingInterval = null;
+    let isPresenceSubscribed = false;
+    let cleanupPresenceListeners = null;
 
     const { data: authSubscription } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT' && isMounted) {
@@ -376,20 +381,73 @@ export function useDashboard() {
             else setRealtimeStatus('connecting');
           });
 
-        presenceChannel = supabase.channel('online-rooms');
-        presenceChannel.subscribe(async (s) => {
-          if (s === 'SUBSCRIBED') {
-            try {
-              await presenceChannel.track({
-                tenant_id: tId,
-                user_email: session.user.email,
-                online_at: new Date().toISOString()
-              });
-            } catch (err) {
-              console.error('[Kasir Presence] Track Error:', err);
-            }
+        const presenceKey = `${tId}:${presenceSessionKeyRef.current}`;
+        presenceChannel = supabase.channel('online-rooms', {
+          config: {
+            presence: { key: presenceKey }
           }
         });
+
+        const syncKitchenPresence = () => {
+          if (!isMounted || !presenceChannel) return;
+          const state = presenceChannel.presenceState() || {};
+          let count = 0;
+          Object.values(state).forEach((entries) => {
+            if (!Array.isArray(entries)) return;
+            entries.forEach((entry) => {
+              if (entry?.tenant_id === tId && entry?.role === 'kitchen') {
+                count += 1;
+              }
+            });
+          });
+          setKitchenCount(count);
+          setIsKitchenOnline(count > 0);
+        };
+
+        const trackKasir = async () => {
+          if (!isMounted || !isPresenceSubscribed || !presenceChannel) return;
+          try {
+            await presenceChannel.track({
+              tenant_id: tId,
+              role: 'kasir',
+              user_email: session.user.email,
+              session_key: presenceSessionKeyRef.current,
+              online_at: new Date().toISOString()
+            });
+          } catch (err) {
+            console.warn('[Kasir Presence] Track Error:', err);
+          }
+        };
+
+        presenceChannel
+          .on('presence', { event: 'sync' }, syncKitchenPresence)
+          .on('presence', { event: 'join' }, syncKitchenPresence)
+          .on('presence', { event: 'leave' }, syncKitchenPresence)
+          .subscribe(async (s) => {
+            if (!isMounted) return;
+            if (s === 'SUBSCRIBED') {
+              isPresenceSubscribed = true;
+              await trackKasir();
+              syncKitchenPresence();
+            } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT' || s === 'CLOSED') {
+              isPresenceSubscribed = false;
+            }
+          });
+
+        const onVisKasir = () => {
+          if (document.visibilityState === 'visible') {
+            trackKasir();
+          }
+        };
+        const onOnlineKasir = () => {
+          trackKasir();
+        };
+        document.addEventListener('visibilitychange', onVisKasir);
+        window.addEventListener('online', onOnlineKasir);
+        cleanupPresenceListeners = () => {
+          document.removeEventListener('visibilitychange', onVisKasir);
+          window.removeEventListener('online', onOnlineKasir);
+        };
 
         pollingInterval = setInterval(() => {
           fetchOrders(tId);
@@ -402,11 +460,16 @@ export function useDashboard() {
     fetchData();
     return () => {
       isMounted = false;
+      isPresenceSubscribed = false;
+      if (cleanupPresenceListeners) cleanupPresenceListeners();
       if (authSubscription?.subscription) authSubscription.subscription.unsubscribe();
       if (pollingInterval) clearInterval(pollingInterval);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (channel) supabase.removeChannel(channel);
-      if (presenceChannel) supabase.removeChannel(presenceChannel);
+      if (presenceChannel) {
+        try { presenceChannel.untrack(); } catch {}
+        supabase.removeChannel(presenceChannel);
+      }
     };
   }, [router, overrideTenantId]);
 
@@ -1006,7 +1069,8 @@ export function useDashboard() {
 
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, expenses, settings, isOpen, isSuspended,
-    todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen, audioUnlocked,
+    todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, isKitchenOnline, kitchenCount,
+    toasts, confirmDialog, isFullscreen, audioUnlocked,
     printingOrderId,
     setTheme, setSettings, setMenus, setOrders, setTables, setExpenses, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
