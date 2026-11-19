@@ -4,6 +4,35 @@ import { supabase } from '@/lib/supabase';
 
 const WA_ADMIN = '6281389744957';
 
+const safeStorageGet = (key) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // noop
+  }
+};
+
+const safeStorageRemove = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // noop
+  }
+};
+
+const isOrderPaid = (o) => {
+  const status = String(o?.payment_status || '').trim().toUpperCase();
+  return !status || status === 'PAID';
+};
+
 // FUNGSI EKSTRAKSI WARNA DARI BANNER
 const extractDominantColor = (imgUrl) => {
   try {
@@ -28,11 +57,11 @@ const extractDominantColor = (imgUrl) => {
           r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
           document.documentElement.style.setProperty('--primary-color', `rgb(${r}, ${g}, ${b})`);
           document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.2)`);
-          document.documentElement.style.setProperty('--primary-dark', `rgb(${Math.max(0, r-20)}, ${Math.max(0, g-20)}, ${Math.max(0, b-20)})`);
+          document.documentElement.style.setProperty('--primary-dark', `rgb(${Math.max(0, r - 20)}, ${Math.max(0, g - 20)}, ${Math.max(0, b - 20)})`);
         } else {
           throw new Error('Fallback');
         }
-      } catch (err) {
+      } catch {
         document.documentElement.style.setProperty('--primary-color', '#4f46e5');
         document.documentElement.style.setProperty('--primary-light', 'rgba(79, 70, 229, 0.2)');
         document.documentElement.style.setProperty('--primary-dark', '#3730a3');
@@ -43,7 +72,7 @@ const extractDominantColor = (imgUrl) => {
       document.documentElement.style.setProperty('--primary-light', 'rgba(79, 70, 229, 0.2)');
       document.documentElement.style.setProperty('--primary-dark', '#3730a3');
     };
-  } catch (e) {
+  } catch {
     document.documentElement.style.setProperty('--primary-color', '#4f46e5');
     document.documentElement.style.setProperty('--primary-light', 'rgba(79, 70, 229, 0.2)');
     document.documentElement.style.setProperty('--primary-dark', '#3730a3');
@@ -59,12 +88,17 @@ const Icons = {
   Expand: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
   Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  LockLg: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
   Undo: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>,
   Alert: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
   Printer: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
   FileText: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  Bell: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  Message: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>,
+  Clipboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>,
+  Note: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
 };
 
 export default function KitchenClient({ tenantId }) {
@@ -83,12 +117,14 @@ export default function KitchenClient({ tenantId }) {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [activeTab, setActiveTab] = useState('new');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   const [theme, setTheme] = useState('dark');
 
   const [cancelBanner, setCancelBanner] = useState(null);
   const [undoToast, setUndoToast] = useState(null);
   const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [noticeToast, setNoticeToast] = useState(null);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const audioCtxRef = useRef(null);
   const soundEnabledRef = useRef(true);
@@ -98,21 +134,29 @@ export default function KitchenClient({ tenantId }) {
   const wakeLockRef = useRef(null);
   const undoTimerRef = useRef(null);
   const cancelBannerTimerRef = useRef(null);
+  const noticeTimerRef = useRef(null);
   const isPayFirstRef = useRef(false);
-  
+  const presenceSessionKeyRef = useRef(`kitchen-${Math.random().toString(36).slice(2, 10)}`);
+
   const ordersRef = useRef([]);
   ordersRef.current = orders;
   const realtimeDebounceRef = useRef(null);
 
+  const showNotice = (message, type = 'error') => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    setNoticeToast({ message, type });
+    noticeTimerRef.current = setTimeout(() => setNoticeToast(null), 4000);
+  };
+
   useEffect(() => {
-    const savedTheme = localStorage.getItem('nexaflow_kds_theme');
+    const savedTheme = safeStorageGet('nexaflow_kds_theme');
     if (savedTheme) setTheme(savedTheme);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    localStorage.setItem('nexaflow_kds_theme', newTheme);
+    safeStorageSet('nexaflow_kds_theme', newTheme);
   };
 
   useEffect(() => {
@@ -129,10 +173,22 @@ export default function KitchenClient({ tenantId }) {
   }, []);
 
   useEffect(() => {
+    const handleOffline = () => setRealtimeStatus('offline');
+    const handleOnline = () => setRealtimeStatus('connecting');
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       if (cancelBannerTimerRef.current) clearTimeout(cancelBannerTimerRef.current);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       if (wakeLockRef.current) { try { wakeLockRef.current.release(); } catch {} }
     };
@@ -149,7 +205,7 @@ export default function KitchenClient({ tenantId }) {
         wakeLockRef.current = null;
       });
       return true;
-    } catch (e) { return false; }
+    } catch { return false; }
   };
 
   const releaseWakeLock = async () => {
@@ -163,7 +219,7 @@ export default function KitchenClient({ tenantId }) {
   useEffect(() => {
     if (authMode !== 'ready') return;
     requestWakeLock();
-    const onVisibility = () => { 
+    const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         requestWakeLock();
         fetchOrders();
@@ -181,44 +237,64 @@ export default function KitchenClient({ tenantId }) {
     return () => clearInterval(poll);
   }, [authMode, tenantId]);
 
-  // 🔥 PRESENCE DAPUR v1 — track ke channel 'online-rooms' agar Admin mendeteksi dapur online
+  // PRESENCE DAPUR v2 — key unik per perangkat, aman saat reconnect & visibilitychange
   useEffect(() => {
     if (authMode !== 'ready' || !tenantId) return;
 
     let isMounted = true;
-    const presenceChannel = supabase.channel('online-rooms');
+    let isSubscribed = false;
+    const presenceKey = `${tenantId}:${presenceSessionKeyRef.current}`;
+
+    const presenceChannel = supabase.channel('online-rooms', {
+      config: {
+        presence: { key: presenceKey }
+      }
+    });
+
+    const trackKitchen = async () => {
+      if (!isMounted || !isSubscribed) return;
+      try {
+        await presenceChannel.track({
+          tenant_id: tenantId,
+          role: 'kitchen',
+          session_key: presenceSessionKeyRef.current,
+          online_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('[Kitchen Presence] Track Error:', err);
+      }
+    };
 
     presenceChannel.subscribe(async (status) => {
       if (!isMounted) return;
       if (status === 'SUBSCRIBED') {
-        try {
-          await presenceChannel.track({
-            tenant_id: tenantId,
-            role: 'kitchen',
-            online_at: new Date().toISOString()
-          });
-        } catch (err) {
-          console.warn('[Kitchen Presence] Track Error:', err);
-        }
+        isSubscribed = true;
+        await trackKitchen();
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        isSubscribed = false;
         console.warn('[Kitchen Presence] Channel status:', status);
       }
     });
 
     const onVisibilityPresence = () => {
-      if (document.visibilityState === 'visible' && isMounted) {
-        presenceChannel.track({
-          tenant_id: tenantId,
-          role: 'kitchen',
-          online_at: new Date().toISOString()
-        }).catch(err => console.warn('[Kitchen Presence] Re-track Error:', err));
+      if (document.visibilityState === 'visible') {
+        trackKitchen();
       }
     };
+
+    const onOnlinePresence = () => {
+      trackKitchen();
+    };
+
     document.addEventListener('visibilitychange', onVisibilityPresence);
+    window.addEventListener('online', onOnlinePresence);
 
     return () => {
       isMounted = false;
+      isSubscribed = false;
       document.removeEventListener('visibilitychange', onVisibilityPresence);
+      window.removeEventListener('online', onOnlinePresence);
+      try { presenceChannel.untrack(); } catch {}
       supabase.removeChannel(presenceChannel);
     };
   }, [authMode, tenantId]);
@@ -291,22 +367,20 @@ export default function KitchenClient({ tenantId }) {
   const fetchOrders = async () => {
     if (!tenantId) return;
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     const { data } = await supabase
       .from('orders')
       .select('*')
       .eq('tenant_id', tenantId)
       .or(`status.in.(pending,cooking),created_at.gte.${cutoff}`)
       .order('created_at', { ascending: true });
-    
+
     if (data) {
-      const isPaidCheck = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
-      
-      const activeIds = new Set(data.filter(o => 
-        ['pending', 'cooking'].includes(o.status) && 
-        (!isPayFirstRef.current || isPaidCheck(o))
+      const activeIds = new Set(data.filter(o =>
+        ['pending', 'cooking'].includes(o.status) &&
+        (!isPayFirstRef.current || isOrderPaid(o))
       ).map(o => o.id));
-      
+
       const prevIds = prevOrderIdsRef.current;
       if (prevIds !== null) {
         const newOnes = [...activeIds].filter(id => !prevIds.has(id));
@@ -346,13 +420,13 @@ export default function KitchenClient({ tenantId }) {
         const payFirstStatus = tenantData.is_pay_first !== false;
         setIsPayFirst(payFirstStatus);
         isPayFirstRef.current = payFirstStatus;
-        
+
         if (tenantData.banner_url) extractDominantColor(tenantData.banner_url);
         else if (tenantData.logo_url) extractDominantColor(tenantData.logo_url);
       }
     } catch {}
     await fetchOrders();
-    
+
     if (channelRef.current) supabase.removeChannel(channelRef.current);
     channelRef.current = supabase.channel('kitchen-' + tenantId + '-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
@@ -423,14 +497,14 @@ export default function KitchenClient({ tenantId }) {
           return;
         }
         if (ok === true) {
-          localStorage.setItem('kds_pin_' + tenantId, urlPin);
+          safeStorageSet('kds_pin_' + tenantId, urlPin);
           window.history.replaceState({}, '', '/kitchen/' + tenantId);
           await loadData();
           setAuthMode('ready');
           return;
         }
       }
-      const savedPin = localStorage.getItem('kds_pin_' + tenantId);
+      const savedPin = safeStorageGet('kds_pin_' + tenantId);
       if (savedPin) {
         const ok = await verifyPin(savedPin);
         if (ok === 'SUSPENDED') {
@@ -439,7 +513,7 @@ export default function KitchenClient({ tenantId }) {
           return;
         }
         if (ok === true) { await loadData(); setAuthMode('ready'); return; }
-        localStorage.removeItem('kds_pin_' + tenantId);
+        safeStorageRemove('kds_pin_' + tenantId);
       }
       setAuthMode('pin');
     };
@@ -457,7 +531,7 @@ export default function KitchenClient({ tenantId }) {
       return;
     }
     if (ok === true) {
-      localStorage.setItem('kds_pin_' + tenantId, pinInput);
+      safeStorageSet('kds_pin_' + tenantId, pinInput);
       initAudio();
       await loadData();
       setAuthMode('ready');
@@ -471,27 +545,27 @@ export default function KitchenClient({ tenantId }) {
   const markCooking = async (orderId) => {
     const prevOrder = ordersRef.current.find(o => o.id === orderId);
     if (!prevOrder) return;
-    
+
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cooking' } : o));
-    
+
     const { error } = await supabase.from('orders').update({ status: 'cooking' }).eq('id', orderId);
     if (error) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: prevOrder.status } : o));
-      alert('Gagal update: ' + error.message);
+      showNotice('Gagal update status: ' + error.message, 'error');
     }
   };
 
   const markReady = async (order) => {
     const previousStatus = order.status;
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'ready' } : o));
-    
+
     const { error } = await supabase.from('orders').update({ status: 'ready' }).eq('id', order.id);
     if (error) {
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: previousStatus } : o));
-      alert('Gagal update: ' + error.message);
+      showNotice('Gagal update status: ' + error.message, 'error');
       return;
     }
-    
+
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoToast({ orderId: order.id, tableNumber: order.table_number, previousStatus });
     undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
@@ -500,12 +574,12 @@ export default function KitchenClient({ tenantId }) {
   const undoMarkReady = async () => {
     if (!undoToast) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    
+
     setOrders(prev => prev.map(o => o.id === undoToast.orderId ? { ...o, status: undoToast.previousStatus } : o));
-    
+
     const { error } = await supabase.from('orders').update({ status: undoToast.previousStatus }).eq('id', undoToast.orderId);
     if (error) {
-      alert('Gagal undo: ' + error.message);
+      showNotice('Gagal membatalkan status: ' + error.message, 'error');
     }
     setUndoToast(null);
   };
@@ -517,19 +591,18 @@ export default function KitchenClient({ tenantId }) {
     } catch {}
   };
 
-  const handleLogout = () => {
-    if (confirm('Keluar dari layar dapur? Anda perlu PIN lagi untuk masuk.')) {
-      localStorage.removeItem('kds_pin_' + tenantId);
-      releaseWakeLock();
-      setAuthMode('pin');
-      setPinInput('');
-    }
+  const confirmLogout = () => {
+    safeStorageRemove('kds_pin_' + tenantId);
+    releaseWakeLock();
+    setLogoutModalOpen(false);
+    setAuthMode('pin');
+    setPinInput('');
   };
 
   const handlePrintOrder = (order) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
+      showNotice('Pop-up diblokir browser. Izinkan pop-up untuk mencetak tiket dapur.', 'warning');
       return;
     }
 
@@ -537,7 +610,7 @@ export default function KitchenClient({ tenantId }) {
       <tr>
         <td style="font-size: 26px; font-weight: 900; padding: 10px 0; border-bottom: 2px dotted #000;">${item.qty}x ${item.name}</td>
       </tr>
-      ${item.note ? `<tr><td style="font-size: 20px; font-weight: bold; font-style: italic; color: #000; padding-bottom: 10px;">➔ Note: ${item.note}</td></tr>` : ''}
+      ${item.note ? `<tr><td style="font-size: 20px; font-weight: bold; font-style: italic; color: #000; padding-bottom: 10px;">- Note: ${item.note}</td></tr>` : ''}
     `).join('');
 
     printWindow.document.write(`
@@ -565,7 +638,7 @@ export default function KitchenClient({ tenantId }) {
           <div class="meta">Waktu: ${new Date(order.created_at).toLocaleTimeString('id-ID')}</div>
           <div class="meta">Order ID: #${order.id.slice(0, 6).toUpperCase()}</div>
           <hr style="border-top: 2px solid #000; margin: 10px 0;" />
-          
+
           <table class="items">
             ${itemsHtml}
           </table>
@@ -577,9 +650,9 @@ export default function KitchenClient({ tenantId }) {
             Powered by NexaFlow
           </div>
           <script>
-            window.onload = function() { 
-              window.print(); 
-              setTimeout(() => window.close(), 1000); 
+            window.onload = function() {
+              window.print();
+              setTimeout(() => window.close(), 1000);
             }
           <\/script>
         </body>
@@ -591,7 +664,7 @@ export default function KitchenClient({ tenantId }) {
   const handlePrintReport = () => {
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today && ['ready', 'completed'].includes(o.status));
-    
+
     let totalOrders = todayOrders.length;
     let totalItems = 0;
     const menuMap = new Map();
@@ -610,7 +683,7 @@ export default function KitchenClient({ tenantId }) {
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
+      showNotice('Pop-up diblokir browser. Izinkan pop-up untuk mencetak laporan.', 'warning');
       return;
     }
 
@@ -644,7 +717,7 @@ export default function KitchenClient({ tenantId }) {
             <h1>LAPORAN DAPUR HARIAN</h1>
             <h2>${tenant?.name || 'Kafe'} - ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
           </div>
-          
+
           <div class="summary">
             <div class="box">
               <h3>Total Pesanan Selesai</h3>
@@ -673,9 +746,9 @@ export default function KitchenClient({ tenantId }) {
             Dicetak pada: ${new Date().toLocaleTimeString('id-ID')} | Powered by NexaFlow
           </div>
           <script>
-            window.onload = function() { 
-              window.print(); 
-              setTimeout(() => window.close(), 1000); 
+            window.onload = function() {
+              window.print();
+              setTimeout(() => window.close(), 1000);
             }
           <\/script>
         </body>
@@ -684,16 +757,14 @@ export default function KitchenClient({ tenantId }) {
     printWindow.document.close();
   };
 
-  const isPaid = (o) => (o.payment_status === 'PAID' || o.payment_status === 'paid' || !o.payment_status);
-  
   const pendingOrders = orders
-    .filter(o => o.status === 'pending' && (!isPayFirst || isPaid(o)))
+    .filter(o => o.status === 'pending' && (!isPayFirst || isOrderPaid(o)))
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
+
   const cookingOrders = orders
-    .filter(o => o.status === 'cooking' && (!isPayFirst || isPaid(o)))
+    .filter(o => o.status === 'cooking' && (!isPayFirst || isOrderPaid(o)))
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
+
   const displayOrders = activeTab === 'new' ? pendingOrders : activeTab === 'cooking' ? cookingOrders : [...pendingOrders, ...cookingOrders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
   const getTimeBadge = (createdAt) => {
@@ -712,18 +783,18 @@ export default function KitchenClient({ tenantId }) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border-4 border-rose-500">
-          <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300">
-            <span className="text-5xl">🔒</span>
+          <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-rose-300 text-rose-600">
+            <Icons.LockLg />
           </div>
-          
+
           <h1 className="text-3xl font-black text-slate-900 mb-2">Layar Dapur Dinonaktifkan</h1>
           {tenant?.name && (
             <p className="text-sm font-semibold text-slate-600 mb-4">Kafe: <span className="font-black text-slate-900">{tenant.name}</span></p>
           )}
-          
+
           <div className="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 mb-6 text-left">
             <p className="text-sm font-bold text-rose-900 leading-relaxed">
-              Akun kafe sedang <strong>dinonaktifkan oleh Admin NexaFlow</strong>. 
+              Akun kafe sedang <strong>dinonaktifkan oleh Admin NexaFlow</strong>.
               Layar dapur tidak bisa digunakan sampai akun diaktifkan kembali. Silakan hubungi admin.
             </p>
           </div>
@@ -735,18 +806,20 @@ export default function KitchenClient({ tenantId }) {
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl text-base shadow-lg active:scale-95 transition-transform border-2 border-emerald-700"
             >
-              💬 Hubungi Admin
+              <Icons.Message />
+              <span>Hubungi Admin</span>
             </a>
             <button
               onClick={() => {
-                localStorage.removeItem('kds_pin_' + tenantId);
+                safeStorageRemove('kds_pin_' + tenantId);
                 releaseWakeLock();
                 setAuthMode('pin');
                 setIsSuspended(false);
               }}
               className="w-full flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-3 rounded-xl text-sm active:scale-95 transition-transform border-2 border-slate-300"
             >
-              🚪 Keluar
+              <Icons.Logout />
+              <span>Keluar</span>
             </button>
           </div>
 
@@ -817,7 +890,7 @@ export default function KitchenClient({ tenantId }) {
               <Icons.Alert />
             </div>
             <div className="flex-1">
-              <p className="text-2xl sm:text-3xl font-black leading-tight tracking-wide">⚠️ MEJA {cancelBanner.tableNumber} DIBATALKAN</p>
+              <p className="text-2xl sm:text-3xl font-black leading-tight tracking-wide">MEJA {cancelBanner.tableNumber} DIBATALKAN</p>
               <p className="text-sm font-bold mt-1 opacity-90">JANGAN DIMASAK — Order sudah dibatalkan kasir</p>
             </div>
             <button
@@ -830,6 +903,17 @@ export default function KitchenClient({ tenantId }) {
         </div>
       )}
 
+      {noticeToast && (
+        <div className={`fixed top-4 right-4 z-[210] max-w-sm rounded-xl px-4 py-3 shadow-2xl border-2 flex items-center gap-3 ${
+          noticeToast.type === 'warning'
+            ? (theme === 'dark' ? 'bg-amber-950/95 border-amber-500 text-amber-200' : 'bg-amber-50 border-amber-400 text-amber-900')
+            : (theme === 'dark' ? 'bg-rose-950/95 border-rose-500 text-rose-200' : 'bg-rose-50 border-rose-400 text-rose-900')
+        }`}>
+          <Icons.Alert />
+          <p className="text-xs font-bold leading-snug">{noticeToast.message}</p>
+        </div>
+      )}
+
       {undoToast && (
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-md rounded-2xl shadow-2xl overflow-hidden border-2 ${theme === 'dark' ? 'bg-slate-800 border-emerald-500/50' : 'bg-white border-emerald-500'}`}>
           <div className="flex items-center gap-3 p-4">
@@ -838,7 +922,7 @@ export default function KitchenClient({ tenantId }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>Meja {undoToast.tableNumber} ditandai SIAP</p>
-              <p className="text-xs text-slate-500 font-semibold">Tap "Batalkan" jika salah tap</p>
+              <p className="text-xs text-slate-500 font-semibold">Tap &quot;Batalkan&quot; jika salah tap</p>
             </div>
             <button
               onClick={undoMarkReady}
@@ -849,6 +933,33 @@ export default function KitchenClient({ tenantId }) {
           </div>
           <div className={`h-1.5 ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}>
             <div className="h-full bg-amber-500 animate-[shrink_5s_linear_forwards]" style={{ animation: 'shrink 5s linear forwards' }}></div>
+          </div>
+        </div>
+      )}
+
+      {logoutModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[220] flex items-center justify-center p-4">
+          <div className={`w-full max-w-sm rounded-2xl p-6 border-2 shadow-2xl text-center space-y-4 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'}`}>
+            <h3 className="text-lg font-black">Keluar dari Layar Dapur?</h3>
+            <p className={`text-xs font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+              Anda perlu memasukkan PIN 4 digit lagi untuk membuka layar dapur kembali.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setLogoutModalOpen(false)}
+                className={`flex-1 py-2.5 rounded-xl font-black text-xs border-2 ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'}`}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 rounded-xl font-black text-xs bg-rose-600 hover:bg-rose-700 text-white border-2 border-rose-700"
+              >
+                Keluar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -874,7 +985,7 @@ export default function KitchenClient({ tenantId }) {
             </div>
           )}
           <span className={`hidden md:block text-2xl font-black tabular-nums tracking-tight ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{clock}</span>
-          
+
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-[11px] font-black tracking-wide ${
             realtimeStatus === 'online' ? (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700') :
             realtimeStatus === 'offline' ? (theme === 'dark' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-rose-50 border-rose-200 text-rose-700') :
@@ -919,15 +1030,16 @@ export default function KitchenClient({ tenantId }) {
           <button onClick={toggleFullscreen} className={`p-2.5 rounded-xl border-2 transition-all active:scale-95 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-800'}`}>
             <Icons.Expand />
           </button>
-          <button onClick={handleLogout} className={`p-2.5 rounded-xl border-2 transition-all active:scale-95 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/40' : 'bg-slate-100 border-slate-300 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300'}`}>
+          <button onClick={() => setLogoutModalOpen(true)} className={`p-2.5 rounded-xl border-2 transition-all active:scale-95 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/40' : 'bg-slate-100 border-slate-300 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300'}`}>
             <Icons.Logout />
           </button>
         </div>
       </header>
 
       {!audioUnlocked && (
-        <button onClick={initAudio} className="bg-amber-500 hover:bg-amber-600 text-white font-black py-3 px-4 text-center text-sm animate-pulse border-b-2 border-amber-700 tracking-wide">
-          🔔 Klik di sini untuk aktifkan suara notifikasi pesanan
+        <button onClick={initAudio} className="bg-amber-500 hover:bg-amber-600 text-white font-black py-3 px-4 text-center text-sm animate-pulse border-b-2 border-amber-700 tracking-wide flex items-center justify-center gap-2">
+          <Icons.Bell />
+          <span>Klik di sini untuk aktifkan suara notifikasi pesanan</span>
         </button>
       )}
 
@@ -941,8 +1053,8 @@ export default function KitchenClient({ tenantId }) {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-5 py-2.5 rounded-xl font-black text-sm whitespace-nowrap transition-all border-2 active:scale-95 ${
-              activeTab === tab.key 
-                ? 'bg-[var(--primary-color)] text-white border-[var(--primary-dark)] shadow-md' 
+              activeTab === tab.key
+                ? 'bg-[var(--primary-color)] text-white border-[var(--primary-dark)] shadow-md'
                 : (theme === 'dark' ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200')
             }`}
           >
@@ -955,7 +1067,9 @@ export default function KitchenClient({ tenantId }) {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {displayOrders.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4 opacity-50">{activeTab === 'new' ? '📋' : activeTab === 'cooking' ? '🍳' : '✨'}</div>
+            <div className={`mb-4 opacity-50 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+              <Icons.Clipboard />
+            </div>
             <p className={`text-xl font-black mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
               {activeTab === 'new' ? 'Belum ada pesanan lunas yang masuk' : activeTab === 'cooking' ? 'Tidak ada yang sedang dimasak' : 'Semua bersih!'}
             </p>
@@ -971,14 +1085,14 @@ export default function KitchenClient({ tenantId }) {
               const totalItems = (order.items || []).reduce((s, i) => s + (i.qty || 0), 0);
               return (
                 <div key={order.id} className={`rounded-2xl overflow-hidden flex flex-col border-2 transition-all shadow-sm ${
-                  badge?.pulse 
-                    ? (theme === 'dark' ? 'bg-slate-800 border-rose-500/80 shadow-md' : 'bg-white border-rose-500 shadow-md') 
+                  badge?.pulse
+                    ? (theme === 'dark' ? 'bg-slate-800 border-rose-500/80 shadow-md' : 'bg-white border-rose-500 shadow-md')
                     : (theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-300')
                 }`}>
-                  
+
                   <div className={`px-5 py-4 flex items-center justify-between border-b-2 ${
-                    isCooking 
-                      ? (theme === 'dark' ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]/20' : 'bg-[var(--primary-light)] border-[var(--primary-color)]/30') 
+                    isCooking
+                      ? (theme === 'dark' ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]/20' : 'bg-[var(--primary-light)] border-[var(--primary-color)]/30')
                       : (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200')
                   }`}>
                     <div>
@@ -1001,7 +1115,7 @@ export default function KitchenClient({ tenantId }) {
                       <p className={`text-[10px] font-black mt-2 tracking-wider ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>#{order.id.slice(0, 6).toUpperCase()}</p>
                       {order.payment_method && (
                         <span className={`inline-block mt-1 text-[10px] font-black px-2 py-0.5 rounded border-2 ${
-                          order.payment_method === 'QRIS' 
+                          String(order.payment_method).toUpperCase() === 'QRIS'
                             ? (theme === 'dark' ? 'bg-cyan-900/30 text-cyan-400 border-cyan-700/50' : 'bg-cyan-50 text-cyan-700 border-cyan-200')
                             : (theme === 'dark' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-700/50' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
                         }`}>
@@ -1010,10 +1124,11 @@ export default function KitchenClient({ tenantId }) {
                       )}
                     </div>
                   </div>
-                  
+
                   {order.order_note && (
-                    <div className={`px-5 py-3 border-l-4 border-amber-500 border-b-2 ${theme === 'dark' ? 'bg-amber-500/10 border-b-slate-700' : 'bg-amber-50 border-b-slate-200'}`}>
-                      <p className={`text-xs font-bold ${theme === 'dark' ? 'text-amber-400' : 'text-amber-700'}`}>📝 {order.order_note}</p>
+                    <div className={`px-5 py-3 border-l-4 border-amber-500 border-b-2 flex items-start gap-2 ${theme === 'dark' ? 'bg-amber-500/10 border-b-slate-700 text-amber-400' : 'bg-amber-50 border-b-slate-200 text-amber-700'}`}>
+                      <Icons.Note />
+                      <p className="text-xs font-bold">{order.order_note}</p>
                     </div>
                   )}
 
@@ -1024,8 +1139,9 @@ export default function KitchenClient({ tenantId }) {
                         <div className="flex-1 min-w-0 pt-1">
                           <p className={`text-base font-bold leading-tight ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{item.name}</p>
                           {item.note && (
-                            <div className={`mt-2 border-2 px-3 py-2 rounded-lg ${theme === 'dark' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-300'}`}>
-                              <p className={`text-xs font-bold leading-snug ${theme === 'dark' ? 'text-amber-300' : 'text-amber-700'}`}>📝 {item.note}</p>
+                            <div className={`mt-2 border-2 px-3 py-2 rounded-lg flex items-start gap-1.5 ${theme === 'dark' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+                              <Icons.Note />
+                              <p className="text-xs font-bold leading-snug">{item.note}</p>
                             </div>
                           )}
                         </div>
@@ -1037,7 +1153,7 @@ export default function KitchenClient({ tenantId }) {
                     <button onClick={() => handlePrintOrder(order)} className={`flex-1 font-black py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 active:scale-95 border-2 ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600' : 'bg-slate-200 border-slate-300 text-slate-700 hover:bg-slate-300'}`}>
                       <Icons.Printer /> CETAK
                     </button>
-                    
+
                     {isCooking ? (
                       <button onClick={() => markReady(order)} className={`flex-[2] font-black py-3.5 rounded-xl text-base shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 border-2 ${theme === 'dark' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30' : 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'}`}>
                         <Icons.Check /> SIAP
