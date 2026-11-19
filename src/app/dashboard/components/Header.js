@@ -20,13 +20,13 @@ export default function Header({
   onToggleCafeStatus,
 }) {
   const textMainClass = theme === 'light' ? 'text-[#1A1512]' : 'text-white';
-  
+
   const headerClass = theme === 'light'
-    ? 'bg-[#F4EFE9]/95 border-b-4 border-[#D4C5B8] shadow-sm'
-    : 'bg-[#0a192f]/95 border-b-4 border-slate-700 shadow-sm';
+    ? 'bg-[#F4EFE9] border-b-4 border-[#D4C5B8] shadow-sm'
+    : 'bg-[#0a192f] border-b-4 border-slate-700 shadow-sm';
 
   const navBtnClass = (isActive) =>
-    `relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-200 border-2 ${
+    `relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-colors duration-200 border-2 ${
       isActive
         ? 'bg-[#2A1F17] text-white border-[#1A1512] shadow-md'
         : theme === 'light'
@@ -34,7 +34,6 @@ export default function Header({
           : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'
     }`;
 
-  // KITA KEMBALIKAN KE SEMULA (TANPA MENU PENGELUARAN)
   const navItems = [
     { key: 'queue', label: 'Antrian', Icon: Icons.Clipboard, badge: activeOrdersCount },
     { key: 'menu', label: 'Menu', Icon: Icons.Utensils },
@@ -44,15 +43,15 @@ export default function Header({
   ];
 
   return (
-    <header className={`backdrop-blur-xl sticky top-0 z-50 print:hidden transition-colors duration-300 ${headerClass}`}>
+    <header className={`sticky top-0 z-50 print:hidden transition-colors duration-200 ${headerClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-20">
 
           <div className="flex items-center gap-3 shrink-0">
-            <img 
-              src="/logo-nexaflow.png" 
-              alt="NexaFlow Logo" 
-              className={`w-11 h-11 object-contain rounded-lg ${theme === 'light' ? 'mix-blend-multiply' : 'mix-blend-screen'}`} 
+            <img
+              src="/logo-nexaflow.png"
+              alt="NexaFlow Logo"
+              className={`w-11 h-11 object-contain rounded-lg ${theme === 'light' ? 'mix-blend-multiply' : 'mix-blend-screen'}`}
             />
             <div>
               <h1 className={`text-xl font-black tracking-tight leading-none ${textMainClass}`}>NexaFlow</h1>
@@ -86,7 +85,7 @@ export default function Header({
               type="button"
               onClick={(e) => { e.preventDefault(); onToggleCafeStatus(); }}
               title={isOpen ? 'Klik untuk menutup kafe' : 'Klik untuk membuka kafe'}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs shadow-md border-2 transition-all active:scale-95 ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs shadow-md border-2 transition-colors active:scale-95 ${
                 isOpen
                   ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-700'
                   : 'bg-rose-500 hover:bg-rose-600 text-white border-rose-700 animate-pulse'
@@ -99,7 +98,7 @@ export default function Header({
             <button
               onClick={onOpenKitchen}
               title="Layar Dapur (KDS)"
-              className={`flex items-center justify-center px-3 py-2.5 rounded-xl shadow-sm transition-all text-xs font-black border-2 ${theme === 'light' ? 'bg-white hover:bg-[#FAF6F2] text-[#1A1512] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}
+              className={`flex items-center justify-center px-3 py-2.5 rounded-xl shadow-sm transition-colors text-xs font-black border-2 ${theme === 'light' ? 'bg-white hover:bg-[#FAF6F2] text-[#1A1512] border-[#D4C5B8]' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}
             >
               <Icons.Utensils />
               <span className="hidden xl:inline ml-1.5">Layar Dapur</span>
@@ -114,7 +113,7 @@ export default function Header({
             <button
               onClick={onToggleTheme}
               title="Ganti Tema"
-              className={`p-2.5 rounded-xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#1A1512] hover:bg-[#FAF6F2]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}
+              className={`p-2.5 rounded-xl border-2 transition-colors shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#1A1512] hover:bg-[#FAF6F2]' : 'bg-slate-800 border-slate-600 text-amber-400 hover:bg-slate-700'}`}
             >
               {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
             </button>
@@ -122,7 +121,7 @@ export default function Header({
             <button
               onClick={onToggleFullscreen}
               title="Layar Penuh"
-              className={`hidden sm:block p-2.5 rounded-xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#1A1512] hover:bg-[#FAF6F2]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}
+              className={`hidden sm:block p-2.5 rounded-xl border-2 transition-colors shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#1A1512] hover:bg-[#FAF6F2]' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}
             >
               {isFullscreen ? <Icons.Shrink /> : <Icons.Expand />}
             </button>
@@ -130,7 +129,7 @@ export default function Header({
             <button
               onClick={onLogout}
               title="Logout"
-              className={`p-2.5 rounded-xl border-2 transition-all shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#8C7A6B] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}
+              className={`p-2.5 rounded-xl border-2 transition-colors shadow-sm ${theme === 'light' ? 'bg-white border-[#D4C5B8] text-[#8C7A6B] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50'}`}
             >
               <Icons.Logout />
             </button>
@@ -144,7 +143,7 @@ export default function Header({
             <button
               key={key}
               onClick={() => { setActiveTab(key); setIsMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all border-2 ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-colors border-2 ${
                 activeTab === key
                   ? 'bg-[#2A1F17] text-white border-[#1A1512]'
                   : theme === 'light'
