@@ -21,20 +21,20 @@ export default function TabReports({
   reportLabel, reportStats, topMenus, chartData, maxChartRev, totalChartRev,
   showDailyBreakdown, activeDays, onExportCSV, onPrintReport, rp, d,
 }) {
-  const textMainClass = theme === 'light' ? 'text-[#2A1F17]' : 'text-white';
-  const textSubClass = theme === 'light' ? 'text-[#5C4B3E]' : 'text-slate-300';
-  const cardClass = theme === 'light' ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
-  const inputClass = `w-full border-2 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${theme === 'light' ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`;
+  const isLight = theme === 'light';
+  const textMainClass = isLight ? 'text-[#2A1F17]' : 'text-white';
+  const textSubClass = isLight ? 'text-[#5C4B3E]' : 'text-slate-300';
+  const cardClass = isLight ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
+  const inputClass = `w-full border-2 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${isLight ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white'}`;
 
   const [expenseModal, setExpenseModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formExpense, setFormExpense] = useState({ description: '', quantity: 1, unit_price: 0 });
 
-  // 🔥 FILTER KHUSUS PENGELUARAN HARIAN (HANYA KASIR YANG BISA INPUT HARIAN) 🔥
   const filteredExpenses = useMemo(() => {
     const exps = d?.expenses || [];
     return exps.filter(ex => {
-      if (ex.category !== 'Harian') return false; // <-- HANYA TAMPILKAN YANG HARIAN
+      if (ex.category !== 'Harian') return false;
       const exDate = new Date(ex.expense_date).toLocaleDateString('en-CA');
       if (reportMode === 'daily') return exDate === reportDateStr;
       if (reportMode === 'weekly') {
@@ -68,12 +68,12 @@ export default function TabReports({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenant_id: d.tenantId,
-          category: 'Harian', // <-- KASIR HANYA KIRIM KATEGORI HARIAN
+          category: 'Harian',
           ...formExpense
         })
       });
       if (!res.ok) throw new Error('Gagal mencatat pengeluaran');
-      
+
       d.showToast('Pengeluaran harian berhasil dicatat', 'success');
       setExpenseModal(false);
       setFormExpense({ description: '', quantity: 1, unit_price: 0 });
@@ -95,7 +95,7 @@ export default function TabReports({
             { k: 'monthly', l: 'Bulanan' },
             { k: 'custom', l: 'Custom' },
           ].map(({ k, l }) => (
-            <button key={k} onClick={() => setReportMode(k)} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === k ? 'bg-[var(--primary-color)] text-white border-[var(--primary-dark)] shadow-md' : theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>{l}</button>
+            <button key={k} onClick={() => setReportMode(k)} className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border-2 ${reportMode === k ? 'bg-[var(--primary-color)] text-white border-[var(--primary-dark)] shadow-md' : isLight ? 'bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{l}</button>
           ))}
           <button onClick={() => setExpenseModal(true)} className="ml-auto bg-[var(--primary-color)] text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-md hover:bg-[var(--primary-dark)] transition-colors">
             <SvgIcons.Plus /> Catat Pengeluaran Harian
@@ -106,7 +106,7 @@ export default function TabReports({
           <input type="date" value={reportDateStr} onChange={e => setReportDateStr(e.target.value)} className={inputClass} />
         )}
         {reportMode === 'weekly' && (
-          <div className={`rounded-xl p-4 border-2 flex items-center gap-3 ${theme === 'light' ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600'}`}>
+          <div className={`rounded-xl p-4 border-2 flex items-center gap-3 ${isLight ? 'bg-[#F4EFE9] border-[#D4C5B8]' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>
             <SvgIcons.Calendar />
             <div>
               <p className={`text-xs font-bold ${textSubClass}`}>Menampilkan data 7 hari terakhir (termasuk hari ini)</p>
@@ -139,15 +139,15 @@ export default function TabReports({
         </div>
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
           <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${textSubClass}`}>Total Omset (Pendapatan)</p>
-          <p className="text-2xl font-black text-[var(--primary-color)]">{rp(reportStats?.revenue || 0)}</p>
+          <p className={`text-2xl font-black ${isLight ? 'text-[var(--primary-color)]' : 'text-cyan-400'}`}>{rp(reportStats?.revenue || 0)}</p>
         </div>
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
-          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 text-rose-500`}>Total Pengeluaran (Harian)</p>
-          <p className="text-2xl font-black text-rose-500">- {rp(totalExpense)}</p>
+          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${isLight ? 'text-rose-600' : 'text-rose-400'}`}>Total Pengeluaran (Harian)</p>
+          <p className={`text-2xl font-black ${isLight ? 'text-rose-600' : 'text-rose-400'}`}>- {rp(totalExpense)}</p>
         </div>
         <div className={`rounded-2xl p-5 shadow-sm border-2 ${cardClass}`}>
-          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>Laba Bersih</p>
-          <p className={`text-2xl font-black ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{rp(netProfit)}</p>
+          <p className={`text-[10px] font-extrabold uppercase tracking-widest mb-2 ${netProfit >= 0 ? (isLight ? 'text-emerald-600' : 'text-emerald-400') : (isLight ? 'text-rose-600' : 'text-rose-400')}`}>Laba Bersih</p>
+          <p className={`text-2xl font-black ${netProfit >= 0 ? (isLight ? 'text-emerald-600' : 'text-emerald-400') : (isLight ? 'text-rose-600' : 'text-rose-400')}`}>{rp(netProfit)}</p>
         </div>
       </div>
 
@@ -156,15 +156,14 @@ export default function TabReports({
           <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Rincian Pengeluaran Harian</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
             {filteredExpenses.map(ex => {
-              // Fallback: Jika unit_price 0, hitung dari Total / Qty
               const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
               return (
-                <div key={ex.id} className={`flex justify-between items-center p-3 rounded-xl border-2 ${theme === 'light' ? 'bg-[#FAF6F2] border-[#E0D6CC]' : 'bg-slate-800 border-slate-700'}`}>
+                <div key={ex.id} className={`flex justify-between items-center p-3 rounded-xl border-2 ${isLight ? 'bg-[#FAF6F2] border-[#E0D6CC]' : 'bg-slate-800 border-slate-700'}`}>
                   <div>
                     <p className={`text-sm font-bold ${textMainClass}`}>{ex.description}</p>
                     <p className={`text-[10px] ${textSubClass}`}>{new Date(ex.expense_date).toLocaleDateString('id-ID')} • {ex.quantity} Qty x {rp(safeUnitPrice)}</p>
                   </div>
-                  <p className="text-sm font-black text-rose-500">- {rp(ex.amount)}</p>
+                  <p className={`text-sm font-black ${isLight ? 'text-rose-600' : 'text-rose-400'}`}>- {rp(ex.amount)}</p>
                 </div>
               );
             })}
@@ -173,50 +172,50 @@ export default function TabReports({
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${theme === 'light' ? 'bg-cyan-50 border-cyan-400' : 'bg-cyan-950 border-cyan-600'}`}>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${isLight ? 'bg-cyan-50 border-cyan-400 text-cyan-800' : 'bg-cyan-950 border-cyan-600 text-cyan-300'}`}>
           <div className="flex items-center gap-2 mb-2">
             <SvgIcons.Qris />
-            <p className={`text-[10px] font-extrabold uppercase tracking-widest ${theme === 'light' ? 'text-cyan-800' : 'text-cyan-400'}`}>Pendapatan QRIS</p>
+            <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>Pendapatan QRIS</p>
           </div>
-          <p className={`text-2xl font-black ${theme === 'light' ? 'text-cyan-800' : 'text-cyan-300'}`}>{rp(reportStats?.revenueQRIS || 0)}</p>
-          <p className={`text-xs font-bold mt-1 ${theme === 'light' ? 'text-cyan-700' : 'text-cyan-500'}`}>{reportStats?.countQRIS || 0} transaksi</p>
+          <p className={`text-2xl font-black ${isLight ? 'text-cyan-800' : 'text-cyan-200'}`}>{rp(reportStats?.revenueQRIS || 0)}</p>
+          <p className={`text-xs font-bold mt-1 ${isLight ? 'text-cyan-700' : 'text-cyan-300'}`}>{reportStats?.countQRIS || 0} transaksi</p>
         </div>
-        <div className={`rounded-2xl p-5 shadow-sm border-2 ${theme === 'light' ? 'bg-emerald-50 border-emerald-400' : 'bg-emerald-950 border-emerald-600'}`}>
+        <div className={`rounded-2xl p-5 shadow-sm border-2 ${isLight ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-emerald-950 border-emerald-600 text-emerald-300'}`}>
           <div className="flex items-center gap-2 mb-2">
             <SvgIcons.Cash />
-            <p className={`text-[10px] font-extrabold uppercase tracking-widest ${theme === 'light' ? 'text-emerald-800' : 'text-emerald-400'}`}>Pendapatan Cash</p>
+            <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isLight ? 'text-emerald-800' : 'text-emerald-300'}`}>Pendapatan Cash</p>
           </div>
-          <p className={`text-2xl font-black ${theme === 'light' ? 'text-emerald-800' : 'text-emerald-300'}`}>{rp(reportStats?.revenueCash || 0)}</p>
-          <p className={`text-xs font-bold mt-1 ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-500'}`}>{reportStats?.countCash || 0} transaksi</p>
+          <p className={`text-2xl font-black ${isLight ? 'text-emerald-800' : 'text-emerald-200'}`}>{rp(reportStats?.revenueCash || 0)}</p>
+          <p className={`text-xs font-bold mt-1 ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>{reportStats?.countCash || 0} transaksi</p>
         </div>
       </div>
 
       {reportStats?.cancelledCount > 0 && (
-        <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${theme === 'light' ? 'bg-rose-50 border-rose-300' : 'bg-slate-900 border-rose-900'}`}>
+        <div className={`rounded-[2rem] p-6 shadow-sm border-2 ${isLight ? 'bg-rose-50 border-rose-300' : 'bg-slate-900 border-rose-900'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <SvgIcons.Warning />
-              <h3 className={`font-black text-lg ${theme === 'light' ? 'text-rose-800' : 'text-rose-400'}`}>Pesanan Ditolak</h3>
+              <h3 className={`font-black text-lg ${isLight ? 'text-rose-800' : 'text-rose-300'}`}>Pesanan Ditolak</h3>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-black ${theme === 'light' ? 'bg-rose-200 text-rose-800' : 'bg-rose-900/50 text-rose-400'}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-black ${isLight ? 'bg-rose-200 text-rose-800' : 'bg-rose-900/60 text-rose-300'}`}>
               {reportStats.cancelledCount} Pesanan
             </span>
           </div>
           <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
             {reportStats.cancelledOrders.map((o) => (
-              <div key={o.id} className={`p-4 rounded-xl border-2 flex flex-col gap-2 ${theme === 'light' ? 'bg-white border-rose-200' : 'bg-slate-800 border-rose-900/50'}`}>
+              <div key={o.id} className={`p-4 rounded-xl border-2 flex flex-col gap-2 ${isLight ? 'bg-white border-rose-200' : 'bg-slate-800 border-rose-900/50'}`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className={`text-sm font-black ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Meja {o.table_number} - {o.customer_name || 'Tamu'}</p>
-                    <p className="text-[10px] font-bold text-slate-500">{new Date(o.created_at).toLocaleString('id-ID')}</p>
+                    <p className={`text-sm font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>Meja {o.table_number} - {o.customer_name || 'Tamu'}</p>
+                    <p className={`text-[10px] font-bold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>{new Date(o.created_at).toLocaleString('id-ID')}</p>
                   </div>
-                  <p className={`text-sm font-black ${theme === 'light' ? 'text-rose-600' : 'text-rose-400'}`}>{rp(o.total_price)}</p>
+                  <p className={`text-sm font-black ${isLight ? 'text-rose-600' : 'text-rose-400'}`}>{rp(o.total_price)}</p>
                 </div>
                 <div>
-                  <p className={`text-xs font-semibold mb-1 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     Item: {o.items?.map(i => `${i.qty}x ${i.name}`).join(', ')}
                   </p>
-                  <p className={`text-xs font-bold p-2 rounded-lg inline-block ${theme === 'light' ? 'bg-rose-100 text-rose-800' : 'bg-rose-950 text-rose-300'}`}>
+                  <p className={`text-xs font-bold p-2 rounded-lg inline-block ${isLight ? 'bg-rose-100 text-rose-800' : 'bg-rose-950 text-rose-200'}`}>
                     Keterangan: {o.order_note || 'Dibatalkan oleh Kasir'}
                   </p>
                 </div>
@@ -250,9 +249,9 @@ export default function TabReports({
           <h3 className={`font-black text-lg mb-4 ${textMainClass}`}>Menu Terlaris</h3>
           <div className="space-y-2">
             {topMenus.map(([name, data], i) => (
-              <div key={name} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: theme === 'light' ? '#E8DFD3' : '#334155' }}>
+              <div key={name} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: isLight ? '#E8DFD3' : '#334155' }}>
                 <div className="flex items-center gap-3">
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${theme === 'light' ? 'bg-[#F4EFE9] text-[var(--primary-color)]' : 'bg-slate-800 text-[var(--primary-color)]'}`}>{i + 1}</span>
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${isLight ? 'bg-[#F4EFE9] text-[var(--primary-color)]' : 'bg-slate-800 text-cyan-400'}`}>{i + 1}</span>
                   <span className={`font-bold text-sm ${textMainClass}`}>{name}</span>
                 </div>
                 <div className="text-right">
@@ -266,10 +265,9 @@ export default function TabReports({
       )}
 
       <div className="flex gap-2">
-        <button onClick={onExportCSV} className={`flex-1 font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all border-2 ${theme === 'light' ? 'bg-white hover:bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
+        <button onClick={onExportCSV} className={`flex-1 font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all border-2 ${isLight ? 'bg-white hover:bg-[#F4EFE9] border-[#D4C5B8] text-[#2A1F17]' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'}`}>
           <Icons.Download /> Export CSV
         </button>
-        {/* 🔥 PASSING DATA EXPENSE KE PRINT 🔥 */}
         <button onClick={() => onPrintReport(filteredExpenses, totalExpense, netProfit)} className="flex-1 bg-gradient-to-r from-[var(--primary-color)] to-[var(--primary-dark)] text-white font-extrabold py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 border-2 border-[var(--primary-dark)]">
           <Icons.Print /> Cetak Laporan
         </button>
@@ -279,48 +277,48 @@ export default function TabReports({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className={`w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border-2 ${cardClass}`}>
             <h3 className={`text-xl font-black mb-6 ${textMainClass}`}>Catat Pengeluaran Harian</h3>
-            
+
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>
                 <label className={`block text-xs font-bold mb-1 ${textSubClass}`}>Nama Barang / Keterangan</label>
-                <input 
-                  type="text" required 
-                  value={formExpense.description} 
-                  onChange={e => setFormExpense({...formExpense, description: e.target.value})} 
-                  placeholder="Contoh: Beli Susu UHT" 
-                  className={inputClass} 
+                <input
+                  type="text" required
+                  value={formExpense.description}
+                  onChange={e => setFormExpense({...formExpense, description: e.target.value})}
+                  placeholder="Contoh: Beli Susu UHT"
+                  className={inputClass}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={`block text-xs font-bold mb-1 ${textSubClass}`}>Jumlah (Qty)</label>
-                  <input 
+                  <input
                     type="number" required min="1"
-                    value={formExpense.quantity} 
-                    onChange={e => setFormExpense({...formExpense, quantity: e.target.value})} 
-                    className={inputClass} 
+                    value={formExpense.quantity}
+                    onChange={e => setFormExpense({...formExpense, quantity: e.target.value})}
+                    className={inputClass}
                   />
                 </div>
                 <div>
                   <label className={`block text-xs font-bold mb-1 ${textSubClass}`}>Harga Satuan (Rp)</label>
-                  <input 
+                  <input
                     type="number" required min="0"
-                    value={formExpense.unit_price} 
-                    onChange={e => setFormExpense({...formExpense, unit_price: e.target.value})} 
-                    placeholder="20000" 
-                    className={inputClass} 
+                    value={formExpense.unit_price}
+                    onChange={e => setFormExpense({...formExpense, unit_price: e.target.value})}
+                    placeholder="20000"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
-              <div className={`p-4 rounded-xl flex justify-between items-center border-2 ${theme === 'light' ? 'bg-rose-50 border-rose-200' : 'bg-rose-950 border-rose-900'}`}>
-                <span className={`text-sm font-black uppercase ${theme === 'light' ? 'text-rose-800' : 'text-rose-400'}`}>Total Otomatis</span>
-                <span className={`text-xl font-black ${theme === 'light' ? 'text-rose-600' : 'text-rose-400'}`}>{rp(Number(formExpense.quantity) * Number(formExpense.unit_price))}</span>
+              <div className={`p-4 rounded-xl flex justify-between items-center border-2 ${isLight ? 'bg-rose-50 border-rose-200' : 'bg-rose-950 border-rose-900'}`}>
+                <span className={`text-sm font-black uppercase ${isLight ? 'text-rose-800' : 'text-rose-300'}`}>Total Otomatis</span>
+                <span className={`text-xl font-black ${isLight ? 'text-rose-600' : 'text-rose-300'}`}>{rp(Number(formExpense.quantity) * Number(formExpense.unit_price))}</span>
               </div>
 
               <div className="flex gap-2 pt-4">
-                <button type="button" onClick={() => setExpenseModal(false)} className={`flex-1 font-bold py-3 rounded-xl transition-colors border-2 ${theme === 'light' ? 'bg-[#FAF6F2] border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'}`}>
+                <button type="button" onClick={() => setExpenseModal(false)} className={`flex-1 font-bold py-3 rounded-xl transition-colors border-2 ${isLight ? 'bg-[#FAF6F2] border-[#D4C5B8] text-[#2A1F17] hover:bg-[#F4EFE9]' : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'}`}>
                   Batal
                 </button>
                 <button type="submit" disabled={isSubmitting} className="flex-1 bg-[var(--primary-color)] text-white font-black py-3 rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-50 shadow-md">
