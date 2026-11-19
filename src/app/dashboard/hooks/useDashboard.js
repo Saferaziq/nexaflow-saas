@@ -37,6 +37,7 @@ export function useDashboard() {
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [cancelModal, setCancelModal] = useState({ open: false, orderId: null, reason: '' });
+  const [printingOrderId, setPrintingOrderId] = useState(null);
 
   const [menuSearch, setMenuSearch] = useState("");
   const [menuCategoryFilter, setMenuCategoryFilter] = useState("all");
@@ -564,7 +565,8 @@ export function useDashboard() {
           reportNow: new Date(),
           filteredExpenses,
           totalExpense,
-          netProfit
+          netProfit,
+          showToast,
         });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
@@ -829,18 +831,28 @@ export function useDashboard() {
   };
 
   const handlePrintBill = async (order) => {
+    if (!order || printingOrderId) return;
+    setPrintingOrderId(order.id);
     try {
       const printModule = await import('../helpers/print');
       const qrisModule = await import('../helpers/qris');
       const printFn = printModule.printBillWithQRIS;
       const qrisFn = qrisModule.generateDynamicQRIS;
       if (printFn && qrisFn) {
-        printFn({ order, settings, generateDynamicQRIS: qrisFn, showToast });
+        printFn({
+          order,
+          settings,
+          generateDynamicQRIS: qrisFn,
+          showToast,
+          onFinish: () => setPrintingOrderId(null),
+        });
       } else {
+        setPrintingOrderId(null);
         showToast('Fungsi cetak tidak ditemukan di print.js', 'error');
       }
     } catch (err) {
       console.error(err);
+      setPrintingOrderId(null);
       showToast('Gagal memuat fungsi cetak: ' + err.message, 'error');
     }
   };
@@ -850,7 +862,7 @@ export function useDashboard() {
       const printModule = await import('../helpers/print');
       const printFn = printModule.printDailyReport;
       if (printFn) {
-        printFn({ orders, settings, userEmail });
+        printFn({ orders, settings, userEmail, showToast });
       } else {
         showToast('Fungsi cetak laporan tidak ditemukan', 'error');
       }
@@ -947,6 +959,7 @@ export function useDashboard() {
   return {
     cafeName, userEmail, tenantId, menus, orders, tables, expenses, settings, isOpen, isSuspended,
     todayStr, baseUrl, isExpired, theme, nowTick, realtimeStatus, toasts, confirmDialog, isFullscreen, audioUnlocked,
+    printingOrderId,
     setTheme, setSettings, setMenus, setOrders, setTables, setExpenses, setToasts, setConfirmDialog,
     rp, showToast, askConfirm, unlockAudio, toggleTheme, toggleFullscreen, handleLogout,
     handleImageUpload, handleUpdateOrderStatus, handleCancelOrder, handleDeleteMenu, handleDeleteTable, toggleMenuStatus,
