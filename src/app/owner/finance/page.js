@@ -7,13 +7,13 @@ import { supabase } from '@/lib/supabase';
 const Icons = {
   Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-  Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-  Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-  WhatsApp: () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>,
-  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-  Warning: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  Box: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  Overview: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
+  Finance: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  Reports: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>,
+  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
 };
 
 export default function OwnerFinance() {
@@ -40,7 +40,6 @@ export default function OwnerFinance() {
   });
   const [formPayroll, setFormPayroll] = useState({ amount: '', notes: '' });
 
-  // Poin 5: State Kelola Stok Menu Khusus Owner
   const [stockBranchFilter, setStockBranchFilter] = useState('all');
   const [stockSearch, setStockSearch] = useState('');
   const [stockModal, setStockModal] = useState({ open: false, menu: null, mode: 'add', qty: '' });
@@ -50,13 +49,20 @@ export default function OwnerFinance() {
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false });
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem('nexaflow_theme');
+    if (savedTheme === 'dark') setIsDarkMode(true);
+    else setIsDarkMode(false);
+  }, []);
+
+  useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    localStorage.setItem('nexaflow_theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3500);
   };
 
   const fetchData = async (email) => {
@@ -312,13 +318,6 @@ export default function OwnerFinance() {
 
   const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
 
-  const getInitials = (name) => {
-    if (!name) return '?';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
-
   const expensesDaily = expenses.filter(ex => ex.category === 'Harian');
   const expensesMonthly = expenses.filter(ex => ex.category !== 'Harian');
 
@@ -342,150 +341,200 @@ export default function OwnerFinance() {
     });
   }, [menus, stockBranchFilter, stockSearch]);
 
-  // Logic untuk Cek Gaji Bulan Ini
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const isEndOfMonth = new Date().getDate() >= 25;
 
   return (
-    <div className="bg-[#F8FAFC] text-slate-800 dark:bg-[#04060B] dark:text-slate-200 min-h-screen overflow-hidden font-sans transition-colors duration-300">
+    <div className="bg-[#F4EFE9] text-[#1A1512] dark:bg-[#0a192f] dark:text-white min-h-screen font-sans">
       <style>{`
-        .owner-3d { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04), 0 8px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.7); }
-        .dark .owner-3d { box-shadow: 0 1px 2px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.20), 0 8px 20px rgba(0,0,0,0.25), 0 20px 40px -12px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.30); }
-        .owner-3d-hover { transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease; }
-        .owner-3d-hover:hover { transform: translateY(-2px); }
-        .owner-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
-        .owner-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #F1F5F9; border: 1px solid #E2E8F0; color: #64748B; transition: all 150ms ease; }
-        .dark .owner-icon-btn { background: #111826; border-color: rgba(148,163,184,0.10); color: #94A3B8; }
-        .owner-icon-btn:hover { background: #E2E8F0; color: #334155; }
-        .dark .owner-icon-btn:hover { background: #17202E; color: #E2E8F0; border-color: rgba(148,163,184,0.22); }
-        .owner-icon-btn-danger:hover { background: #FEE2E2; color: #DC2626; border-color: #FCA5A5; }
-        .dark .owner-icon-btn-danger:hover { background: rgba(244,63,94,0.10); color: #FB7185; border-color: rgba(244,63,94,0.30); }
-        .owner-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-        .owner-avatar { box-shadow: 0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10); border: 1px solid rgba(148,163,184,0.12); }
-        .owner-row { transition: background-color 150ms ease; }
-        .owner-row:hover { background-color: rgba(17, 28, 51, 0.04); }
-        .dark .owner-row:hover { background-color: rgba(17, 28, 51, 0.55); }
+        .num-tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+        .owner-card { box-shadow: 0 2px 8px rgba(26, 21, 18, 0.06); }
+        .dark .owner-card { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
-      <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-[#2563EB]/10 dark:bg-[#2563EB]/15 blur-[150px] pointer-events-none z-0"></div>
-
-      <div className="flex h-screen relative z-10">
-        <aside className="group w-[80px] hover:w-64 transition-all duration-300 ease-in-out bg-white/70 dark:bg-[#060911]/80 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 h-full shrink-0">
-          <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800/80 overflow-hidden shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-lg overflow-hidden p-1">
-              <img src="/logo-nexaflow-3d.png" alt="NexaFlow Logo" className="w-full h-full object-contain drop-shadow-md" />
-            </div>
-            <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-black tracking-tight font-display text-slate-900 dark:text-white">NEXAFLOW</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EA8B42]"></span>
+      <div className="flex min-h-screen">
+        {/* SIDEBAR SELARAS KASIR */}
+        <aside className="hidden lg:flex lg:w-60 bg-[#2A1F17] text-white dark:bg-slate-900 border-r-2 border-[#1A1512] dark:border-slate-700 flex-col justify-between p-5 shrink-0 h-screen sticky top-0">
+          <div className="space-y-8">
+            <div className="flex items-center gap-3 px-1">
+              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
+                <img src="/logo-nexaflow-3d.png" alt="NF" className="w-full h-full object-contain" />
               </div>
-              <p className="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">Owner Space</p>
+              <div>
+                <p className="text-base font-black tracking-tight text-white leading-none">NEXAFLOW</p>
+                <p className="text-[11px] font-extrabold text-amber-400 tracking-wider uppercase mt-1">Owner Panel</p>
+              </div>
             </div>
+
+            <nav className="space-y-1.5">
+              <Link href="/owner" className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
+                <Icons.Overview />
+                <span>Command Center AI</span>
+              </Link>
+              <Link href="/owner/finance" className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black border border-blue-400/40">
+                <Icons.Finance />
+                <span>Keuangan & Stok</span>
+              </Link>
+              <Link href="/owner/reports" className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
+                <Icons.Reports />
+                <span>Laporan Global P&L</span>
+              </Link>
+              <Link href="/owner/settings" className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#D3C8BB] dark:text-slate-300 hover:bg-white/10 hover:text-white text-xs font-bold transition-colors">
+                <Icons.Settings />
+                <span>Pengaturan & AI Key</span>
+              </Link>
+            </nav>
           </div>
-          <nav className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto overflow-x-hidden">
-            <Link href="/owner" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Overview</span>
-            </Link>
-            <Link href="/owner/finance" className="flex items-center gap-3 px-3 py-3 bg-blue-50 dark:bg-[#111C33] text-[#2563EB] dark:text-sky-400 rounded-xl font-bold transition-all border border-blue-100 dark:border-sky-500/20 shadow-sm whitespace-nowrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Keuangan</span>
-            </Link>
-            <Link href="/owner/reports" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Laporan Global</span>
-            </Link>
-            <Link href="/owner/settings" className="flex items-center gap-3 px-3 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#111C33] hover:text-slate-900 dark:hover:text-white rounded-xl font-bold transition-all whitespace-nowrap">
-              <Icons.Settings />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Pengaturan</span>
-            </Link>
-          </nav>
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800/80">
-            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 rounded-xl font-bold transition-all whitespace-nowrap">
-              <Icons.Logout /> <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Logout</span>
+
+          <div className="pt-4 border-t border-white/15 space-y-3">
+            <div className="px-1">
+              <p className="text-xs font-black text-white truncate">{userEmail || 'Owner'}</p>
+              <p className="text-[11px] font-bold text-[#D3C8BB] dark:text-slate-400 mt-0.5">{tenants.length} Cabang Terdaftar</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors"
+            >
+              <Icons.Logout />
+              <span>Logout</span>
             </button>
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-          <header className="h-20 bg-white/60 dark:bg-[#04060B]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-10 z-40 transition-colors">
+        {/* AREA KONTEN UTAMA */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* NAVIGASI MOBILE */}
+          <div className="lg:hidden bg-[#2A1F17] dark:bg-slate-900 border-b-2 border-[#1A1512] dark:border-slate-700 px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5">
+              <Link href="/owner" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Overview</Link>
+              <Link href="/owner/finance" className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-xs font-black whitespace-nowrap">Keuangan</Link>
+              <Link href="/owner/reports" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Laporan</Link>
+              <Link href="/owner/settings" className="px-3 py-1.5 rounded-lg text-[#D3C8BB] text-xs font-bold whitespace-nowrap">Pengaturan</Link>
+            </div>
+            <button type="button" onClick={() => setIsDarkMode(!isDarkMode)} className="p-1.5 rounded-lg bg-white/10 text-amber-300 shrink-0">
+              {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
+            </button>
+          </div>
+
+          <header className="bg-white dark:bg-slate-900 border-b-2 border-[#E0D6CC] dark:border-slate-700 px-5 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">Manajemen Keuangan & Stok</h1>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Kelola biaya operasional, gaji karyawan, dan stok menu cabang</p>
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-[#1A1512] dark:text-white">Keuangan, Karyawan & Stok</h1>
+              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">Kelola pengeluaran operasional, gaji staf, dan stok menu cabang</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shadow-sm">
-                {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              title="Ubah Tema"
+              className="hidden lg:inline-flex p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-amber-400"
+            >
+              {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
+            </button>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10 z-10 scroll-smooth">
+          <main className="p-5 sm:p-8 max-w-6xl w-full mx-auto space-y-6">
+            {/* SUB-TABS TEGAS */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('expenses_daily')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
+                  activeTab === 'expenses_daily' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                }`}
+              >
+                Pengeluaran Harian (Kasir)
+              </button>
 
-            <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
-              <button onClick={() => setActiveTab('expenses_daily')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_daily' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Pengeluaran Harian (Kasir)</button>
-              <button onClick={() => setActiveTab('expenses_monthly')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'expenses_monthly' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Biaya Bulanan (Fixed Cost)</button>
-              <button onClick={() => setActiveTab('employees')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all ${activeTab === 'employees' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>Data Karyawan & Gaji</button>
-              <button onClick={() => setActiveTab('stocks')} className={`px-6 py-3 rounded-xl text-sm font-black whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === 'stocks' ? 'bg-[#2563EB] text-white shadow-lg' : 'bg-white dark:bg-[#111C33] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B]'}`}>
-                <Icons.Box />
-                <span>Kelola Stok Menu (Owner)</span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('expenses_monthly')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
+                  activeTab === 'expenses_monthly' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                }`}
+              >
+                Biaya Bulanan (Fixed Cost)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('employees')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${
+                  activeTab === 'employees' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                }`}
+              >
+                Data Karyawan & Gaji
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('stocks')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 flex items-center gap-2 ${
+                  activeTab === 'stocks' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-200'
+                }`}
+              >
+                <span>Kelola Stok Menu</span>
                 {lowStockCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-300 text-xs font-black">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[#1A1512] text-[10px] font-black">
                     {lowStockCount}
                   </span>
                 )}
               </button>
             </div>
 
+            {/* TAB 1: PENGELUARAN HARIAN KASIR */}
             {activeTab === 'expenses_daily' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="mb-6 p-4 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 rounded-2xl flex items-start gap-3">
-                  <div className="text-sky-500 mt-0.5"><Icons.Warning /></div>
-                  <div>
-                    <h4 className="font-bold text-sky-800 dark:text-sky-300">Informasi</h4>
-                    <p className="text-sm text-sky-700 dark:text-sky-400 mt-1">Data di bawah ini adalah pengeluaran harian yang diinput oleh <b>Kasir</b> (seperti bahan baku, gas, dll). Owner hanya dapat memantau dan menghapus jika ada kecurangan.</p>
-                  </div>
+              <div className="space-y-4">
+                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-200">
+                    Catatan pengeluaran harian yang diinput oleh Kasir (bahan baku, gas, es, dll).
+                  </p>
+                  <span className="text-sm font-black text-rose-600 dark:text-rose-400 num-tabular">
+                    Total: {formatRp(totalPengeluaranHarian)}
+                  </span>
                 </div>
 
-                <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden mb-6">
-                  <div className="p-6 border-b border-slate-200 dark:border-slate-800/60 flex justify-between items-center">
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Riwayat Pengeluaran Harian</h2>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Total Harian</p>
-                      <p className="text-lg font-black text-rose-500 owner-num">{formatRp(totalPengeluaranHarian)}</p>
-                    </div>
-                  </div>
+                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800/80">
-                        <tr className="text-xs uppercase tracking-wider text-slate-500 font-black">
-                          <th className="p-4 pl-6">Tanggal</th>
-                          <th className="p-4">Cabang</th>
-                          <th className="p-4">Keterangan</th>
-                          <th className="p-4">Total</th>
-                          <th className="p-4 pr-6 text-right">Aksi</th>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
+                          <th className="py-3.5 px-6">Tanggal</th>
+                          <th className="py-3.5 px-4">Cabang</th>
+                          <th className="py-3.5 px-4">Keterangan</th>
+                          <th className="py-3.5 px-4">Nominal</th>
+                          <th className="py-3.5 px-6 text-right">Aksi</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 text-base">
+                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
                         {expensesDaily.map(ex => {
                           const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
                           return (
-                            <tr key={ex.id} className="owner-row">
-                              <td className="p-4 pl-6 text-sm font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                              <td className="p-4 text-sm font-bold text-slate-900 dark:text-white">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                              <td className="p-4">
-                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{ex.description || '-'}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">({ex.quantity || 1} Qty x {formatRp(safeUnitPrice)})</p>
+                            <tr key={ex.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
+                              <td className="py-3.5 px-6 font-bold text-[#5C4B3E] dark:text-slate-300 whitespace-nowrap">
+                                {new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                               </td>
-                              <td className="p-4 text-base font-black text-rose-500 owner-num whitespace-nowrap">- {formatRp(ex.amount)}</td>
-                              <td className="p-4 pr-6 text-right">
-                                <button onClick={() => handleDelete('expense', ex.id)} className="owner-icon-btn owner-icon-btn-danger inline-flex" title="Hapus"><Icons.Trash /></button>
+                              <td className="py-3.5 px-4 font-black text-[#1A1512] dark:text-white">
+                                {tenants.find(t => t.id === ex.tenant_id)?.name || '-'}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="font-extrabold text-[#1A1512] dark:text-white">{ex.description || '-'}</span>
+                                <span className="text-[#5C4B3E] dark:text-slate-300 font-bold ml-2">({ex.quantity || 1} x {formatRp(safeUnitPrice)})</span>
+                              </td>
+                              <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 num-tabular whitespace-nowrap">
+                                -{formatRp(ex.amount)}
+                              </td>
+                              <td className="py-3.5 px-6 text-right">
+                                <button onClick={() => handleDelete('expense', ex.id)} className="p-2 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white" title="Hapus">
+                                  <Icons.Trash />
+                                </button>
                               </td>
                             </tr>
                           );
                         })}
-                        {expensesDaily.length === 0 && <tr><td colSpan="5" className="p-10 text-center text-slate-500 font-bold text-base">Belum ada catatan pengeluaran harian dari kasir.</td></tr>}
+                        {expensesDaily.length === 0 && (
+                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada pengeluaran harian dari kasir.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -493,56 +542,62 @@ export default function OwnerFinance() {
               </div>
             )}
 
+            {/* TAB 2: BIAYA BULANAN */}
             {activeTab === 'expenses_monthly' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <div>
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Biaya Wajib Bulanan</h2>
-                    <p className="text-sm text-slate-500 mt-1">Catat pengeluaran tetap seperti Sewa, Listrik, Air, WiFi, dll.</p>
+              <div className="space-y-4">
+                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div>
+                      <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase">Total Beban Bulanan + Gaji</p>
+                      <p className="text-lg font-black text-rose-600 dark:text-rose-400 num-tabular mt-0.5">{formatRp(totalPengeluaranBulanan)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase">Gaji Dibayarkan</p>
+                      <p className="text-lg font-black text-[#1A1512] dark:text-white num-tabular mt-0.5">{formatRp(totalGajiBulanIni)}</p>
+                    </div>
                   </div>
-                  <button onClick={() => { setFormExpense({ ...formExpense, category: 'Bulanan' }); setExpenseModal(true); }} className="bg-[#2563EB] hover:bg-[#1E4E8C] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Catat Biaya Bulanan
+                  <button
+                    type="button"
+                    onClick={() => { setFormExpense({ ...formExpense, category: 'Bulanan' }); setExpenseModal(true); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black transition-colors"
+                  >
+                    + Catat Biaya Bulanan
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="owner-3d bg-white dark:bg-[#0A0F1C] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/60">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Pengeluaran Bulanan</p>
-                    <h3 className="text-2xl font-black text-rose-500 owner-num">{formatRp(totalPengeluaranBulanan)}</h3>
-                    <p className="text-[11px] text-slate-500 mt-2">*Termasuk total gaji karyawan yang telah dibayarkan</p>
-                  </div>
-                  <div className="owner-3d bg-white dark:bg-[#0A0F1C] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/60">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Gaji Dibayarkan</p>
-                    <h3 className="text-2xl font-black text-sky-500 owner-num">{formatRp(totalGajiBulanIni)}</h3>
-                  </div>
-                </div>
-
-                <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
+                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800/80">
-                        <tr className="text-xs uppercase tracking-wider text-slate-500 font-black">
-                          <th className="p-4 pl-6">Tanggal</th>
-                          <th className="p-4">Cabang</th>
-                          <th className="p-4">Keterangan Biaya</th>
-                          <th className="p-4">Total</th>
-                          <th className="p-4 pr-6 text-right">Aksi</th>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
+                          <th className="py-3.5 px-6">Tanggal</th>
+                          <th className="py-3.5 px-4">Cabang</th>
+                          <th className="py-3.5 px-4">Keterangan Biaya</th>
+                          <th className="py-3.5 px-4">Nominal</th>
+                          <th className="py-3.5 px-6 text-right">Aksi</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 text-base">
+                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
                         {expensesMonthly.map(ex => (
-                          <tr key={ex.id} className="owner-row">
-                            <td className="p-4 pl-6 text-sm font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                            <td className="p-4 text-sm font-bold text-slate-900 dark:text-white">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                            <td className="p-4 text-sm font-bold text-slate-800 dark:text-slate-200">{ex.description || '-'}</td>
-                            <td className="p-4 text-base font-black text-rose-500 owner-num whitespace-nowrap">- {formatRp(ex.amount)}</td>
-                            <td className="p-4 pr-6 text-right">
-                              <button onClick={() => handleDelete('expense', ex.id)} className="owner-icon-btn owner-icon-btn-danger inline-flex" title="Hapus"><Icons.Trash /></button>
+                          <tr key={ex.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
+                            <td className="py-3.5 px-6 font-bold text-[#5C4B3E] dark:text-slate-300 whitespace-nowrap">
+                              {new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="py-3.5 px-4 font-black text-[#1A1512] dark:text-white">
+                              {tenants.find(t => t.id === ex.tenant_id)?.name || '-'}
+                            </td>
+                            <td className="py-3.5 px-4 font-extrabold text-[#1A1512] dark:text-slate-200">{ex.description || '-'}</td>
+                            <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 num-tabular whitespace-nowrap">-{formatRp(ex.amount)}</td>
+                            <td className="py-3.5 px-6 text-right">
+                              <button onClick={() => handleDelete('expense', ex.id)} className="p-2 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white" title="Hapus">
+                                <Icons.Trash />
+                              </button>
                             </td>
                           </tr>
                         ))}
-                        {expensesMonthly.length === 0 && <tr><td colSpan="5" className="p-10 text-center text-slate-500 font-bold text-base">Belum ada catatan biaya wajib bulanan.</td></tr>}
+                        {expensesMonthly.length === 0 && (
+                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada catatan biaya bulanan.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -550,106 +605,87 @@ export default function OwnerFinance() {
               </div>
             )}
 
+            {/* TAB 3: DATA KARYAWAN & GAJI */}
             {activeTab === 'employees' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <div>
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white font-display">Daftar Karyawan</h2>
-                    <p className="text-sm text-slate-500 mt-1">Kelola gaji, kasbon, dan bonus staf kafe Anda.</p>
-                  </div>
-                  <button onClick={() => { setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' }); setEmployeeModal({ open: true, data: null }); }} className="bg-[#EA8B42] hover:bg-[#D97736] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Tambah Karyawan
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-300">{employees.length} staf terdaftar lintas cabang</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' });
+                      setEmployeeModal({ open: true, data: null });
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black transition-colors"
+                  >
+                    + Tambah Karyawan
                   </button>
                 </div>
 
-                {/* MODEL 2: HORIZONTAL CARD */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {employees.map(emp => {
                     const empTrans = transactions.filter(t => t.employee_id === emp.id);
                     const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
                     const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
-
                     const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
                     const showSalaryReminder = isEndOfMonth && !hasBeenPaidThisMonth;
 
                     return (
-                      <div key={emp.id} className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 relative overflow-hidden">
-
-                        {showSalaryReminder && (
-                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-rose-400"></div>
-                        )}
-
-                        <div className="flex items-center gap-3 w-full md:w-[28%] shrink-0">
-                          <div className="w-12 h-12 rounded-full owner-avatar flex items-center justify-center text-base font-black text-sky-300 shrink-0" style={{ background: 'linear-gradient(180deg,#0F2033,#0A1826)' }}>
-                            {getInitials(emp.name)}
+                      <div key={emp.id} className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-black text-[#1A1512] dark:text-white">{emp.name}</p>
+                            {showSalaryReminder && (
+                              <span className="px-2.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-black">Belum Digaji</span>
+                            )}
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-slate-900 dark:text-white text-base truncate">{emp.name}</p>
-                              {showSalaryReminder && (
-                                <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black px-2 py-0.5 rounded shrink-0">Belum Digaji</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mt-0.5">{emp.role} • {tenants.find(t => t.id === emp.tenant_id)?.name}</p>
+                          <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">
+                            {emp.role} · {tenants.find(t => t.id === emp.tenant_id)?.name || 'Cabang'}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-6 text-xs">
+                          <div>
+                            <p className="font-bold text-[#5C4B3E] dark:text-slate-400">Gaji Pokok</p>
+                            <p className="font-black text-[#1A1512] dark:text-white num-tabular mt-0.5">{formatRp(emp.base_salary)}</p>
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#5C4B3E] dark:text-slate-400">Kasbon</p>
+                            <p className="font-black text-amber-700 dark:text-amber-400 num-tabular mt-0.5">{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#5C4B3E] dark:text-slate-400">Bonus</p>
+                            <p className="font-black text-emerald-700 dark:text-emerald-400 num-tabular mt-0.5">{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
                           </div>
                         </div>
 
-                        <div className="flex-1 w-full grid grid-cols-3 gap-2 bg-slate-50 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800/50 rounded-xl p-3">
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Gaji Pokok</p>
-                            <p className="font-black text-slate-900 dark:text-white owner-num text-sm">{formatRp(emp.base_salary)}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Kasbon</p>
-                            <p className={`font-bold owner-num text-sm ${totalKasbon > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-600'}`}>{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Bonus</p>
-                            <p className={`font-bold owner-num text-sm ${totalBonus > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-600'}`}>{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end mt-4 md:mt-0">
-                          <button onClick={() => handleOpenEditEmployee(emp)} className="owner-icon-btn hidden md:flex" title="Edit"><Icons.Edit /></button>
-                          <button onClick={() => handleDelete('employee', emp.id)} className="owner-icon-btn owner-icon-btn-danger hidden md:flex" title="Hapus"><Icons.Trash /></button>
-
-                          <div className="w-px h-8 bg-slate-300 dark:bg-slate-800 mx-1 hidden md:block"></div>
-
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="flex-1 md:flex-none bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-colors">Gaji</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="flex-1 md:flex-none bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500/20 transition-colors">Kasbon</button>
-                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">Bonus</button>
-                          <button onClick={() => handleSendSalaryWA(emp)} className="flex-1 md:flex-none bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#25D366]/20 flex items-center gap-1 justify-center transition-colors">
-                            <Icons.WhatsApp /> WA
-                          </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-[#2563EB] text-xs font-black">Gaji</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-amber-500 text-xs font-black">Kasbon</button>
+                          <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-emerald-500 text-xs font-black">Bonus</button>
+                          <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
+                          <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
+                          <button onClick={() => handleDelete('employee', emp.id)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400" title="Hapus"><Icons.Trash /></button>
                         </div>
                       </div>
                     );
                   })}
-                  {employees.length === 0 && <div className="p-10 text-center text-slate-500 font-bold border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-base">Belum ada data karyawan.</div>}
+                  {employees.length === 0 && (
+                    <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-8 text-center text-xs font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada data karyawan.</div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* POIN 5: TAB KELOLA STOK MENU KHUSUS OWNER */}
+            {/* TAB 4: KELOLA STOK MENU */}
             {activeTab === 'stocks' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3">
-                  <div className="text-amber-500 mt-0.5"><Icons.Warning /></div>
-                  <div>
-                    <h4 className="font-bold text-amber-800 dark:text-amber-300">Kontrol Stok Khusus Owner (Anti-Manipulasi Kasir)</h4>
-                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                      Penambahan stok porsi harian dilakukan oleh Owner dari halaman ini. Jika stok diubah menjadi di atas 0, status menu otomatis berubah menjadi <b>Available</b> di layar QR pelanggan dan Kasir.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-                  <div className="flex flex-wrap items-center gap-3">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={stockBranchFilter}
                       onChange={(e) => setStockBranchFilter(e.target.value)}
-                      className="bg-white dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none"
+                      className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#1A1512] dark:text-white outline-none"
                     >
                       <option value="all">Semua Cabang ({tenants.length})</option>
                       {tenants.map(t => (
@@ -662,85 +698,55 @@ export default function OwnerFinance() {
                       value={stockSearch}
                       onChange={(e) => setStockSearch(e.target.value)}
                       placeholder="Cari nama menu..."
-                      className="bg-white dark:bg-[#111C33] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none"
+                      className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-[#1A1512] dark:text-white outline-none"
                     />
                   </div>
-                  <p className="text-xs font-bold text-slate-500">
-                    Menampilkan {filteredMenus.length} menu
-                  </p>
+                  <span className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-300">{filteredMenus.length} menu ditampilkan</span>
                 </div>
 
-                <div className="owner-3d bg-white dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
+                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50 dark:bg-[#060911]/50 border-b border-slate-200 dark:border-slate-800/80">
-                        <tr className="text-xs uppercase tracking-wider text-slate-500 font-black">
-                          <th className="p-4 pl-6">Nama Menu</th>
-                          <th className="p-4">Cabang</th>
-                          <th className="p-4">Kategori</th>
-                          <th className="p-4">Harga</th>
-                          <th className="p-4 text-center">Sisa Stok</th>
-                          <th className="p-4 pr-6 text-right">Tambah / Atur Stok</th>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
+                          <th className="py-3.5 px-6">Menu</th>
+                          <th className="py-3.5 px-4">Cabang</th>
+                          <th className="py-3.5 px-4">Harga</th>
+                          <th className="py-3.5 px-4 text-center">Sisa Stok</th>
+                          <th className="py-3.5 px-6 text-right">Tambah / Atur Stok</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
                         {filteredMenus.map(m => {
                           const branchName = tenants.find(t => t.id === m.tenant_id)?.name || 'Cabang';
                           const stockNum = Number(m.stock || 0);
                           return (
-                            <tr key={m.id} className="owner-row">
-                              <td className="p-4 pl-6">
-                                <p className="font-bold text-sm text-slate-900 dark:text-white">{m.name}</p>
-                                <p className="text-[11px] text-slate-500">{m.status === 'available' && stockNum > 0 ? 'Tersedia di QR' : 'Habis (Sold Out)'}</p>
+                            <tr key={m.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
+                              <td className="py-3.5 px-6">
+                                <p className="font-black text-[#1A1512] dark:text-white">{m.name}</p>
+                                <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-400">{m.category}</p>
                               </td>
-                              <td className="p-4 text-sm font-bold text-slate-700 dark:text-slate-300">{branchName}</td>
-                              <td className="p-4 text-xs font-bold text-slate-500 uppercase">{m.category}</td>
-                              <td className="p-4 text-sm font-black text-slate-900 dark:text-white owner-num">{formatRp(m.price)}</td>
-                              <td className="p-4 text-center">
-                                <span className={`owner-pill ${
-                                  stockNum <= 3
-                                    ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                                    : stockNum <= 10
-                                    ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
-                                    : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                              <td className="py-3.5 px-4 font-bold text-[#5C4B3E] dark:text-slate-300">{branchName}</td>
+                              <td className="py-3.5 px-4 font-black text-[#1A1512] dark:text-white num-tabular">{formatRp(m.price)}</td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className={`px-2.5 py-1 rounded-lg font-black num-tabular ${
+                                  stockNum <= 3 ? 'bg-rose-600 text-white' : stockNum <= 10 ? 'bg-amber-500 text-[#1A1512]' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
                                 }`}>
                                   {stockNum} pcs
                                 </span>
                               </td>
-                              <td className="p-4 pr-6 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleQuickAddStock(m, 10)}
-                                    className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-black transition-colors"
-                                  >
-                                    +10
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleQuickAddStock(m, 25)}
-                                    className="px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 text-xs font-black transition-colors"
-                                  >
-                                    +25
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setStockModal({ open: true, menu: m, mode: 'add', qty: '20' })}
-                                    className="px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1E4E8C] text-white text-xs font-bold transition-colors"
-                                  >
-                                    Atur Manual
-                                  </button>
+                              <td className="py-3.5 px-6 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button type="button" onClick={() => handleQuickAddStock(m, 10)} className="px-2.5 py-1.5 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-emerald-700 dark:text-emerald-400 font-black">+10</button>
+                                  <button type="button" onClick={() => handleQuickAddStock(m, 25)} className="px-2.5 py-1.5 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-blue-700 dark:text-sky-400 font-black">+25</button>
+                                  <button type="button" onClick={() => setStockModal({ open: true, menu: m, mode: 'add', qty: '20' })} className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white font-black">Atur</button>
                                 </div>
                               </td>
                             </tr>
                           );
                         })}
                         {filteredMenus.length === 0 && (
-                          <tr>
-                            <td colSpan="6" className="p-10 text-center text-slate-500 font-bold text-sm">
-                              Tidak ada menu yang cocok dengan filter.
-                            </td>
-                          </tr>
+                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Tidak ada menu yang cocok.</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -748,70 +754,32 @@ export default function OwnerFinance() {
                 </div>
               </div>
             )}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
 
-      {/* MODAL ATUR STOK MANUAL (POIN 5) */}
+      {/* MODAL ATUR STOK MANUAL */}
       {stockModal.open && stockModal.menu && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">Kelola Stok Menu</h3>
-            <p className="text-sm font-bold text-sky-500 mt-1">
-              {stockModal.menu.name} · Stok Saat Ini: {stockModal.menu.stock} pcs
-            </p>
-
-            <form onSubmit={handleSaveStockModal} className="space-y-4 mt-6">
-              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-[#04060B] border border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setStockModal(prev => ({ ...prev, mode: 'add' }))}
-                  className={`py-2 rounded-lg text-xs font-black transition-all ${
-                    stockModal.mode === 'add' ? 'bg-[#2563EB] text-white' : 'text-slate-500'
-                  }`}
-                >
-                  + Tambah Stok
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStockModal(prev => ({ ...prev, mode: 'set', qty: String(stockModal.menu.stock || 0) }))}
-                  className={`py-2 rounded-lg text-xs font-black transition-all ${
-                    stockModal.mode === 'set' ? 'bg-[#2563EB] text-white' : 'text-slate-500'
-                  }`}
-                >
-                  Setel Angka Pasti
-                </button>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div>
+              <h3 className="text-base font-black text-[#1A1512] dark:text-white">Atur Stok Menu</h3>
+              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">{stockModal.menu.name} · Stok saat ini: {stockModal.menu.stock} pcs</p>
+            </div>
+            <form onSubmit={handleSaveStockModal} className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-700">
+                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'add' }))} className={`py-2 rounded-lg text-xs font-black ${stockModal.mode === 'add' ? 'bg-[#2563EB] text-white' : 'text-[#5C4B3E] dark:text-slate-300'}`}>+ Tambah Stok</button>
+                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'set', qty: String(stockModal.menu.stock || 0) }))} className={`py-2 rounded-lg text-xs font-black ${stockModal.mode === 'set' ? 'bg-[#2563EB] text-white' : 'text-[#5C4B3E] dark:text-slate-300'}`}>Setel Angka Pasti</button>
               </div>
-
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  {stockModal.mode === 'add' ? 'Jumlah Porsi yang Ditambahkan' : 'Total Stok Baru (Porsi)'}
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">
+                  {stockModal.mode === 'add' ? 'Jumlah Porsi Ditambahkan' : 'Total Stok Baru'}
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={stockModal.qty}
-                  onChange={(e) => setStockModal(prev => ({ ...prev, qty: e.target.value }))}
-                  className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]"
-                />
+                <input type="number" min="0" required value={stockModal.qty} onChange={(e) => setStockModal(prev => ({ ...prev, qty: e.target.value }))} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1A1512] dark:text-white" />
               </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStockModal({ open: false, menu: null, mode: 'add', qty: '' })}
-                  className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUpdatingStock}
-                  className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)] disabled:opacity-50"
-                >
-                  {isUpdatingStock ? 'Menyimpan...' : 'Simpan Stok'}
-                </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setStockModal({ open: false, menu: null, mode: 'add', qty: '' })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+                <button type="submit" disabled={isUpdatingStock} className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">{isUpdatingStock ? 'Menyimpan...' : 'Simpan'}</button>
               </div>
             </form>
           </div>
@@ -820,27 +788,27 @@ export default function OwnerFinance() {
 
       {/* MODAL EXPENSE */}
       {expenseModal && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black mb-6 text-slate-900 dark:text-white">Catat Biaya Bulanan</h3>
-            <form onSubmit={handleAddExpense} className="space-y-4">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
+            <h3 className="text-base font-black text-[#1A1512] dark:text-white">Catat Biaya Bulanan</h3>
+            <form onSubmit={handleAddExpense} className="space-y-3.5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Pilih Cabang</label>
-                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]">
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Cabang</label>
+                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
                   {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Keterangan Biaya</label>
-                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Contoh: Sewa Kios, Token Listrik, WiFi" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Keterangan Biaya</label>
+                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Sewa, Listrik, WiFi..." className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nominal (Rp)</label>
-                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nominal (Rp)</label>
+                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
-                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)]">Simpan</button>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
@@ -849,34 +817,34 @@ export default function OwnerFinance() {
 
       {/* MODAL EMPLOYEE */}
       {employeeModal.open && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-black mb-6 text-slate-900 dark:text-white">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
-            <form onSubmit={handleSaveEmployee} className="space-y-4">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-black text-[#1A1512] dark:text-white">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
+            <form onSubmit={handleSaveEmployee} className="space-y-3.5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Pilih Cabang</label>
-                <select value={formEmployee.tenant_id} onChange={e => setFormEmployee({...formEmployee, tenant_id: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]">
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Cabang</label>
+                <select value={formEmployee.tenant_id} onChange={e => setFormEmployee({...formEmployee, tenant_id: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
                   {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nama Lengkap</label>
-                  <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({...formEmployee, name: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nama Lengkap</label>
+                  <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({...formEmployee, name: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">No. WhatsApp</label>
-                  <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({...formEmployee, wa_number: e.target.value})} placeholder="0812..." className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">No. WhatsApp</label>
+                  <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({...formEmployee, wa_number: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Alamat</label>
-                <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({...formEmployee, address: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Alamat</label>
+                <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({...formEmployee, address: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Jabatan</label>
-                  <select value={formEmployee.role} onChange={e => setFormEmployee({...formEmployee, role: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]">
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Jabatan</label>
+                  <select value={formEmployee.role} onChange={e => setFormEmployee({...formEmployee, role: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
                     <option>Kasir</option>
                     <option>Koki / Barista</option>
                     <option>Pelayan</option>
@@ -884,23 +852,23 @@ export default function OwnerFinance() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Gaji Pokok (Rp)</label>
-                  <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({...formEmployee, base_salary: e.target.value})} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Gaji Pokok (Rp)</label>
+                  <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({...formEmployee, base_salary: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nama Bank</label>
-                  <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({...formEmployee, bank_name: e.target.value})} placeholder="BCA / Mandiri" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nama Bank</label>
+                  <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({...formEmployee, bank_name: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">No. Rekening</label>
-                  <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({...formEmployee, bank_account: e.target.value})} placeholder="12345678" className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#EA8B42]" />
+                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">No. Rekening</label>
+                  <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({...formEmployee, bank_account: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
-                <button type="submit" className="flex-1 bg-[#EA8B42] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(234,139,66,0.5)]">Simpan</button>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
@@ -909,33 +877,24 @@ export default function OwnerFinance() {
 
       {/* MODAL PAYROLL */}
       {payrollModal.open && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                payrollModal.type === 'Gaji' ? 'bg-blue-500/10 text-blue-500' :
-                payrollModal.type === 'Kasbon' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
-              }`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Catat {payrollModal.type}</h3>
-                <p className="text-sm font-bold text-slate-500">{payrollModal.employee.name}</p>
-              </div>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div>
+              <h3 className="text-base font-black text-[#1A1512] dark:text-white">Catat {payrollModal.type}</h3>
+              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">{payrollModal.employee.name}</p>
             </div>
-
-            <form onSubmit={handlePayroll} className="space-y-4 mt-6">
+            <form onSubmit={handlePayroll} className="space-y-3.5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nominal (Rp)</label>
-                <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({...formPayroll, amount: e.target.value})} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nominal (Rp)</label>
+                <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({...formPayroll, amount: e.target.value})} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Catatan (Opsional)</label>
-                <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({...formPayroll, notes: e.target.value})} placeholder={`Contoh: ${payrollModal.type} Bulan Ini`} className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-[#04060B] border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-[#2563EB]" />
+                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Catatan (Opsional)</label>
+                <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({...formPayroll, notes: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Batal</button>
-                <button type="submit" className="flex-1 bg-[#2563EB] text-white font-black py-3.5 rounded-xl shadow-[0_4px_12px_-2px_rgba(37,99,235,0.5)]">Simpan</button>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
@@ -944,46 +903,22 @@ export default function OwnerFinance() {
 
       {/* CONFIRM MODAL */}
       {confirmModal.open && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-          <div className="owner-3d bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-3xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto ${confirmModal.isDanger ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
-                {confirmModal.isDanger ? (
-                  <>
-                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
-                    <line x1="12" y1="2" x2="12" y2="12"/>
-                  </>
-                ) : (
-                  <>
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </>
-                )}
-              </svg>
-            </div>
-            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white mb-2">{confirmModal.title}</h3>
-            <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50">Batal</button>
-              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className={`flex-1 text-white font-black py-3 rounded-xl transition-all disabled:opacity-50 ${confirmModal.isDanger ? 'bg-rose-600 hover:bg-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]'}`}>{confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}</button>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-sm rounded-2xl p-6 space-y-4 text-center">
+            <h3 className="text-base font-black text-[#1A1512] dark:text-white">{confirmModal.title}</h3>
+            <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">{confirmModal.message}</p>
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
+              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-black">{confirmModal.loading ? 'Memproses...' : 'Hapus'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TOAST */}
       {toast.show && (
-        <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl border backdrop-blur-xl owner-3d ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
-              {toast.type === 'success' ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              )}
-            </div>
-            <p className="text-sm font-bold pr-4">{toast.message}</p>
-          </div>
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 px-4 py-3 rounded-xl shadow-lg">
+          <span className={`w-2.5 h-2.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+          <p className="text-xs font-black text-[#1A1512] dark:text-white">{toast.message}</p>
         </div>
       )}
     </div>
