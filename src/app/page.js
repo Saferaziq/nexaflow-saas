@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 // ============ KONFIGURASI TAUTAN DEMO ============
 const WA_NUMBER = '6281389744957';
-const WA_MESSAGE = 'Halo NexaFlow, saya ingin menjadwalkan demo sistem kasir + Dashboard Owner untuk kafe/resto saya.';
+const WA_MESSAGE = 'Halo NexaFlow, saya ingin menjadwalkan demo serta menanyakan informasi paket sistem kasir + Dashboard Owner untuk kafe/resto saya.';
 const demoLink = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;
 
 // ============ KOMPONEN LOGO ============
@@ -17,6 +17,13 @@ const LogoImg = ({ className = 'w-10 h-10' }) => (
 );
 
 // ============ DATA FITUR & ALUR ============
+const businessTypes = [
+  'Kafe / Coffee Shop',
+  'Restoran / Rumah Makan',
+  'Bakery / Pastry',
+  'Food Court / Booth',
+];
+
 const aiFeatures = [
   { title: 'Deteksi Anomali Omzet & Biaya', desc: 'Membandingkan pendapatan cabang terhadap rata-rata 30 hari serta mengaudit rasio pengeluaran dan gaji.' },
   { title: 'Promo Jam Sepi Auto-Stop 16:30', desc: 'Aktifkan harga coret dan label unggulan dalam 1 klik, lalu kembali normal otomatis sesuai jadwal.' },
@@ -49,10 +56,10 @@ const features = [
   { icon: 'qr', title: 'Self-Order via QR', desc: 'Pelanggan pesan mandiri dari meja tanpa unduh aplikasi.' },
   { icon: 'kds', title: 'Kitchen Display', desc: 'Layar monitor dapur pengganti kertas pesanan lengkap dengan pantauan bottleneck.' },
   { icon: 'qris', title: 'QRIS Dinamis', desc: 'Cetak QRIS dengan nominal tagihan otomatis sesuai total pesanan.' },
-  { icon: 'chart', title: 'Laporan P&L & CSV', desc: 'Pantau omzet dan laba bersih dari HP kapan saja. Ekspor CSV 1 klik.' },
+  { icon: 'chart', title: 'Laporan P&L & CSV', desc: 'Pantau omzet, pengeluaran harian, dan laba bersih dari HP kapan saja. Ekspor CSV 1 klik.' },
   { icon: 'tag', title: 'Promo & Diskon Terjadwal', desc: 'Atur harga coret dan label unggulan dengan penghentian otomatis pukul 16:30 WIB.' },
   { icon: 'speaker', title: 'Panggilan Suara', desc: 'HP pelanggan memanggil nama dan nomor antrean saat pesanan siap.' },
-  { icon: 'printer', title: 'Cetak Bluetooth', desc: 'Struk thermal langsung dari tablet atau perangkat kasir.' },
+  { icon: 'printer', title: 'Cetak Struk Lintas Perangkat', desc: 'Mendukung Android (RawBT), iPad (BR RawPrinter), Windows (QZ Tray), dan Browser.' },
   { icon: 'shield', title: 'Anti-Fraud & Keamanan RLS', desc: 'Harga divalidasi di database server (RPC) dan kolom sensitif terlindungi.' },
 ];
 
@@ -70,7 +77,7 @@ const simSteps = [
     label: '2. Kasir Konfirmasi',
     role: 'POS Kasir (/dashboard)',
     title: 'Pembayaran & Cetak Struk',
-    desc: 'Kasir menerima pesanan real-time, memverifikasi Tunai atau QRIS Dinamis, dan stok menu langsung terpotong.',
+    desc: 'Kasir menerima pesanan real-time (Mode Terang/Gelap), memverifikasi Tunai atau QRIS Dinamis, dan stok menu langsung terpotong.',
     ownerNote: 'Omzet cabang bertambah dan stok menu otomatis diperbarui.',
   },
   {
@@ -93,9 +100,10 @@ const simSteps = [
 
 const faqs = [
   { q: 'Mengapa NexaFlow lebih mudah dibanding aplikasi kasir lain?', a: 'Kami membuang semua pengaturan rumit. Layar kasir dan dapur fokus pada transaksi harian sehingga staf baru langsung paham dalam 5 menit.' },
+  { q: 'Perangkat dan printer apa saja yang didukung?', a: 'NexaFlow berjalan langsung di browser HP Android, iPad (termasuk iOS 15+), maupun Laptop/PC dengan Mode Terang & Gelap. Untuk cetak struk, mendukung RawBT (Android), BR RawPrinter (iPad), QZ Tray (Windows USB/LAN), dan cetak browser standar.' },
   { q: 'Bagaimana AI Agent membantu bisnis saya?', a: 'AI bekerja 24/7 mendeteksi anomali omzet, rasio biaya, kecurangan pembatalan tunai, menu kurang laku, hingga merekomendasikan promo 1-klik.' },
   { q: 'Apakah pelanggan bisa memanipulasi harga?', a: 'Tidak. Semua kalkulasi harga, pajak, dan pemotongan stok divalidasi ulang di database server (RPC) saat checkout.' },
-  { q: 'Bagaimana cara mulai menggunakan atau menjadwalkan setup cabang?', a: 'Anda dapat mencoba akun trial gratis 7 hari atau menjadwalkan sesi demo bersama tim kami untuk bantuan input menu awal dan QR meja.' },
+  { q: 'Bagaimana cara mulai menggunakan atau menanyakan paket cabang?', a: 'Anda dapat langsung mencoba akun trial gratis 7 hari atau menghubungi tim kami via WhatsApp untuk konsultasi paket dan bantuan setup menu serta QR meja.' },
 ];
 
 // ============ ICONS ============
@@ -251,41 +259,51 @@ export default function LandingPage() {
 
       {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50 bg-[#04060B]/80 backdrop-blur-xl border-b border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 relative z-10 group">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-lg group-hover:scale-105 transition-transform">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 relative z-10 group min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-lg group-hover:scale-105 transition-transform shrink-0">
               <LogoImg className="w-full h-full" />
             </div>
-            <span className="text-xl font-black tracking-tight text-white font-display">NexaFlow<span className="text-blue-500">.</span></span>
+            <span className="text-lg sm:text-xl font-black tracking-tight text-white font-display truncate">NexaFlow<span className="text-blue-500">.</span></span>
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+          <div className="hidden lg:flex items-center gap-8 text-sm font-semibold text-slate-300">
             <a href="#ai" className="hover:text-white transition-colors flex items-center gap-1.5">
               AI Copilot <span className="bg-purple-500/20 text-purple-300 text-[10px] px-2 py-0.5 rounded-full border border-purple-500/30">BARU</span>
             </a>
             <a href="#owner-dashboard" className="hover:text-white transition-colors">Dashboard Owner</a>
             <a href="#fitur" className="hover:text-white transition-colors">Fitur</a>
             <a href="#tampilan" className="hover:text-white transition-colors">Simulasi</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
-          <div className="flex items-center gap-4 relative z-10">
-            <Link href="/login" className="text-sm font-bold text-slate-300 hover:text-white transition-colors hidden sm:block">Masuk</Link>
-            <Link href="/register" className="btn-sapphire text-sm px-5 py-2.5 rounded-xl text-white font-bold">Mulai Gratis</Link>
+          <div className="flex items-center gap-2 sm:gap-3 relative z-10 shrink-0">
+            <Link href="/login" className="text-xs sm:text-sm font-bold text-slate-200 hover:text-white transition-colors px-3 py-2 rounded-xl border border-slate-700/80 bg-slate-900/60 hover:bg-slate-800">Masuk</Link>
+            <Link href="/register" className="btn-sapphire text-xs sm:text-sm px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-white font-bold whitespace-nowrap">Mulai Gratis</Link>
           </div>
         </div>
       </nav>
 
       {/* HERO SECTION */}
-      <section className="relative pt-40 pb-20 px-6 max-w-6xl mx-auto text-center z-10">
+      <section className="relative pt-32 sm:pt-40 pb-20 px-4 sm:px-6 max-w-6xl mx-auto text-center z-10">
         <div className="hero-fade inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-sky-500/30 text-sky-300 text-xs font-bold mb-8 backdrop-blur-md">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           NexaFlow v2.0 — Kasir Multi-Cabang + AI Copilot
         </div>
-        <h1 className="hero-fade text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tight mb-6 font-display">
+        <h1 className="hero-fade text-4xl sm:text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tight mb-6 font-display">
           Kasir Pintar.<br />
           <span className="text-gradient">Otak Owner.</span>
         </h1>
-        <p className="hero-fade text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
-          Satukan QR self-order meja, kasir, layar dapur, kontrol stok, laporan P&L, dan AI Business Advisor dalam satu sistem yang mudah dipakai sejak hari pertama.
+        <p className="hero-fade text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 font-medium leading-relaxed">
+          Satukan QR self-order meja, kasir, layar dapur, kontrol stok, laporan P&L, dan AI Business Advisor dalam satu sistem yang berjalan mulus di HP, iPad, maupun Laptop.
         </p>
+
+        <div className="hero-fade flex flex-wrap items-center justify-center gap-2 mb-10">
+          {businessTypes.map((type) => (
+            <span key={type} className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 text-xs font-semibold">
+              {type}
+            </span>
+          ))}
+        </div>
+
         <div className="hero-fade flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="/register" className="btn-sapphire text-base px-8 py-4 rounded-xl text-white font-bold w-full sm:w-auto">
             Coba Gratis 7 Hari
@@ -296,13 +314,20 @@ export default function LandingPage() {
             rel="noopener noreferrer"
             className="px-8 py-4 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 font-bold hover:bg-slate-800 hover:text-white transition-all w-full sm:w-auto flex items-center justify-center gap-2"
           >
-            <span>Jadwalkan Demo</span>
+            <span>Tanya Paket & Jadwalkan Demo</span>
             <Icons.arrowRight />
           </a>
         </div>
 
-        {/* MOCKUP DASHBOARD OWNER LENGKAP (PENGGANTI KOTAK ABU-ABU KOSONG) */}
-        <div className="mt-16 relative">
+        <div className="hero-fade mt-5">
+          <a href="#tampilan" className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors">
+            <span>Lihat Simulasi Alur 4 Layar</span>
+            <Icons.chevron />
+          </a>
+        </div>
+
+        {/* MOCKUP DASHBOARD OWNER LENGKAP */}
+        <div className="mt-14 relative">
           <div className="absolute inset-0 bg-gradient-to-t from-[#04060B] via-transparent to-transparent z-10 pointer-events-none"></div>
           <div className="card-3d rounded-2xl p-2 border-slate-700/50 overflow-hidden max-w-5xl mx-auto">
             <div className="bg-[#0A0F1C] rounded-xl border border-slate-800 flex min-h-[360px] text-left">
@@ -319,7 +344,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex-1 p-6 space-y-5">
+              <div className="flex-1 p-5 sm:p-6 space-y-5">
                 <div className="flex flex-wrap justify-between items-center gap-2">
                   <div>
                     <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">Riset Otomatis Periode Aktif</p>
@@ -396,7 +421,8 @@ export default function LandingPage() {
               </div>
 
               <Link href="/register" className="inline-flex items-center gap-2 text-purple-400 font-bold hover:text-purple-300 transition-colors">
-                Coba Fitur AI Sekarang <span className="text-lg">→</span>
+                <span>Coba Fitur AI Sekarang</span>
+                <Icons.arrowRight />
               </Link>
             </div>
 
@@ -423,7 +449,7 @@ export default function LandingPage() {
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl rounded-tr-none p-4 text-sm text-purple-100 ml-auto w-10/12 shadow-sm">
                     <p className="font-bold text-xs text-purple-300 mb-1">Rekomendasi Promo Jam Sepi:</p>
                     Aktifkan harga coret Iced Matcha Latte hingga pukul 16:30 WIB, lalu kembali normal otomatis.
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded">Eksekusi 1-Klik</span>
                       <span className="bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded">Auto-Stop 16:30</span>
                     </div>
@@ -463,7 +489,7 @@ export default function LandingPage() {
       <section id="fitur" className="py-20 px-6 max-w-7xl mx-auto z-10 relative border-t border-slate-800/50">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-black text-white mb-4 font-display">Semua yang Bisnis Anda Butuhkan</h2>
-          <p className="text-slate-400 max-w-2xl mx-auto">Kelola meja, kasir, dapur, dan laporan keuangan dalam satu alur kerja yang cepat.</p>
+          <p className="text-slate-400 max-w-2xl mx-auto">Kelola meja, kasir, dapur, dan laporan keuangan dalam satu alur kerja yang cepat di HP, iPad, maupun Laptop.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -487,7 +513,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3 font-display">Alur Kerja 4 Layar Terintegrasi</h2>
-            <p className="text-slate-600 text-base">HP untuk Pelanggan, Tablet/PC untuk Kasir & Dapur, serta Dashboard Owner untuk kontrol cabang.</p>
+            <p className="text-slate-600 text-base">HP untuk Pelanggan, HP/iPad/PC untuk Kasir & Dapur, serta Dashboard Owner untuk kontrol cabang.</p>
           </div>
 
           <div className="max-w-4xl mx-auto mb-10 bg-slate-900 text-white rounded-2xl p-3 border border-slate-800 shadow-xl">
@@ -542,7 +568,7 @@ export default function LandingPage() {
                   }}
                   className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
                 >
-                  {simStage >= 4 ? 'Ulangi Alur' : 'Tahap Berikutnya →'}
+                  {simStage >= 4 ? 'Ulangi Alur' : 'Tahap Berikutnya'}
                 </button>
                 <button
                   type="button"
@@ -586,7 +612,7 @@ export default function LandingPage() {
                       }}
                       className="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold"
                     >
-                      {demoOrderConfirmed ? 'Terkirim' : 'Kirim →'}
+                      {demoOrderConfirmed ? 'Terkirim' : 'Kirim'}
                     </button>
                   </div>
                   {phoneAlertOpen && (
@@ -629,11 +655,11 @@ export default function LandingPage() {
       </section>
 
       {/* CTA PENUTUP */}
-      <section id="konsultasi" className="py-20 px-6 relative z-10 bg-[#04060B]">
-        <div className="max-w-4xl mx-auto text-center card-3d p-12 rounded-3xl border-blue-500/20">
-          <h2 className="text-3xl md:text-4xl font-black text-white mb-4 font-display">Siap Membawa Bisnis Anda ke Level Berikutnya?</h2>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto">
-            Jadwalkan demo untuk melihat langsung alur kasir, dapur, dan Dashboard Owner, atau mulai dengan akun trial 7 hari.
+      <section id="konsultasi" className="py-20 px-4 sm:px-6 relative z-10 bg-[#04060B]">
+        <div className="max-w-4xl mx-auto text-center card-3d p-6 sm:p-12 rounded-3xl border-blue-500/20">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-4 font-display">Siap Membawa Bisnis Anda ke Level Berikutnya?</h2>
+          <p className="text-slate-400 mb-8 max-w-xl mx-auto text-sm sm:text-base">
+            Jadwalkan demo dan konsultasi paket cabang via WhatsApp untuk melihat langsung alur kasir, dapur, dan Dashboard Owner, atau mulai dengan akun trial 7 hari.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -642,7 +668,7 @@ export default function LandingPage() {
               rel="noopener noreferrer"
               className="btn-sapphire inline-flex items-center justify-center gap-2 text-base px-8 py-4 rounded-xl text-white font-bold w-full sm:w-auto"
             >
-              <span>Jadwalkan Demo & Setup</span>
+              <span>Tanya Paket & Jadwalkan Demo</span>
               <Icons.arrowRight />
             </a>
             <Link
