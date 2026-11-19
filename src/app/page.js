@@ -59,7 +59,7 @@ const painComparisons = [
 
 const aiFeatures = [
   { title: 'Deteksi Anomali Omzet & Biaya', desc: 'Membandingkan pendapatan cabang terhadap rata-rata 30 hari serta mengaudit rasio pengeluaran dan gaji.' },
-  { title: 'Promo Jam Sepi Auto-Stop 16:30', desc: 'Aktifkan harga coret dan label unggulan dalam 1 klik, lalu kembali normal otomatis sesuai jadwal.' },
+  { title: 'Promo Jam Sepi Auto-Stop Terjadwal', desc: 'Aktifkan harga coret dan label unggulan dalam 1 klik, lalu kembali normal otomatis sesuai jadwal yang Anda atur (mis. 14:00–16:30).' },
   { title: 'Audit Fraud & Menu Kurang Laku', desc: 'Menandai pembatalan tunai jam malam, order menggantung, serta menu tanpa penjualan selama 30 hari.' },
   { title: 'Tanya Jawab Data Multi-Cabang', desc: 'Konsultasikan performa cabang dan rekomendasi paket bundling langsung kepada AI Business Advisor.' },
 ];
@@ -90,7 +90,7 @@ const features = [
   { icon: 'kds', title: 'Kitchen Display', desc: 'Layar monitor dapur pengganti kertas pesanan lengkap dengan pantauan bottleneck.' },
   { icon: 'qris', title: 'QRIS Dinamis', desc: 'Cetak QRIS dengan nominal tagihan otomatis sesuai total pesanan.' },
   { icon: 'chart', title: 'Laporan P&L & CSV', desc: 'Pantau omzet, pengeluaran harian, dan laba bersih dari HP kapan saja. Ekspor CSV 1 klik.' },
-  { icon: 'tag', title: 'Promo & Diskon Terjadwal', desc: 'Atur harga coret dan label unggulan dengan penghentian otomatis pukul 16:30 WIB.' },
+  { icon: 'tag', title: 'Promo & Diskon Terjadwal', desc: 'Atur harga coret dan label unggulan dengan penghentian otomatis sesuai jadwal yang Anda tentukan.' },
   { icon: 'speaker', title: 'Panggilan Suara', desc: 'HP pelanggan memanggil nama dan nomor antrean saat pesanan siap.' },
   { icon: 'printer', title: 'Cetak Struk Lintas Perangkat', desc: 'Mendukung Android (RawBT), iPad (BR RawPrinter), Windows (QZ Tray), dan Browser.' },
   { icon: 'shield', title: 'Anti-Fraud & Keamanan RLS', desc: 'Harga divalidasi di database server (RPC) dan kolom sensitif terlindungi.' },
@@ -136,11 +136,36 @@ const videoScenes = [
 ];
 
 const faqs = [
-  { q: 'Mengapa NexaFlow lebih efisien dibanding cara kasir biasa?', a: 'NexaFlow memotong langkah berulang di jam ramai. Pesanan langsung mengalir dari HP pelanggan ke kasir, dapur, hingga laporan laba rugi owner—tanpa catat manual dan tanpa rekap ulang di malam hari.' },
-  { q: 'Apakah owner masih perlu ikut mengatur kasir saat jam ramai?', a: 'Tidak perlu. Alur kerja kasir dan dapur sudah dibuat sangat sederhana sehingga staf baru paham dalam 5 menit. Owner cukup memantau performa cabang, laba bersih, dan hasil audit AI dari HP agar bisa fokus ke pengembangan dan pemasaran.' },
-  { q: 'Perangkat dan printer apa saja yang didukung?', a: 'NexaFlow berjalan langsung di browser HP Android, iPad (termasuk iOS 15+), maupun Laptop/PC dengan Mode Terang & Gelap. Untuk cetak struk, mendukung RawBT (Android), BR RawPrinter (iPad), QZ Tray (Windows USB/LAN), dan cetak browser standar.' },
-  { q: 'Apakah pelanggan bisa memanipulasi harga?', a: 'Tidak. Semua kalkulasi harga, pajak, dan pemotongan stok divalidasi ulang di database server (RPC) saat checkout.' },
-  { q: 'Bagaimana cara mulai menggunakan atau menanyakan paket cabang?', a: 'Anda dapat langsung mencoba akun trial gratis 7 hari atau menghubungi tim kami via WhatsApp untuk konsultasi paket dan bantuan setup menu serta QR meja.' },
+  {
+    q: 'Mengapa NexaFlow lebih efisien dibanding cara kasir biasa?',
+    a: 'NexaFlow memotong langkah berulang di jam ramai. Pesanan langsung mengalir dari HP pelanggan ke kasir, dapur, hingga laporan laba rugi owner—tanpa catat manual dan tanpa rekap ulang di malam hari.',
+  },
+  {
+    q: 'Apakah owner masih perlu ikut mengatur kasir saat jam ramai?',
+    a: 'Tidak perlu. Alur kerja kasir dan dapur sudah dibuat sangat sederhana sehingga staf baru paham dalam 5 menit. Owner cukup memantau performa cabang, laba bersih, dan hasil audit AI dari HP agar bisa fokus ke pengembangan dan pemasaran.',
+  },
+  {
+    q: 'Bisakah saya mengelola banyak cabang dari satu akun Owner?',
+    a: 'Bisa. Melalui Owner Executive Suite, Anda dapat memantau seluruh cabang secara gabungan maupun memfilter per cabang untuk laporan P&L, stok menu, penggajian staf, hingga konsultasi AI Business Advisor dalam satu layar.',
+  },
+  {
+    q: 'Perangkat dan printer apa saja yang didukung?',
+    a: 'NexaFlow berjalan langsung di browser HP Android, iPad (termasuk iOS 15+), maupun Laptop/PC dengan Mode Terang & Gelap. Untuk cetak struk, mendukung RawBT (Android), BR RawPrinter (iPad), QZ Tray (Windows USB/LAN), dan cetak browser standar.',
+  },
+  {
+    q: 'Bagaimana keamanan data dan pencegahan kecurangan kasir?',
+    a: 'Semua kalkulasi harga, pajak, dan pemotongan stok divalidasi ulang di database server (RPC), dilindungi Row Level Security (RLS), serta diawasi oleh AI Audit yang menandai pembatalan pesanan mencurigakan dan transaksi menggantung.',
+  },
+  {
+    q: 'Bagaimana cara kerja Coba Gratis 7 Hari dan aktivasi paket?',
+    a: 'Anda dapat langsung mendaftar akun trial gratis 7 hari tanpa instalasi rumit untuk mencoba seluruh fitur secara nyata. Jika butuh bantuan setup menu, cetak QR meja, atau konsultasi paket cabang, tim kami siap mendampingi via WhatsApp.',
+  },
+];
+
+const ctaHighlights = [
+  'Setup Cepat Tanpa Instalasi Rumit',
+  'Dukungan Onboarding via WhatsApp',
+  'Cocok untuk HP, iPad & Laptop',
 ];
 
 // ============ ICONS ============
@@ -655,7 +680,7 @@ export default function LandingPage() {
                           </div>
                           <div>
                             <p className="text-xs font-black text-white">Panggilan Suara ke HP Pelanggan</p>
-                            <p className="text-[11px] text-sky-200 mt-0.5">"Antrean 14, Meja 10, pesanan Anda siap!"</p>
+                            <p className="text-[11px] text-sky-200 mt-0.5">&quot;Antrean 14, Meja 10, pesanan Anda siap!&quot;</p>
                           </div>
                         </div>
                       ) : (
@@ -919,9 +944,19 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-4 font-display">
             Saatnya Lepas dari Kerumitan Harian & Fokus Besarkan Bisnis
           </h2>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto text-sm sm:text-base">
+          <p className="text-slate-400 mb-6 max-w-xl mx-auto text-sm sm:text-base">
             Jadwalkan demo dan konsultasi paket cabang via WhatsApp untuk melihat langsung bagaimana NexaFlow menertibkan operasional Anda, atau mulai gratis selama 7 hari.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 mb-8">
+            {ctaHighlights.map((item) => (
+              <div key={item} className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-200">
+                <span className="text-emerald-400 shrink-0">
+                  <Icons.check />
+                </span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href={demoLink}
