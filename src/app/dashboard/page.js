@@ -97,15 +97,44 @@ function DashboardContent() {
   }
 
   if (d.isExpired) {
+    const waTrialMessage = `Halo Admin NexaFlow, masa trial 7 hari untuk kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) telah berakhir. Saya ingin informasi paket dan aktivasi langganan. Terima kasih.`;
     return (
-      <div className="min-h-screen w-full overflow-x-hidden flex items-center justify-center bg-[#F4EFE9] p-6">
-        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border-2 border-rose-200">
+      <div className="min-h-screen w-full overflow-x-hidden flex items-center justify-center bg-[#F4EFE9] p-4 sm:p-6 font-sans">
+        <div className="bg-white p-7 sm:p-8 rounded-3xl shadow-xl max-w-md w-full text-center border-2 border-rose-200">
           <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-rose-600 border-2 border-rose-200">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-8 h-8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-          <h1 className="text-2xl font-black text-[#1A1512] mb-2">Masa Trial Habis</h1>
-          <p className="text-[#8C7A6B] mb-6 font-medium">Silakan hubungi admin untuk memperpanjang langganan kafe Anda.</p>
-          <button onClick={d.handleLogout} className="bg-[#2A1F17] hover:bg-[#1A1512] text-white font-black py-3 px-6 rounded-xl w-full transition-colors border-2 border-[#1A1512]">Logout</button>
+          <h1 className="text-2xl font-black text-[#1A1512] mb-1">Masa Trial Habis</h1>
+          <p className="text-sm font-bold text-[#8C7A6B] mb-1">Kafe: <span className="font-black text-[#1A1512]">{d.cafeName || '-'}</span></p>
+          <p className="text-xs font-semibold text-[#A69B91] mb-5">{d.userEmail || '-'}</p>
+
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6 text-left">
+            <p className="text-sm font-bold text-amber-900 leading-relaxed">
+              Masa coba gratis 7 hari Anda telah berakhir. Silakan hubungi admin untuk informasi paket dan mengaktifkan kembali operasional kasir.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href={`https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waTrialMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3.5 px-6 rounded-xl text-sm sm:text-base shadow-lg active:scale-95 transition-transform border-2 border-emerald-700"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              <span>Hubungi Admin via WhatsApp</span>
+            </a>
+            <button
+              onClick={d.handleLogout}
+              className="bg-[#2A1F17] hover:bg-[#1A1512] text-white font-black py-3 px-6 rounded-xl w-full transition-colors border-2 border-[#1A1512] text-sm"
+            >
+              Logout
+            </button>
+          </div>
+
+          <p className="text-[10px] font-bold text-[#A69B91] mt-6">
+            NexaFlow SaaS · Data menu dan laporan Anda tetap tersimpan aman
+          </p>
         </div>
       </div>
     );
