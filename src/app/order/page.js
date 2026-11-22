@@ -9,6 +9,51 @@ const fontImport = `
   .font-serif { font-family: 'Playfair Display', serif; }
 `;
 
+const safeStorageGet = (key) => {
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(key, value);
+  } catch {
+    // noop (Safari iOS 15 Private Browsing safe)
+  }
+};
+
+const safeStorageRemove = (key) => {
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(key);
+  } catch {
+    // noop
+  }
+};
+
+const safeSessionGet = (key) => {
+  try {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSessionSet = (key, value) => {
+  try {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(key, value);
+  } catch {
+    // noop
+  }
+};
+
 const extractDominantColor = (imgUrl) => {
   try {
     const img = new Image();
@@ -35,7 +80,7 @@ const extractDominantColor = (imgUrl) => {
         } else {
           throw new Error('Fallback');
         }
-      } catch (err) {
+      } catch {
         document.documentElement.style.setProperty('--primary-color', '#3A2A20');
         document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
       }
@@ -44,7 +89,7 @@ const extractDominantColor = (imgUrl) => {
       document.documentElement.style.setProperty('--primary-color', '#3A2A20');
       document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
     };
-  } catch (e) {
+  } catch {
     document.documentElement.style.setProperty('--primary-color', '#3A2A20');
     document.documentElement.style.setProperty('--primary-light', '#F4EFE9');
   }
@@ -81,20 +126,46 @@ const getEffectivePrice = (menu, nowMs = Date.now()) => {
 
 const getDeviceId = () => {
   if (typeof window === 'undefined') return null;
-  let id = localStorage.getItem('nexaflow_device_id');
+  let id = safeStorageGet('nexaflow_device_id');
   if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID() : 'dev_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('nexaflow_device_id', id);
+    id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'dev_' + Math.random().toString(36).substring(2, 15);
+    safeStorageSet('nexaflow_device_id', id);
   }
   return id;
 };
 
-// HELPER: Ekstrak alasan penolakan dari order_note
 const getRejectionReason = (order) => {
   if (!order || !order.order_note) return 'Ditolak oleh kasir';
   const match = order.order_note.match(/\[DITOLAK:\s*(.*?)\]/i);
   if (match && match[1]) return match[1].trim();
   return 'Ditolak oleh kasir';
+};
+
+const loadPermanentHistory = (tenantId) => {
+  if (!tenantId) return [];
+  try {
+    const raw = safeStorageGet(`nexaflow_permanent_history_${tenantId}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePermanentHistory = (tenantId, ordersList) => {
+  if (!tenantId || !Array.isArray(ordersList)) return;
+  try {
+    const sorted = [...ordersList]
+      .filter(o => o && o.id)
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 100);
+    safeStorageSet(`nexaflow_permanent_history_${tenantId}`, JSON.stringify(sorted));
+  } catch {
+    // noop
+  }
 };
 
 const Icons = {
@@ -107,6 +178,8 @@ const Icons = {
   Back: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
   Cart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
   Book: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  History: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>,
+  Repeat: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
   Speaker: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
   X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   Lock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
@@ -149,12 +222,36 @@ function OrderContent() {
   const myOrderIdsRef = useRef([]);
   const myOrdersRef = useRef([]);
   myOrdersRef.current = myOrders;
+  const pastOrdersRef = useRef([]);
+  pastOrdersRef.current = pastOrders;
   const prevReadyRef = useRef(false);
   const spokenReadyOrderIdRef = useRef(null);
 
   const [isLocked, setIsLocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
   const [sessionReady, setSessionReady] = useState(false);
+
+  // Helper menggabungkan & menyimpan riwayat pesanan permanen ke localStorage
+  const mergeIntoPermanentHistory = (incomingOrders) => {
+    if (!tenantId || !Array.isArray(incomingOrders) || incomingOrders.length === 0) return;
+    setPastOrders(prev => {
+      const map = new Map();
+      (prev || []).forEach(item => {
+        if (item && item.id) map.set(item.id, item);
+      });
+      incomingOrders.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id) || {};
+          map.set(item.id, { ...existing, ...item });
+        }
+      });
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
+      savePermanentHistory(tenantId, merged);
+      return merged;
+    });
+  };
 
   // Ticker setiap 30 detik agar promo kadaluarsa (16:30 WIB) otomatis berhenti walau tab tidak di-refresh
   useEffect(() => {
@@ -164,7 +261,7 @@ function OrderContent() {
     return () => clearInterval(promoTimer);
   }, []);
 
-  // SESSION INIT — deteksi new scan vs refresh, anti-bypass lock
+  // SESSION INIT — deteksi new scan vs refresh, anti-bypass lock, tetap pertahankan riwayat permanen
   useEffect(() => {
     if (!tenantId || !tableNumber) return;
 
@@ -172,45 +269,63 @@ function OrderContent() {
     const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
     const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
     const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
-    const historyKey = `nexaflow_history_${tenantId}_${tableNumber}`;
+    const legacyHistoryKey = `nexaflow_history_${tenantId}_${tableNumber}`;
     const legacyOrderIdsKey = `my_order_ids_${tableNumber}`;
 
     // Migrasi key lama (my_order_ids_<table>) ke key baru (per tenant+table)
-    const legacyVal = localStorage.getItem(legacyOrderIdsKey);
+    const legacyVal = safeStorageGet(legacyOrderIdsKey);
     if (legacyVal) {
-      if (!localStorage.getItem(orderIdsKey)) {
-        localStorage.setItem(orderIdsKey, legacyVal);
+      if (!safeStorageGet(orderIdsKey)) {
+        safeStorageSet(orderIdsKey, legacyVal);
       }
-      localStorage.removeItem(legacyOrderIdsKey);
+      safeStorageRemove(legacyOrderIdsKey);
     }
 
-    const visited = sessionStorage.getItem(visitKey);
+    // Muat & migrasikan riwayat lama ke penyimpanan permanen per kafe (TIDAK PERNAH DIHAPUS)
+    const permanentHist = loadPermanentHistory(tenantId);
+    let legacyHist = [];
+    try {
+      const rawLegacyHist = safeStorageGet(legacyHistoryKey);
+      if (rawLegacyHist) {
+        const parsed = JSON.parse(rawLegacyHist);
+        if (Array.isArray(parsed)) legacyHist = parsed;
+      }
+    } catch {}
+
+    if (legacyHist.length > 0) {
+      const combinedMap = new Map();
+      [...permanentHist, ...legacyHist].forEach(item => {
+        if (item && item.id) combinedMap.set(item.id, item);
+      });
+      const mergedInitial = Array.from(combinedMap.values()).sort(
+        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
+      savePermanentHistory(tenantId, mergedInitial);
+      setPastOrders(mergedInitial);
+    } else {
+      setPastOrders(permanentHist);
+    }
+
+    const visited = safeSessionGet(visitKey);
 
     if (!visited) {
-      // New scan (fresh tab, QR fisik, bookmark baru)
-      sessionStorage.setItem(visitKey, 'true');
-      sessionStorage.setItem(startKey, Date.now().toString());
-      localStorage.removeItem(lockKey);
-      localStorage.removeItem(orderIdsKey);
-      localStorage.removeItem(historyKey);
+      // New scan (fresh tab, QR fisik, bookmark baru) — reset sesi aktif saja, riwayat permanen tetap utuh
+      safeSessionSet(visitKey, 'true');
+      safeSessionSet(startKey, Date.now().toString());
+      safeStorageRemove(lockKey);
+      safeStorageRemove(orderIdsKey);
       myOrderIdsRef.current = [];
       setMyOrders([]);
-      setPastOrders([]);
       setIsLocked(false);
       setTimeLeft(600);
       setActiveTab('menu');
     } else {
       // Refresh / internal navigation
-      const isLockedStored = localStorage.getItem(lockKey) === 'true';
+      const isLockedStored = safeStorageGet(lockKey) === 'true';
       if (isLockedStored) {
         setIsLocked(true);
         setTimeLeft(0);
       }
-      // Load riwayat pesanan
-      try {
-        const hist = JSON.parse(localStorage.getItem(historyKey) || '[]');
-        if (Array.isArray(hist)) setPastOrders(hist);
-      } catch (e) {}
     }
 
     setSessionReady(true);
@@ -225,7 +340,7 @@ function OrderContent() {
 
     const startKey = `nexaflow_start_${tenantId}_${tableNumber}`;
     const lockKey = `nexaflow_locked_${tenantId}_${tableNumber}`;
-    const startTime = parseInt(sessionStorage.getItem(startKey) || Date.now().toString());
+    const startTime = parseInt(safeSessionGet(startKey) || Date.now().toString(), 10);
     const expireAt = startTime + 600 * 1000;
 
     const tick = () => {
@@ -234,7 +349,7 @@ function OrderContent() {
       setTimeLeft(remaining);
       if (remaining <= 0) {
         setIsLocked(true);
-        localStorage.setItem(lockKey, 'true');
+        safeStorageSet(lockKey, 'true');
         return true;
       }
       return false;
@@ -264,13 +379,15 @@ function OrderContent() {
     );
 
     if (allDone) {
+      mergeIntoPermanentHistory(myOrders);
       const timer = setTimeout(() => {
         setIsLocked(true);
         setTimeLeft(0);
-        localStorage.setItem(`nexaflow_locked_${tenantId}_${tableNumber}`, 'true');
+        safeStorageSet(`nexaflow_locked_${tenantId}_${tableNumber}`, 'true');
       }, 2000);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myOrders, sessionReady, isLocked, tenantId, tableNumber]);
 
   const fetchAllMenus = async () => {
@@ -293,15 +410,18 @@ function OrderContent() {
       return;
     }
     const { data } = await supabase.rpc('get_customer_orders', { p_order_ids: ids });
-    if (data) setMyOrders(data);
+    if (data) {
+      setMyOrders(data);
+      mergeIntoPermanentHistory(data);
+    }
   };
 
   const fetchCafeStatus = async () => {
     const { data } = await supabase.from('tenants').select('is_open, is_pay_first, is_active').eq('id', tenantId).single();
     if (data) {
-      setCafe(prev => ({ 
-        ...prev, 
-        is_open: data.is_open !== false, 
+      setCafe(prev => ({
+        ...prev,
+        is_open: data.is_open !== false,
         is_pay_first: data.is_pay_first !== false,
         is_active: data.is_active !== false
       }));
@@ -315,7 +435,13 @@ function OrderContent() {
     if (!tenantId) return;
 
     const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
-    const existingIds = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
+    let existingIds = [];
+    try {
+      existingIds = JSON.parse(safeStorageGet(orderIdsKey) || '[]');
+      if (!Array.isArray(existingIds)) existingIds = [];
+    } catch {
+      existingIds = [];
+    }
     myOrderIdsRef.current = existingIds;
 
     const fetchData = async () => {
@@ -325,13 +451,13 @@ function OrderContent() {
           .eq('id', tenantId).single(),
         supabase.from('menus').select('*').eq('tenant_id', tenantId)
       ]);
-      
+
       if (cafeRes.data) {
         setCafe(cafeRes.data);
         if (cafeRes.data.banner_url) extractDominantColor(cafeRes.data.banner_url);
         else if (cafeRes.data.logo_url) extractDominantColor(cafeRes.data.logo_url);
       }
-      
+
       if (menuRes.data) {
         const sorted = [...menuRes.data].sort((a, b) => {
           const sa = getMenuStock(a);
@@ -342,14 +468,25 @@ function OrderContent() {
         });
         setMenus(sorted);
       }
-      
-      const savedName = localStorage.getItem('nexaflow_customer_name');
+
+      const savedName = safeStorageGet('nexaflow_customer_name');
       if (savedName) setCustomerName(savedName);
 
       setLoading(false);
 
       if (existingIds.length > 0) {
         await fetchMyOrders(existingIds);
+      }
+
+      // Sinkronkan juga status riwayat permanen yang masih belum final (jika ada)
+      const histIds = loadPermanentHistory(tenantId)
+        .filter(o => o && o.id && !['completed', 'cancelled'].includes(o.status) && o.payment_status !== 'CANCELLED')
+        .map(o => o.id);
+      if (histIds.length > 0) {
+        const { data: updatedHist } = await supabase.rpc('get_customer_orders', { p_order_ids: histIds });
+        if (updatedHist && updatedHist.length > 0) {
+          mergeIntoPermanentHistory(updatedHist);
+        }
       }
     };
     fetchData();
@@ -385,13 +522,14 @@ function OrderContent() {
       if (myOrderIdsRef.current.length > 0) {
         fetchMyOrders(myOrderIdsRef.current);
       }
-      fetchCafeStatus(); 
+      fetchCafeStatus();
     }, 3000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, tableNumber]);
 
   useEffect(() => {
@@ -508,7 +646,7 @@ function OrderContent() {
 
     const text = `Pesanan atas nama ${order.customer_name}, meja ${order.table_number}, antrean nomor ${order.queue_number || ''}, sudah siap silahkan ambil di kasir.`;
     const utterance = new SpeechSynthesisUtterance(text);
-    
+
     utterance.lang = 'id-ID';
     utterance.rate = 0.9;
     utterance.pitch = 1;
@@ -547,7 +685,7 @@ function OrderContent() {
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200, 100, 500]);
       }
-      
+
       if (spokenReadyOrderIdRef.current !== readyOrder.id) {
         setTimeout(() => {
           speakReadyOrder(readyOrder);
@@ -592,6 +730,83 @@ function OrderContent() {
     });
     showToast(`${menu.name} ditambah`);
     setPopupNote('');
+  };
+
+  const handleReorderFromHistory = (historyOrder) => {
+    if (cafe.is_open === false) {
+      showToast('Kafe sedang tutup, tidak bisa memesan');
+      return;
+    }
+    if (!historyOrder || !Array.isArray(historyOrder.items) || historyOrder.items.length === 0) {
+      showToast('Item riwayat tidak tersedia');
+      return;
+    }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    setCart(prev => {
+      let nextCart = [...prev];
+      historyOrder.items.forEach(histItem => {
+        const liveMenu = menus.find(m =>
+          (histItem.menu_id && m.id === histItem.menu_id) ||
+          (histItem.id && m.id === histItem.id) ||
+          (histItem.name && m.name.toLowerCase() === String(histItem.name).toLowerCase())
+        );
+
+        if (!liveMenu) {
+          skippedCount += 1;
+          return;
+        }
+
+        const stock = getMenuStock(liveMenu);
+        if (stock.isOut) {
+          skippedCount += 1;
+          return;
+        }
+
+        const desiredQty = Math.max(1, Number(histItem.qty || 1));
+        const effectivePrice = getEffectivePrice(liveMenu, nowTick);
+        const existingIdx = nextCart.findIndex(c => c.id === liveMenu.id);
+        const currentQty = existingIdx >= 0 ? nextCart[existingIdx].qty : 0;
+        const maxAddable = stock.tracked ? Math.max(0, stock.value - currentQty) : desiredQty;
+        const finalAddQty = Math.min(desiredQty, maxAddable);
+
+        if (finalAddQty <= 0) {
+          skippedCount += 1;
+          return;
+        }
+
+        if (existingIdx >= 0) {
+          nextCart[existingIdx] = {
+            ...nextCart[existingIdx],
+            price: effectivePrice,
+            qty: currentQty + finalAddQty,
+            note: histItem.note || nextCart[existingIdx].note || ''
+          };
+        } else {
+          nextCart.push({
+            ...liveMenu,
+            price: effectivePrice,
+            qty: finalAddQty,
+            note: histItem.note || ''
+          });
+        }
+        addedCount += finalAddQty;
+      });
+      return nextCart;
+    });
+
+    if (addedCount > 0) {
+      setActiveTab('cart');
+      if (skippedCount > 0) {
+        showToast(`${addedCount} item ditambahkan ke keranjang (${skippedCount} habis/tidak tersedia)`);
+      } else {
+        showToast('Pesanan riwayat dimasukkan ke keranjang');
+      }
+    } else {
+      showToast('Semua menu pada riwayat ini sedang habis atau tidak tersedia');
+    }
   };
 
   const decCart = (id) => {
@@ -668,30 +883,37 @@ function OrderContent() {
     });
 
     if (error) {
-      showToast(error.message); 
+      showToast(error.message);
       fetchAllMenus();
       setIsSubmitting(false);
       return;
     }
 
-    localStorage.setItem('nexaflow_customer_name', customerName.trim());
+    safeStorageSet('nexaflow_customer_name', customerName.trim());
 
     const orderIdsKey = `my_order_ids_${tenantId}_${tableNumber}`;
-    const existingIds = JSON.parse(localStorage.getItem(orderIdsKey) || '[]');
+    let existingIds = [];
+    try {
+      existingIds = JSON.parse(safeStorageGet(orderIdsKey) || '[]');
+      if (!Array.isArray(existingIds)) existingIds = [];
+    } catch {
+      existingIds = [];
+    }
     const newIds = [...existingIds, newOrder.id];
-    localStorage.setItem(orderIdsKey, JSON.stringify(newIds));
+    safeStorageSet(orderIdsKey, JSON.stringify(newIds));
     myOrderIdsRef.current = newIds;
 
     setMyOrders(prev => [newOrder, ...prev]);
-    
-    setCart([]); 
+    mergeIntoPermanentHistory([newOrder]);
+
+    setCart([]);
     setGlobalNote('');
-    setIsSubmitting(false); 
+    setIsSubmitting(false);
     setShowConfirmModal(false);
     setShowPaymentModal(false);
     setShowQrisModal(false);
     setActiveTab('status');
-    
+
     if (cafe.is_pay_first) {
       showToast('Pesanan dibuat. Menunggu Konfirmasi Kasir');
     } else {
@@ -700,7 +922,7 @@ function OrderContent() {
   };
 
   if (!tenantId || !tableNumber) return <div className="p-10 text-center font-black text-[#1A1512]">QR Code tidak valid.</div>;
-  
+
   if (loading || !sessionReady) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F4EFE9]">
       <div className="text-center">
@@ -751,12 +973,15 @@ function OrderContent() {
     );
   }
 
-  // LAYAR SESI BERAKHIR — WAJIB SCAN QR ULANG DI MEJA (tanpa tombol apapun)
+  // LAYAR SESI BERAKHIR — WAJIB SCAN QR ULANG DI MEJA + TAMPILKAN RIWAYAT PESANAN PERMANEN
   if (isLocked) {
-    const allHist = [...(pastOrders || []), ...myOrders];
-    const deduped = allHist.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
-    const sortedOrders = deduped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const historyOrders = sortedOrders.slice(0, 3);
+    const allHistMap = new Map();
+    [...(pastOrders || []), ...myOrders].forEach(o => {
+      if (o && o.id) allHistMap.set(o.id, o);
+    });
+    const historyOrders = Array.from(allHistMap.values()).sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
 
     return (
       <div className="min-h-screen bg-[#F4EFE9] flex items-center justify-center p-6 relative overflow-hidden font-sans">
@@ -773,24 +998,49 @@ function OrderContent() {
             Waktu 10 menit habis, atau pesanan Anda telah selesai.
           </p>
 
-          {/* RIWAYAT PESANAN */}
+          {/* RIWAYAT PESANAN PERMANEN */}
           {historyOrders.length > 0 && (
             <div className="bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-2xl p-4 mb-5 text-left">
-              <p className="text-[10px] font-black text-[#8C7A6B] uppercase tracking-wider mb-3 border-b border-[#E0D6CC] pb-2">Riwayat Pesanan</p>
-              <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-[#E0D6CC] pb-2 mb-3">
+                <p className="text-[10px] font-black text-[#8C7A6B] uppercase tracking-wider flex items-center gap-1.5">
+                  <Icons.History /> Riwayat Pesanan Anda
+                </p>
+                <span className="text-[10px] font-black text-[#1A1512] bg-white px-2 py-0.5 rounded border border-[#E0D6CC]">
+                  {historyOrders.length}x Order
+                </span>
+              </div>
+              <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                 {historyOrders.map(o => {
                   const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
                   const reason = isCancelled ? getRejectionReason(o) : 'Pesanan Selesai';
+                  const orderDateStr = o.created_at
+                    ? new Date(o.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                    : '';
                   return (
-                    <div key={o.id} className="border-l-4 pl-3 py-1" style={{ borderColor: isCancelled ? '#e11d48' : '#10b981' }}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-black text-[#1A1512]">Antrean #{o.queue_number || '-'}</p>
-                          <p className="text-[10px] font-bold text-[#5C4B3E] mt-1 line-clamp-1">
-                            {o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                    <div key={o.id} className="border-l-4 pl-3 py-1 bg-white/70 rounded-r-lg pr-2" style={{ borderColor: isCancelled ? '#e11d48' : '#10b981' }}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-black text-[#1A1512]">Antrean #{o.queue_number || '-'}</p>
+                            {o.table_number && (
+                              <span className="text-[9px] font-black text-[#5C4B3E] bg-[#F4EFE9] px-1.5 py-0.5 rounded">
+                                Meja {o.table_number}
+                              </span>
+                            )}
+                          </div>
+                          {orderDateStr && (
+                            <p className="text-[9px] font-bold text-[#8C7A6B] mt-0.5">{orderDateStr}</p>
+                          )}
+                          <p className="text-[10px] font-bold text-[#5C4B3E] mt-1">
+                            {(o.items || []).map(i => `${i.qty}x ${i.name}`).join(', ')}
                           </p>
+                          {o.total_price !== undefined && o.total_price !== null && (
+                            <p className="text-[10px] font-black text-[#1A1512] mt-1">
+                              Total: Rp {Number(o.total_price).toLocaleString('id-ID')}
+                            </p>
+                          )}
                         </div>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${isCancelled ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider shrink-0 ${isCancelled ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                           {isCancelled ? 'Ditolak' : 'Selesai'}
                         </span>
                       </div>
@@ -838,13 +1088,17 @@ function OrderContent() {
 
   const recommendedMenus = menus.filter(m => (isFeaturedActive(m, nowTick) || m.is_new) && !getMenuStock(m).isOut);
 
-  // gabung pastOrders + myOrders untuk tab Status
-  const displayOrders = (() => {
-    const all = [...(pastOrders || []), ...myOrders];
-    const deduped = all.filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i);
-    return deduped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  })();
-  const hasWaitingOrder = displayOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
+  // Pisahkan Pesanan Aktif Sesi Ini vs Riwayat Pesanan Sebelumnya (permanen)
+  const activeSessionOrders = [...myOrders].sort(
+    (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
+  const activeIdSet = new Set(activeSessionOrders.map(o => o.id));
+  const previousHistoryOrders = (pastOrders || [])
+    .filter(o => o && o.id && !activeIdSet.has(o.id))
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
+  const hasWaitingOrder = activeSessionOrders.some(o => ['WAITING_QRIS', 'WAITING_CASH'].includes(o.payment_status));
+  const totalHistoryBadge = activeSessionOrders.length + previousHistoryOrders.length;
 
   return (
     <div className="min-h-screen bg-[#F4EFE9] text-[#1A1512] font-sans pb-32 selection:bg-[#2A1F17] selection:text-white">
@@ -863,7 +1117,7 @@ function OrderContent() {
           <a href="/" className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#1A1512] border border-white shadow-sm">
             <Icons.Back />
           </a>
-          
+
           <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-3 border border-white shadow-sm">
             {myOrders.length === 0 && timeLeft > 0 && (
               <span className="text-[10px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
@@ -930,7 +1184,7 @@ function OrderContent() {
                   <h2 className="text-2xl font-serif font-black text-[#1A1512]">Chef's Recommendation</h2>
                 </div>
               </div>
-              
+
               <div className="flex gap-5 overflow-x-auto px-6 pb-6 scrollbar-hide snap-x">
                 {recommendedMenus.map(menu => {
                   const effectivePrice = getEffectivePrice(menu, nowTick);
@@ -939,8 +1193,8 @@ function OrderContent() {
                   return (
                     <div key={menu.id} onClick={() => setSelectedMenu(menu)} className="snap-start shrink-0 w-64 bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group transition-transform duration-300 cursor-pointer">
                       <div className="relative h-48 w-full bg-[#F4EFE9] overflow-hidden">
-                        {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold">No Image</div>}
-                        
+                        {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={menu.name} /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold">No Image</div>}
+
                         {showFeaturedBadge && (
                           <div className="absolute top-3 left-3 bg-[#2A1F17] text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 tracking-widest uppercase border border-[#1A1512]">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-cyan-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
@@ -971,7 +1225,7 @@ function OrderContent() {
           {/* SEMUA MENU */}
           <div className="px-6 mt-2">
             <h2 className="text-xl font-black text-[#1A1512] mb-5">Semua Menu</h2>
-            
+
             <div className="grid grid-cols-2 gap-4">
               {filteredMenus.length === 0 ? (
                 <div className="col-span-2 text-center py-10">
@@ -988,8 +1242,8 @@ function OrderContent() {
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group ${isOut ? 'opacity-60 grayscale' : ''}`}>
                     <div onClick={() => setSelectedMenu(menu)} className="relative aspect-[4/5] bg-[#F4EFE9] overflow-hidden cursor-pointer">
-                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold text-xs">No Image</div>}
-                      
+                      {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" alt={menu.name} /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold text-xs">No Image</div>}
+
                       {cartItem && !isOut && (
                         <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md w-7 h-7 rounded-full flex items-center justify-center shadow-md border-2 border-[#E0D6CC]">
                           <span className="text-[11px] font-black text-[#1A1512]">{cartItem.qty}</span>
@@ -1004,14 +1258,14 @@ function OrderContent() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="p-4">
                       <h3 onClick={() => setSelectedMenu(menu)} className="font-sans font-black text-[14px] text-[#1A1512] leading-tight line-clamp-1 mb-1 cursor-pointer">{menu.name}</h3>
                       <div className="flex flex-col mb-4">
                         {hasDiscount && <span className="text-[10px] text-[#A69B91] font-bold line-through">Rp {Number(menu.price).toLocaleString('id-ID')}</span>}
                         <span className="font-black text-[15px] text-[#1A1512]">Rp {effectivePrice.toLocaleString('id-ID')}</span>
                       </div>
-                      
+
                       {isOut ? (
                         <button disabled className="w-full bg-[#FAF6F2] text-[#A69B91] font-black py-2.5 rounded-xl text-xs cursor-not-allowed border-2 border-[#E0D6CC]">Habis</button>
                       ) : cartItem ? (
@@ -1057,7 +1311,7 @@ function OrderContent() {
                     <div key={item.id} className="flex flex-col gap-3">
                       <div className="flex justify-between items-start gap-4">
                         <div className="w-16 h-16 bg-[#F4EFE9] rounded-xl overflow-hidden flex-shrink-0 border-2 border-[#E0D6CC]">
-                          {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#A69B91]">No Img</div>}
+                          {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" alt={item.name} /> : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#A69B91]">No Img</div>}
                         </div>
                         <div className="flex-1 min-w-0 pt-1">
                           <p className="font-black text-[15px] text-[#1A1512] truncate">{item.name}</p>
@@ -1105,7 +1359,7 @@ function OrderContent() {
       )}
 
       {activeTab === 'status' && (
-        <div className="px-6 mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-4">
+        <div className="px-6 mt-8 space-y-6 animate-in fade-in slide-in-from-bottom-4">
           {hasWaitingOrder && (
             <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-[1.25rem] flex items-start gap-3 shadow-sm">
               <div className="text-amber-600 mt-0.5">
@@ -1118,87 +1372,194 @@ function OrderContent() {
             </div>
           )}
 
-          {displayOrders.length === 0 ? (
+          {/* BAGIAN 1: PESANAN AKTIF SESI INI */}
+          {activeSessionOrders.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-[#5C4B3E] uppercase tracking-widest">Pesanan Sesi Ini</h3>
+                <span className="text-[10px] font-black bg-[#2A1F17] text-white px-2.5 py-0.5 rounded-full">
+                  {activeSessionOrders.length} Aktif
+                </span>
+              </div>
+
+              {activeSessionOrders.map(o => {
+                const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
+                const isWaitingCash = o.payment_status === 'WAITING_CASH';
+                const isWaitingQris = o.payment_status === 'WAITING_QRIS';
+
+                const statusIdx = ['pending', 'cooking', 'ready', 'completed'].indexOf(o.status);
+                const statusLabels = ['Diterima', 'Dimasak', 'Siap', 'Selesai'];
+                const statusColors = ['bg-amber-500', 'bg-blue-500', 'bg-emerald-500', 'bg-[#2A1F17]'];
+
+                return (
+                  <div key={o.id} className="bg-white rounded-[1.5rem] p-6 border-2 border-[#E0D6CC] shadow-sm">
+                    <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F4EFE9]">
+                      <div>
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="bg-[#1A1512] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
+                            Antrean #{o.queue_number || '-'}
+                          </span>
+                          <span className="text-[10px] font-black text-[#5C4B3E] bg-[#FAF6F2] px-2 py-0.5 rounded border border-[#E0D6CC]">
+                            Meja {o.table_number || tableNumber}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#5C4B3E] font-bold mt-1">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase text-white tracking-wider border border-black/10 shadow-sm ${
+                        isCancelled ? 'bg-rose-600' : isWaitingCash || isWaitingQris ? 'bg-amber-500' : statusColors[statusIdx]
+                      }`}>
+                        {isCancelled ? 'Ditolak' : isWaitingCash || isWaitingQris ? 'Menunggu Bayar' : o.status}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 mb-5">
+                      {(o.items || []).map((i, idx) => (
+                        <div key={idx} className="flex justify-between text-xs font-bold text-[#1A1512]">
+                          <span>{i.qty}x {i.name}{i.note ? ` (${i.note})` : ''}</span>
+                          <span>Rp {(Number(i.price || 0) * Number(i.qty || 0)).toLocaleString('id-ID')}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t-2 border-[#F4EFE9] mb-6">
+                      <span className="text-xs text-[#5C4B3E] font-black uppercase tracking-wider">Total</span>
+                      <span className="text-lg font-black text-[#1A1512]">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
+                    </div>
+
+                    {isCancelled && (
+                      <div className="bg-rose-50 border-2 border-rose-200 p-4 rounded-xl text-center">
+                        <p className="text-rose-800 font-black text-sm">Pesanan Ditolak</p>
+                        <p className="text-rose-600 text-xs font-bold mt-1">Alasan: {getRejectionReason(o)}</p>
+                      </div>
+                    )}
+
+                    {!isCancelled && !isWaitingCash && !isWaitingQris && (
+                      <div className="mt-4 space-y-4">
+                        {statusLabels.map((label, i) => {
+                          const isDone = i <= statusIdx;
+                          const isActive = i === statusIdx;
+                          return (
+                            <div key={i} className="flex items-start gap-4">
+                              <div className="flex flex-col items-center">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all ${isDone ? statusColors[statusIdx] + ' text-white border-transparent' : 'bg-[#FAF6F2] text-[#A69B91] border-[#E0D6CC]'}`}>
+                                  {isDone ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg> : (i + 1)}
+                                </div>
+                                {i < statusLabels.length - 1 && (
+                                  <div className={`w-0.5 h-6 mt-1 rounded-full ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-[#E0D6CC]'}`}></div>
+                                )}
+                              </div>
+                              <div className="flex-1 pt-0.5">
+                                <p className={`text-sm font-black ${isDone ? 'text-[#1A1512]' : 'text-[#A69B91]'}`}>{label}</p>
+                                {isActive && <p className="text-[10px] text-cyan-600 font-black mt-1 animate-pulse">Sedang berlangsung...</p>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* BAGIAN 2: RIWAYAT PESANAN PERMANEN (TIDAK PERNAH DIHAPUS) */}
+          {previousHistoryOrders.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pt-2">
+                <h3 className="text-xs font-black text-[#5C4B3E] uppercase tracking-widest flex items-center gap-1.5">
+                  <Icons.History /> Riwayat Pesanan Sebelumnya
+                </h3>
+                <span className="text-[10px] font-black bg-white text-[#1A1512] px-2.5 py-0.5 rounded-full border border-[#E0D6CC]">
+                  {previousHistoryOrders.length} Tersimpan
+                </span>
+              </div>
+
+              {previousHistoryOrders.map(o => {
+                const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
+                const isCompleted = o.status === 'completed';
+                const orderDateStr = o.created_at
+                  ? new Date(o.created_at).toLocaleDateString('id-ID', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  : '-';
+
+                return (
+                  <div key={o.id} className="bg-white rounded-[1.5rem] p-5 border-2 border-[#E0D6CC] shadow-sm">
+                    <div className="flex justify-between items-start gap-2 mb-4 pb-3 border-b-2 border-[#F4EFE9]">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="bg-[#FAF6F2] text-[#1A1512] border border-[#E0D6CC] text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider">
+                            Antrean #{o.queue_number || '-'}
+                          </span>
+                          {o.table_number && (
+                            <span className="text-[10px] font-black text-[#5C4B3E]">
+                              Meja {o.table_number}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#8C7A6B] font-bold mt-1.5">{orderDateStr}</p>
+                      </div>
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider shrink-0 ${
+                        isCancelled
+                          ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                          : isCompleted
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {isCancelled ? 'Ditolak' : isCompleted ? 'Selesai' : (o.status || 'Tercatat')}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 mb-4">
+                      {(o.items || []).map((i, idx) => (
+                        <div key={idx} className="flex justify-between text-xs font-bold text-[#1A1512]">
+                          <span>
+                            {i.qty}x {i.name}
+                            {i.note ? <span className="text-[#8C7A6B] font-semibold"> ({i.note})</span> : ''}
+                          </span>
+                          <span>Rp {(Number(i.price || 0) * Number(i.qty || 0)).toLocaleString('id-ID')}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {isCancelled && (
+                      <div className="bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl mb-4">
+                        <p className="text-rose-700 text-[11px] font-bold">Alasan: {getRejectionReason(o)}</p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-3 border-t-2 border-[#F4EFE9] gap-3">
+                      <div>
+                        <p className="text-[10px] text-[#8C7A6B] font-black uppercase tracking-wider">Total Bayar</p>
+                        <p className="text-base font-black text-[#1A1512]">Rp {Number(o.total_price || 0).toLocaleString('id-ID')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReorderFromHistory(o)}
+                        className="inline-flex items-center gap-1.5 bg-[#2A1F17] hover:bg-[#1A1512] text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider border-2 border-[#1A1512] shadow-sm active:scale-95 transition-transform"
+                      >
+                        <Icons.Repeat /> Pesan Lagi
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* EMPTY STATE JIKA BELUM ADA PESANAN SAMA SEKALI */}
+          {activeSessionOrders.length === 0 && previousHistoryOrders.length === 0 && (
             <div className="bg-white rounded-[1.5rem] p-10 text-center shadow-sm border-2 border-[#E0D6CC]">
               <div className="text-[#A69B91] mb-4 flex justify-center"><Icons.Book /></div>
               <p className="text-[#1A1512] font-black text-xl mb-2">Belum ada pesanan</p>
-              <p className="text-xs text-[#5C4B3E] font-bold">Silakan pesan menu terlebih dahulu.</p>
+              <p className="text-xs text-[#5C4B3E] font-bold">Silakan pesan menu terlebih dahulu. Riwayat pesanan Anda akan tersimpan otomatis di sini.</p>
             </div>
-          ) : displayOrders.map(o => {
-            const isCancelled = o.payment_status === 'CANCELLED' || o.status === 'cancelled';
-            const isWaitingCash = o.payment_status === 'WAITING_CASH';
-            const isWaitingQris = o.payment_status === 'WAITING_QRIS';
-            
-            const statusIdx = ['pending', 'cooking', 'ready', 'completed'].indexOf(o.status);
-            const statusLabels = ['Diterima', 'Dimasak', 'Siap', 'Selesai'];
-            const statusColors = ['bg-amber-500', 'bg-blue-500', 'bg-emerald-500', 'bg-[#2A1F17]'];
-
-            return (
-              <div key={o.id} className="bg-white rounded-[1.5rem] p-6 border-2 border-[#E0D6CC] shadow-sm">
-                <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F4EFE9]">
-                  <div>
-                    <div className="mb-1">
-                      <span className="bg-[#1A1512] text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
-                        Antrean #{o.queue_number || '-'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#5C4B3E] font-bold mt-1">{new Date(o.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                  <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase text-white tracking-wider border border-black/10 shadow-sm ${
-                    isCancelled ? 'bg-rose-600' : isWaitingCash || isWaitingQris ? 'bg-amber-500' : statusColors[statusIdx]
-                  }`}>
-                    {isCancelled ? 'Ditolak' : isWaitingCash || isWaitingQris ? 'Menunggu Bayar' : o.status}
-                  </span>
-                </div>
-
-                <div className="space-y-2 mb-5">
-                  {o.items.map((i, idx) => (
-                    <div key={idx} className="flex justify-between text-xs font-bold text-[#1A1512]">
-                      <span>{i.qty}x {i.name}</span>
-                      <span>Rp {(i.price * i.qty).toLocaleString('id-ID')}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t-2 border-[#F4EFE9] mb-6">
-                  <span className="text-xs text-[#5C4B3E] font-black uppercase tracking-wider">Total</span>
-                  <span className="text-lg font-black text-[#1A1512]">Rp {Number(o.total_price).toLocaleString('id-ID')}</span>
-                </div>
-
-                {isCancelled && (
-                  <div className="bg-rose-50 border-2 border-rose-200 p-4 rounded-xl text-center">
-                    <p className="text-rose-800 font-black text-sm">Pesanan Ditolak</p>
-                    <p className="text-rose-600 text-xs font-bold mt-1">Alasan: {getRejectionReason(o)}</p>
-                  </div>
-                )}
-
-                {!isCancelled && !isWaitingCash && !isWaitingQris && (
-                  <div className="mt-4 space-y-4">
-                    {statusLabels.map((label, i) => {
-                      const isDone = i <= statusIdx;
-                      const isActive = i === statusIdx;
-                      return (
-                        <div key={i} className="flex items-start gap-4">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all ${isDone ? statusColors[statusIdx] + ' text-white border-transparent' : 'bg-[#FAF6F2] text-[#A69B91] border-[#E0D6CC]'}`}>
-                              {isDone ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg> : (i + 1)}
-                            </div>
-                            {i < statusLabels.length - 1 && (
-                              <div className={`w-0.5 h-6 mt-1 rounded-full ${isDone && i < statusIdx ? statusColors[statusIdx] : 'bg-[#E0D6CC]'}`}></div>
-                            )}
-                          </div>
-                          <div className="flex-1 pt-0.5">
-                            <p className={`text-sm font-black ${isDone ? 'text-[#1A1512]' : 'text-[#A69B91]'}`}>{label}</p>
-                            {isActive && <p className="text-[10px] text-cyan-600 font-black mt-1 animate-pulse">Sedang berlangsung...</p>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          )}
         </div>
       )}
 
@@ -1240,22 +1601,27 @@ function OrderContent() {
       {/* BOTTOM NAVIGATION (Premium Cream) */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-6">
         <div className="max-w-md mx-auto bg-white/90 backdrop-blur-2xl border-2 border-[#E0D6CC] shadow-[0_-10px_40px_rgba(58,42,32,0.05)] rounded-[2rem] p-2 flex justify-between items-center">
-          <button onClick={() => setActiveTab('menu')} className={`flex flex-col items-center justify-center w-20 h-14 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
+          <button onClick={() => setActiveTab('menu')} className={`flex flex-col items-center justify-center w-24 h-14 rounded-2xl transition-all ${activeTab === 'menu' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
             <Icons.Book />
             <span className="text-[10px] font-black uppercase tracking-wider mt-1">Menu</span>
           </button>
-          
-          <button onClick={() => setActiveTab('cart')} className={`flex flex-col items-center justify-center w-20 h-14 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
+
+          <button onClick={() => setActiveTab('cart')} className={`flex flex-col items-center justify-center w-24 h-14 rounded-2xl transition-all relative ${activeTab === 'cart' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
             <Icons.Cart />
             <span className="text-[10px] font-black uppercase tracking-wider mt-1">Keranjang</span>
             {totalCartQty > 0 && activeTab !== 'cart' && (
-              <span className="absolute top-2 right-3 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{totalCartQty}</span>
+              <span className="absolute top-2 right-4 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{totalCartQty}</span>
             )}
           </button>
-          
-          <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center justify-center w-20 h-14 rounded-2xl transition-all ${activeTab === 'status' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
-            <Icons.Book />
-            <span className="text-[10px] font-black uppercase tracking-wider mt-1">Status</span>
+
+          <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center justify-center w-24 h-14 rounded-2xl transition-all relative ${activeTab === 'status' ? 'bg-[#FAF6F2] shadow-sm text-[#1A1512] border-2 border-[#E0D6CC]' : 'text-[#8C7A6B] hover:text-[#1A1512] border-2 border-transparent'}`}>
+            <Icons.History />
+            <span className="text-[10px] font-black uppercase tracking-wider mt-1">Riwayat</span>
+            {totalHistoryBadge > 0 && activeTab !== 'status' && (
+              <span className="absolute top-2 right-4 bg-[#2A1F17] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border-2 border-white">
+                {totalHistoryBadge}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -1267,7 +1633,7 @@ function OrderContent() {
         const effectivePrice = getEffectivePrice(selectedMenu, nowTick);
         const hasDiscount = isDiscountActive(selectedMenu, nowTick);
         const showFeaturedBadge = isFeaturedActive(selectedMenu, nowTick);
-        
+
         return (
           <div className="fixed inset-0 bg-[#1A1512]/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
             <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
@@ -1278,7 +1644,7 @@ function OrderContent() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold">No Image</div>
                   )}
-                  
+
                   <div className="absolute top-5 left-5 flex flex-wrap gap-2 max-w-[70%]">
                     {showFeaturedBadge && (
                       <span className="bg-[#2A1F17] text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 tracking-widest uppercase border border-[#1A1512]">
@@ -1287,7 +1653,7 @@ function OrderContent() {
                       </span>
                     )}
                   </div>
-                  
+
                   <button onClick={() => setSelectedMenu(null)} className="absolute top-5 right-5 w-10 h-10 bg-white/90 hover:bg-white text-[#1A1512] rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 border border-[#E0D6CC]">
                     <Icons.X />
                   </button>
@@ -1296,11 +1662,11 @@ function OrderContent() {
                 <div className="bg-white rounded-t-[2rem] -mt-8 relative px-6 py-8">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-2xl font-black text-[#1A1512] leading-tight max-w-[65%]">{selectedMenu.name}</h2>
-                    
+
                     <div className="flex flex-col items-end">
                       {hasDiscount && <span className="text-sm text-[#A69B91] font-bold line-through mb-0.5">Rp {Number(selectedMenu.price).toLocaleString('id-ID')}</span>}
                       <span className={`text-2xl font-black tracking-tight text-[#1A1512]`}>Rp {effectivePrice.toLocaleString('id-ID')}</span>
-                      
+
                       {hasDiscount && (
                         <span className="bg-rose-50 text-rose-600 text-[10px] font-black px-2.5 py-1 rounded-full mt-1.5 border border-rose-100 flex items-center gap-1 uppercase tracking-wider">
                           Hemat {Math.round(((Number(selectedMenu.price) - Number(selectedMenu.discount_price)) / Number(selectedMenu.price)) * 100)}%
@@ -1308,19 +1674,19 @@ function OrderContent() {
                       )}
                     </div>
                   </div>
-                  
+
                   <p className="text-[15px] text-[#5C4B3E] leading-relaxed mb-6 font-bold">
                     {selectedMenu.description || 'Belum ada deskripsi untuk menu ini.'}
                   </p>
 
                   <div className="mb-4">
                     <label className="block text-xs font-black text-[#1A1512] mb-2 uppercase tracking-wide">Catatan Khusus</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={popupNote}
                       onChange={e => setPopupNote(e.target.value)}
-                      placeholder="Misal: Less sugar, extra ice..." 
-                      className="w-full bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-xl px-4 py-3.5 text-sm font-bold text-[#1A1512] outline-none focus:border-[#8C7A6B] transition-colors placeholder:text-[#A69B91]" 
+                      placeholder="Misal: Less sugar, extra ice..."
+                      className="w-full bg-[#FAF6F2] border-2 border-[#E0D6CC] rounded-xl px-4 py-3.5 text-sm font-bold text-[#1A1512] outline-none focus:border-[#8C7A6B] transition-colors placeholder:text-[#A69B91]"
                     />
                   </div>
 
@@ -1363,7 +1729,7 @@ function OrderContent() {
       {showReadyPopup && (
         <div className="fixed inset-0 z-[200] bg-[#1A1512]/70 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl border-2 border-[#E0D6CC] animate-in zoom-in-95 duration-500">
-            
+
             <div className="relative w-24 h-24 mx-auto mb-6">
               {isSpeaking && (
                 <>
@@ -1375,7 +1741,7 @@ function OrderContent() {
                 <Icons.Speaker />
               </div>
             </div>
-            
+
             <h2 className="text-2xl font-black text-[#1A1512] mb-2">Pesanan Siap!</h2>
             <div className="mb-4">
               <span className="bg-[#1A1512] text-white text-sm font-black px-4 py-1.5 rounded-lg tracking-widest uppercase">
@@ -1390,7 +1756,7 @@ function OrderContent() {
               <span className="w-4 h-4"><Icons.Speaker /></span>
               {isSpeaking ? 'Sedang Memanggil...' : 'Putar Suara'}
             </button>
-            
+
             <p className="mt-5 text-[10px] font-black text-[#A69B91] uppercase tracking-widest">
               Menunggu konfirmasi kasir
             </p>
