@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { useDashboard } from './hooks/useDashboard';
+import { useDashboard, toLocalDateYYYYMMDD } from './hooks/useDashboard';
 import Header from './components/Header';
 import StatsCards from './components/StatsCards';
 import Toast from './components/Toast';
@@ -40,16 +40,77 @@ function DashboardContent() {
   };
 
   const { stats, activeOrdersCount } = useMemo(() => {
-    const todayOrders = d.orders ? d.orders.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()) : [];
+    const todayLocal = toLocalDateYYYYMMDD(new Date());
+    const todayOrders = d.orders
+      ? d.orders.filter(o => toLocalDateYYYYMMDD(o.created_at) === todayLocal)
+      : [];
+
+    const menuCostById = new Map();
+    const menuCostByName = new Map();
+    (d.menus || []).forEach(m => {
+      const c = Number(m.cost_price || 0);
+      if (m.id) menuCostById.set(m.id, c);
+      if (m.name) menuCostByName.set(String(m.name).toLowerCase(), c);
+    });
+
+    let paidRevenue = 0;
+    let unpaidRevenue = 0;
+    let totalCogs = 0;
+    let cashRevenue = 0;
+    let qrisRevenue = 0;
+
+    todayOrders.forEach(o => {
+      if (o.status === 'cancelled') return;
+      const amt = Number(o.total_price || 0);
+      const payStatus = String(o.payment_status || '').trim().toUpperCase();
+      const isPaid = payStatus === 'PAID' || !payStatus;
+
+      if (isPaid) {
+        paidRevenue += amt;
+        const method = String(o.payment_method || 'CASH').trim().toUpperCase();
+        if (method === 'QRIS') qrisRevenue += amt;
+        else cashRevenue += amt;
+
+        if (Array.isArray(o.items)) {
+          o.items.forEach(item => {
+            const qty = Number(item.qty || 0);
+            const itemCost =
+              item.cost_price !== undefined && item.cost_price !== null
+                ? Number(item.cost_price || 0)
+                : (item.id && menuCostById.get(item.id)) ||
+                  (item.name && menuCostByName.get(String(item.name).toLowerCase())) ||
+                  0;
+            totalCogs += itemCost * qty;
+          });
+        }
+      } else {
+        unpaidRevenue += amt;
+      }
+    });
+
+    const todayExpenses = (d.expenses || [])
+      .filter(ex => ex.expense_date === todayLocal)
+      .reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
+
+    const grossProfit = paidRevenue - totalCogs;
+    const netProfit = grossProfit - todayExpenses;
+
+    const validOrders = todayOrders.filter(o => o.status !== 'cancelled');
     const s = {
-      total: todayOrders.length,
+      total: validOrders.length,
       ready: todayOrders.filter(o => o.status === 'ready').length,
       cooking: todayOrders.filter(o => o.status === 'cooking').length,
-      revenue: todayOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + Number(o.total_price || 0), 0)
+      revenue: paidRevenue,
+      unpaidRevenue,
+      cashRevenue,
+      qrisRevenue,
+      grossProfit,
+      todayExpenses,
+      netProfit,
     };
     const count = todayOrders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status)).length;
     return { stats: s, activeOrdersCount: count };
-  }, [d.orders]);
+  }, [d.orders, d.menus, d.expenses]);
 
   if (d.isSuspended) {
     const waMessage = `Halo Admin NexaFlow, akun kafe "${d.cafeName || '-'}" (email: ${d.userEmail || '-'}) sedang disuspend. Mohon bantu aktifkan kembali. Terima kasih.`;
