@@ -24,6 +24,16 @@ const SAFE_TENANT_COLUMNS = [
 
 const normPayStatus = (val) => String(val || '').trim().toUpperCase();
 
+// Helper zona waktu lokal otomatis (mendukung WIB, WITA, WIT secara dinamis per perangkat)
+export const toLocalDateYYYYMMDD = (dateInput = new Date()) => {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function useDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -224,7 +234,7 @@ export function useDashboard() {
     } catch {
       setTheme('light');
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateYYYYMMDD(new Date());
     setReportDateStr(today);
     setReportStartDateStr(today);
     setReportEndDateStr(today);
@@ -516,10 +526,20 @@ export function useDashboard() {
     }, false);
   };
 
-  const getLocalDateStr = (dateStr) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
-  };
+  // Menggunakan zona waktu lokal perangkat (WIB / WITA / WIT otomatis)
+  const getLocalDateStr = (dateStr) => toLocalDateYYYYMMDD(dateStr);
+
+  // Peta harga modal (HPP) per menu untuk perhitungan margin & laba kotor
+  const menuCostMap = useMemo(() => {
+    const byId = new Map();
+    const byName = new Map();
+    menus.forEach((m) => {
+      const cost = Number(m.cost_price || 0);
+      if (m.id) byId.set(m.id, cost);
+      if (m.name) byName.set(String(m.name).toLowerCase(), cost);
+    });
+    return { byId, byName };
+  }, [menus]);
 
   const reportData = useMemo(() => {
     let start = '', end = '', label = '';
@@ -527,13 +547,15 @@ export function useDashboard() {
     if (reportMode === 'daily') {
       start = reportDateStr;
       end = reportDateStr;
-      label = new Date(reportDateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      label = reportDateStr
+        ? new Date(`${reportDateStr}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '';
     } else if (reportMode === 'weekly') {
       const today = new Date();
       const weekAgo = new Date(today);
       weekAgo.setDate(today.getDate() - 6);
-      start = weekAgo.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
-      end = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      start = toLocalDateYYYYMMDD(weekAgo);
+      end = toLocalDateYYYYMMDD(today);
       label = `7 Hari Terakhir (${weekAgo.toLocaleDateString('id-ID')} - ${today.toLocaleDateString('id-ID')})`;
     } else if (reportMode === 'monthly') {
       const lastDay = new Date(reportYear, reportMonth + 1, 0).getDate();
@@ -543,7 +565,7 @@ export function useDashboard() {
     } else {
       start = reportStartDateStr;
       end = reportEndDateStr;
-      label = `${new Date(start).toLocaleDateString('id-ID')} - ${new Date(end).toLocaleDateString('id-ID')}`;
+      label = `${new Date(`${start}T00:00:00`).toLocaleDateString('id-ID')} - ${new Date(`${end}T00:00:00`).toLocaleDateString('id-ID')}`;
     }
 
     const cancelledFiltered = orders.filter(o => {
@@ -559,6 +581,8 @@ export function useDashboard() {
     });
 
     let revenue = 0;
+    let unpaidRevenue = 0;
+    let totalCogs = 0;
     let totalItems = 0;
     let revenueQRIS = 0;
     let revenueCash = 0;
@@ -569,37 +593,59 @@ export function useDashboard() {
 
     filtered.forEach(o => {
       const amount = Number(o.total_price || 0);
-      revenue += amount;
+      const payStatus = normPayStatus(o.payment_status);
+      const isPaid = payStatus === 'PAID' || !payStatus;
 
-      const method = String(o.payment_method || 'CASH').toUpperCase();
-      if (method === 'QRIS') {
-        revenueQRIS += amount;
-        countQRIS++;
+      if (isPaid) {
+        revenue += amount;
+        const method = String(o.payment_method || 'CASH').toUpperCase();
+        if (method === 'QRIS') {
+          revenueQRIS += amount;
+          countQRIS++;
+        } else {
+          revenueCash += amount;
+          countCash++;
+        }
       } else {
-        revenueCash += amount;
-        countCash++;
+        unpaidRevenue += amount;
       }
 
       if (statusCount.hasOwnProperty(o.status)) statusCount[o.status]++;
 
       if (o.items && Array.isArray(o.items)) {
         o.items.forEach(item => {
-          totalItems += Number(item.qty || 0);
-          const existing = menuMap.get(item.name) || { qty: 0, revenue: 0 };
+          const qty = Number(item.qty || 0);
+          const itemSell = Number(item.price || 0);
+          const itemCost =
+            item.cost_price !== undefined && item.cost_price !== null
+              ? Number(item.cost_price || 0)
+              : (item.id && menuCostMap.byId.get(item.id)) ||
+                (item.name && menuCostMap.byName.get(String(item.name).toLowerCase())) ||
+                0;
+
+          totalItems += qty;
+          if (isPaid) {
+            totalCogs += itemCost * qty;
+          }
+
+          const existing = menuMap.get(item.name) || { qty: 0, revenue: 0, profit: 0 };
           menuMap.set(item.name, {
-            qty: existing.qty + Number(item.qty || 0),
-            revenue: existing.revenue + (Number(item.price || 0) * Number(item.qty || 0))
+            qty: existing.qty + qty,
+            revenue: existing.revenue + (itemSell * qty),
+            profit: existing.profit + ((itemSell - itemCost) * qty),
           });
         });
       }
     });
 
+    const grossProfit = revenue - totalCogs;
     const topMenus = Array.from(menuMap.entries()).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
     const totalOrders = filtered.length;
     const avgOrder = totalOrders > 0 ? revenue / totalOrders : 0;
 
     const reportStats = {
-      totalOrders, revenue, avgOrder, totalItems,
+      totalOrders, revenue, unpaidRevenue, totalCogs, grossProfit,
+      avgOrder, totalItems,
       revenueQRIS, revenueCash, countQRIS, countCash,
       statusCount,
       cancelledCount: cancelledFiltered.length,
@@ -614,9 +660,13 @@ export function useDashboard() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      const dStr = toLocalDateYYYYMMDD(d);
 
-      const dayOrders = orders.filter(o => o.status !== 'cancelled' && getLocalDateStr(o.created_at) === dStr);
+      const dayOrders = orders.filter(o => {
+        if (o.status === 'cancelled' || getLocalDateStr(o.created_at) !== dStr) return false;
+        const ps = normPayStatus(o.payment_status);
+        return ps === 'PAID' || !ps;
+      });
       const dayRev = dayOrders.reduce((sum, o) => sum + Number(o.total_price || 0), 0);
 
       if (dayRev > maxChartRev) maxChartRev = dayRev;
@@ -628,20 +678,23 @@ export function useDashboard() {
     }
 
     return { reportStats, topMenus, chartData, maxChartRev, totalChartRev, label };
-  }, [orders, reportMode, reportDateStr, reportMonth, reportYear, reportStartDateStr, reportEndDateStr]);
+  }, [orders, menuCostMap, reportMode, reportDateStr, reportMonth, reportYear, reportStartDateStr, reportEndDateStr]);
 
   const handleExportCSV = () => {
     const { reportStats, topMenus, label } = reportData;
     let csv = `Laporan: ${label}\n\n`;
     csv += `Total Pesanan,${reportStats.totalOrders}\n`;
-    csv += `Total Omset,${reportStats.revenue}\n`;
+    csv += `Omzet Lunas,${reportStats.revenue}\n`;
+    csv += `Menunggu Bayar,${reportStats.unpaidRevenue}\n`;
+    csv += `Total Modal (HPP),${reportStats.totalCogs}\n`;
+    csv += `Laba Kotor Produk,${reportStats.grossProfit}\n`;
     csv += `Rata-rata/Order,${reportStats.avgOrder}\n`;
     csv += `Item Terjual,${reportStats.totalItems}\n\n`;
     csv += `Pendapatan QRIS,${reportStats.revenueQRIS} (${reportStats.countQRIS} transaksi)\n`;
     csv += `Pendapatan Cash,${reportStats.revenueCash} (${reportStats.countCash} transaksi)\n\n`;
-    csv += `Menu Terlaris,Qty,Omset\n`;
+    csv += `Menu Terlaris,Qty,Omset,Laba Kotor\n`;
     topMenus.forEach(([name, data]) => {
-      csv += `"${name}",${data.qty},${data.revenue}\n`;
+      csv += `"${name}",${data.qty},${data.revenue},${data.profit || 0}\n`;
     });
 
     csv += `\nPesanan Ditolak,Meja,Nama,Alasan\n`;
@@ -884,6 +937,9 @@ export function useDashboard() {
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
     const discountVal = currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null;
+    const costVal = currentMenu.cost_price !== '' && currentMenu.cost_price !== null && currentMenu.cost_price !== undefined
+      ? parseFloat(currentMenu.cost_price) || 0
+      : 0;
     const hasPromo = Boolean((discountVal && discountVal > 0) || currentMenu.is_featured);
 
     const payload = {
@@ -891,6 +947,7 @@ export function useDashboard() {
       name: currentMenu.name,
       category: currentMenu.category,
       price: parseFloat(currentMenu.price),
+      cost_price: costVal,
       description: currentMenu.desc,
       status: currentMenu.status,
       image_url: currentMenu.image_url,
@@ -925,6 +982,7 @@ export function useDashboard() {
       name: '',
       category: 'makanan',
       price: '',
+      cost_price: '',
       desc: '',
       status: 'available',
       image_url: '',
