@@ -883,6 +883,9 @@ export function useDashboard() {
 
   const handleSaveMenu = async (currentMenu, resetFn) => {
     const isEdit = !!currentMenu.id;
+    const discountVal = currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null;
+    const hasPromo = Boolean((discountVal && discountVal > 0) || currentMenu.is_featured);
+
     const payload = {
       tenant_id: tenantId,
       name: currentMenu.name,
@@ -894,7 +897,8 @@ export function useDashboard() {
       stock: parseInt(currentMenu.stock, 10) || 0,
       is_featured: currentMenu.is_featured || false,
       is_new: currentMenu.is_new || false,
-      discount_price: currentMenu.discount_price ? parseFloat(currentMenu.discount_price) : null,
+      discount_price: discountVal,
+      promo_expires_at: hasPromo ? (currentMenu.promo_expires_at || null) : null,
     };
 
     if (isEdit) {
@@ -917,8 +921,20 @@ export function useDashboard() {
     }
 
     resetFn({
-      id: null, name: '', category: 'makanan', price: '', desc: '', status: 'available', image_url: '', stock: 0,
-      is_featured: false, is_new: false, discount_price: ''
+      id: null,
+      name: '',
+      category: 'makanan',
+      price: '',
+      desc: '',
+      status: 'available',
+      image_url: '',
+      stock: 0,
+      is_featured: false,
+      is_new: false,
+      discount_price: '',
+      promo_duration_mode: 'unlimited',
+      promo_duration_hours: '3',
+      existing_promo_expires_at: null,
     });
     showToast(isEdit ? 'Menu diperbarui' : 'Menu ditambahkan', 'success');
   };
