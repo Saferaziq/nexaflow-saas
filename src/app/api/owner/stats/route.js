@@ -235,7 +235,6 @@ export async function GET(request) {
     ]);
 
     const rawPeriodOrders = orderRes.data || [];
-    // Selaraskan dengan Kasir: semua order non-cancelled yang sudah PAID dihitung ke omzet lunas
     const paidValidAllOrders = rawPeriodOrders.filter((o) => {
       if (o.status === 'cancelled') return false;
       const ps = normPayStatus(o.payment_status);
@@ -375,7 +374,6 @@ export async function GET(request) {
 
     const salaryExpense = actualSalaryTx + pendingBaseSalary;
     const totalExpense = operationalExpense + salaryExpense;
-    // Laba Bersih = Laba Kotor Produk - Total Biaya Operasional & Gaji
     const netProfit = grossProfit - totalExpense;
 
     const expenseCategories = {};
@@ -735,7 +733,6 @@ export async function GET(request) {
       [...allMenus]
         .filter((m) => m.status === 'available' && Number(m.stock) >= 10 && !m.discount_price)
         .sort((a, b) => {
-          // Prioritaskan menu yang punya margin tebal & stok banyak
           const marginA = Number(a.price || 0) - Number(a.cost_price || 0);
           const marginB = Number(b.price || 0) - Number(b.cost_price || 0);
           return marginB + Number(b.stock) * 200 - (marginA + Number(a.stock) * 200);
@@ -1104,9 +1101,10 @@ export async function POST(request) {
 
       const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran di Indonesia.
 Aturan wajib:
-1. Jawab dalam Bahasa Indonesia yang ringkas, tajam, terstruktur (gunakan 2-3 poin singkat dengan angka nyata dari JSON).
-2. Perhitungkan Omzet Lunas, HPP (Modal Menu), Laba Kotor, Biaya Operasional/Gaji, Laba Bersih, margin %, dan stok kritis. Jangan pernah mengarang angka yang tidak ada di JSON.
-3. Jika Owner meminta tindakan nyata (misalnya mengaktifkan promo diskon 3 jam, menaikkan stok, atau membuat paket bundling) dan menu kandidatnya tersedia di field "actionableCandidates" pada JSON, sertakan tepat di baris paling akhir respons sebuah tag aksi valid:
+1. LANGSUNG masuk ke poin jawaban tanpa kalimat pembuka basa-basi (dilarang menulis "Baik, mari kita tinjau..." atau salam).
+2. Jawab dalam Bahasa Indonesia yang ringkas, lengkap, dan terstruktur (3-4 poin singkat dengan angka nyata dari JSON: Omzet Lunas, HPP, Laba Kotor, Biaya, Laba Bersih, margin %, stok, atau anomali kasir).
+3. Jangan pernah memotong kalimat di tengah jalan dan jangan mengarang angka di luar JSON.
+4. Jika Owner meminta tindakan nyata (aktifkan promo 3 jam, naikkan stok, atau buat paket bundling) dan kandidat tersedia di "actionableCandidates", sertakan di baris paling akhir tag valid:
 <<ACTION:{"action_type":"promo_discount","menu_id":"ID_MENU","discount_price":15000,"duration_hours":3,"title":"Aktifkan Promo 3 Jam Nama Menu","buttonLabel":"Terapkan Promo 3 Jam"}>>
 atau untuk restock:
 <<ACTION:{"action_type":"restock_menu","menu_id":"ID_MENU","new_stock":40,"title":"Naikkan Stok Nama Menu","buttonLabel":"Naikkan Stok Sekarang"}>>
@@ -1127,6 +1125,15 @@ Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
           model
         )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        const genConfig = {
+          temperature: 0.25,
+          maxOutputTokens: 2048,
+        };
+        if (model.includes('2.5')) {
+          genConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
         const res = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1137,7 +1144,7 @@ Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
                 parts: [{ text: `${systemPrompt}\n\nPertanyaan Owner: ${question}` }],
               },
             ],
-            generationConfig: { temperature: 0.25, maxOutputTokens: 520 },
+            generationConfig: genConfig,
           }),
         });
         const data = await res.json();
@@ -1174,7 +1181,7 @@ Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
               { role: 'user', content: question },
             ],
             temperature: 0.25,
-            max_tokens: 520,
+            max_tokens: 2048,
           }),
         });
         const data = await res.json();
