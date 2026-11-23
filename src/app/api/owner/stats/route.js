@@ -2,31 +2,39 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 const formatRpServer = (num) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(num || 0);
 
-const getPromoExpiresAt1630Wib = () => {
-  const nowUtcMs = Date.now();
-  const wibOffsetMs = 7 * 60 * 60 * 1000;
-  const wibNow = new Date(nowUtcMs + wibOffsetMs);
-  const year = wibNow.getUTCFullYear();
-  const month = wibNow.getUTCMonth();
-  const day = wibNow.getUTCDate();
+const normPayStatus = (val) => String(val || '').trim().toUpperCase();
 
-  let targetUtcMs = Date.UTC(year, month, day, 9, 30, 0, 0);
-  if (nowUtcMs >= targetUtcMs) {
-    targetUtcMs += 24 * 60 * 60 * 1000;
+// Helper zona waktu dinamis berdasarkan offset perangkat cabang/owner (mendukung WIB, WITA, WIT)
+const getLocalShiftedDate = (isoStr, tzOffsetMinutes = -420) => {
+  // tzOffsetMinutes dari JS Date.getTimezoneOffset(): WIB = -420, WITA = -480, WIT = -540
+  const shiftMs = -Number(tzOffsetMinutes) * 60 * 1000;
+  return new Date(new Date(isoStr).getTime() + shiftMs);
+};
+
+const getLocalDateKey = (isoStr, tzOffsetMinutes = -420) =>
+  getLocalShiftedDate(isoStr, tzOffsetMinutes).toISOString().slice(0, 10);
+
+const getLocalHour = (isoStr, tzOffsetMinutes = -420) =>
+  getLocalShiftedDate(isoStr, tzOffsetMinutes).getUTCHours();
+
+// Hitung harga diskon aman di atas modal (Margin Guard)
+const computeSafeDiscountPrice = (sellPrice, costPrice, discountRatio = 0.8) => {
+  const sell = Number(sellPrice || 0);
+  const cost = Number(costPrice || 0);
+  const target = Math.round((sell * discountRatio) / 1000) * 1000;
+  // Pastikan minimal 15% di atas modal jika modal diisi
+  const minSafePrice = cost > 0 ? Math.ceil((cost * 1.15) / 1000) * 1000 : 5000;
+  const clamped = Math.max(target, minSafePrice);
+  if (clamped >= sell) {
+    return Math.max(cost > 0 ? cost + 1000 : 5000, Math.round((sell * 0.9) / 1000) * 1000);
   }
-  return new Date(targetUtcMs).toISOString();
-};
-
-const getWibDateKey = (isoStr) => {
-  const ms = new Date(isoStr).getTime() + 7 * 60 * 60 * 1000;
-  return new Date(ms).toISOString().slice(0, 10);
-};
-
-const getWibHour = (isoStr) => {
-  const ms = new Date(isoStr).getTime() + 7 * 60 * 60 * 1000;
-  return new Date(ms).getUTCHours();
+  return clamped;
 };
 
 export async function GET(request) {
@@ -36,6 +44,11 @@ export async function GET(request) {
     const period = searchParams.get('period') || 'daily';
     const dateStr = searchParams.get('date_str');
     const tenantIdParam = searchParams.get('tenant_id');
+    const tzOffsetParam = searchParams.get('tz_offset');
+    const tzOffsetMinutes =
+      tzOffsetParam !== null && !Number.isNaN(Number(tzOffsetParam))
+        ? Number(tzOffsetParam)
+        : -420;
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -51,6 +64,9 @@ export async function GET(request) {
     if (!tenants || tenants.length === 0) {
       return NextResponse.json({
         totalRevenue: 0,
+        unpaidRevenue: 0,
+        totalCogs: 0,
+        grossProfit: 0,
         totalTransactions: 0,
         totalBranches: 0,
         activeBranches: 0,
@@ -65,6 +81,7 @@ export async function GET(request) {
         netProfit: 0,
         expenseCategories: {},
         topMenus: [],
+        lowMarginMenus: [],
         lowStockMenus: [],
         unpaidInvoices: [],
         savedAiConfig: null,
@@ -93,7 +110,8 @@ export async function GET(request) {
       tenantNameMap[t.id] = t.name;
     });
 
-    const tenantWithAi = tenants.find((t) => t.ai_api_key || t.ai_provider || t.ai_model) || tenants[0];
+    const tenantWithAi =
+      tenants.find((t) => t.ai_api_key || t.ai_provider || t.ai_model) || tenants[0];
     const savedAiConfig = {
       provider: tenantWithAi?.ai_provider || 'gemini',
       model: tenantWithAi?.ai_model || 'gemini-2.5-flash',
@@ -105,51 +123,76 @@ export async function GET(request) {
       ? tenants.filter((t) => t.id === tenantIdParam).map((t) => t.id)
       : allTenantIds;
 
+    // Hitung rentang tanggal akurat sesuai zona waktu lokal pengirim
+    const shiftMs = -tzOffsetMinutes * 60 * 1000;
+    const makeUtcBoundary = (y, mZero, d, h, min, s, ms) =>
+      new Date(Date.UTC(y, mZero, d, h, min, s, ms) - shiftMs);
+
     let startDate = new Date();
     let endDate = new Date();
     let labels = [];
 
     try {
+      const nowLocalShifted = new Date(Date.now() + shiftMs);
+      const defDateStr = nowLocalShifted.toISOString().slice(0, 10);
+
       if (period === 'daily') {
-        const safeDate = dateStr ? dateStr : new Date().toLocaleDateString('en-CA');
-        startDate = new Date(safeDate);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(safeDate);
-        endDate.setHours(23, 59, 59, 999);
+        const safeDate = dateStr || defDateStr;
+        const [y, m, d] = safeDate.split('-').map(Number);
+        startDate = makeUtcBoundary(y, m - 1, d, 0, 0, 0, 0);
+        endDate = makeUtcBoundary(y, m - 1, d, 23, 59, 59, 999);
         labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
       } else if (period === 'monthly') {
-        const [year, month] = (dateStr || new Date().toISOString().slice(0, 7)).split('-');
-        startDate = new Date(year, parseInt(month) - 1, 1);
-        endDate = new Date(year, parseInt(month), 0, 23, 59, 59);
+        const [y, m] = (dateStr || defDateStr.slice(0, 7)).split('-').map(Number);
+        const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        startDate = makeUtcBoundary(y, m - 1, 1, 0, 0, 0, 0);
+        endDate = makeUtcBoundary(y, m - 1, lastDay, 23, 59, 59, 999);
         labels = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
       } else if (period === 'weekly') {
-        const [year, week] = (dateStr || '2024-W01').split('-W');
-        const simple = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
-        const dow = simple.getDay();
-        startDate = new Date(simple);
-        if (dow <= 4) startDate.setDate(simple.getDate() - simple.getDay() + 1);
-        else startDate.setDate(simple.getDate() + 8 - simple.getDay());
-        startDate.setHours(0, 0, 0, 0);
+        const [yearStr, weekStr] = (dateStr || '2026-W01').split('-W');
+        const y = parseInt(yearStr, 10);
+        const w = parseInt(weekStr, 10);
+        const simple = new Date(Date.UTC(y, 0, 1 + (w - 1) * 7));
+        const dow = simple.getUTCDay();
+        const mondayUtc = new Date(simple);
+        if (dow <= 4) mondayUtc.setUTCDate(simple.getUTCDate() - dow + 1);
+        else mondayUtc.setUTCDate(simple.getUTCDate() + 8 - dow);
 
-        endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
+        startDate = makeUtcBoundary(
+          mondayUtc.getUTCFullYear(),
+          mondayUtc.getUTCMonth(),
+          mondayUtc.getUTCDate(),
+          0,
+          0,
+          0,
+          0
+        );
+        endDate = new Date(startDate.getTime() + 7 * 86400000 - 1);
         labels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
       }
     } catch (e) {
-      startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
+      startDate = new Date(Date.now() - 24 * 3600 * 1000);
       endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
     }
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-    const safeTargetIds = targetTenantIds.length > 0 ? targetTenantIds : ['00000000-0000-0000-0000-000000000000'];
+    const safeTargetIds =
+      targetTenantIds.length > 0 ? targetTenantIds : ['00000000-0000-0000-0000-000000000000'];
 
-    const [orderRes, expenseRes, empTransRes, empRes, allMenusRes, invoiceRes, recent30OrdersRes] = await Promise.all([
+    const [
+      orderRes,
+      expenseRes,
+      empTransRes,
+      empRes,
+      allMenusRes,
+      invoiceRes,
+      recent30OrdersRes,
+    ] = await Promise.all([
       supabaseAdmin
         .from('orders')
-        .select('id, total_price, created_at, updated_at, paid_at, tenant_id, items, status, payment_status, payment_method, table_number, device_id')
+        .select(
+          'id, total_price, created_at, updated_at, paid_at, tenant_id, items, status, payment_status, payment_method, table_number, device_id'
+        )
         .in('tenant_id', allTenantIds)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString()),
@@ -157,8 +200,8 @@ export async function GET(request) {
         .from('expenses')
         .select('amount, category, tenant_id')
         .in('tenant_id', safeTargetIds)
-        .gte('expense_date', startDate.toISOString())
-        .lte('expense_date', endDate.toISOString()),
+        .gte('expense_date', getLocalDateKey(startDate.toISOString(), tzOffsetMinutes))
+        .lte('expense_date', getLocalDateKey(endDate.toISOString(), tzOffsetMinutes)),
       supabaseAdmin
         .from('employee_transactions')
         .select('id, employee_id, type, amount, tenant_id, transaction_date')
@@ -182,7 +225,9 @@ export async function GET(request) {
         .order('created_at', { ascending: false }),
       supabaseAdmin
         .from('orders')
-        .select('id, total_price, created_at, updated_at, paid_at, tenant_id, items, status, payment_status, payment_method, table_number, device_id')
+        .select(
+          'id, total_price, created_at, updated_at, paid_at, tenant_id, items, status, payment_status, payment_method, table_number, device_id'
+        )
         .in('tenant_id', safeTargetIds)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
@@ -190,7 +235,18 @@ export async function GET(request) {
     ]);
 
     const rawPeriodOrders = orderRes.data || [];
-    const completedAllOrders = rawPeriodOrders.filter((o) => o.status === 'completed');
+    // Selaraskan dengan Kasir: semua order non-cancelled yang sudah PAID dihitung ke omzet lunas
+    const paidValidAllOrders = rawPeriodOrders.filter((o) => {
+      if (o.status === 'cancelled') return false;
+      const ps = normPayStatus(o.payment_status);
+      return ps === 'PAID' || !ps;
+    });
+    const unpaidValidAllOrders = rawPeriodOrders.filter((o) => {
+      if (o.status === 'cancelled') return false;
+      const ps = normPayStatus(o.payment_status);
+      return ['WAITING_CASH', 'WAITING_QRIS'].includes(ps);
+    });
+
     const expenses = expenseRes.data || [];
     const empTrans = empTransRes.data || [];
     const allEmployees = empRes.data || [];
@@ -222,6 +278,15 @@ export async function GET(request) {
       };
     });
 
+    // Peta HPP (cost_price) per menu untuk perhitungan laba kotor produk
+    const menuCostById = new Map();
+    const menuCostByName = new Map();
+    allMenus.forEach((m) => {
+      const c = Number(m.cost_price || 0);
+      if (m.id) menuCostById.set(m.id, c);
+      if (m.name) menuCostByName.set(String(m.name).toLowerCase().trim(), c);
+    });
+
     const lowStockMenus = allMenus.filter((m) => Number(m.stock) <= 10);
     const unpaidInvoices = (invoiceRes.data || []).map((inv) => ({
       ...inv,
@@ -237,8 +302,8 @@ export async function GET(request) {
       };
     });
 
-    completedAllOrders.forEach((order) => {
-      const amt = Number(order.total_price);
+    paidValidAllOrders.forEach((order) => {
+      const amt = Number(order.total_price || 0);
       if (branchStats[order.tenant_id]) {
         branchStats[order.tenant_id].revenue += amt;
         branchStats[order.tenant_id].transactions += 1;
@@ -246,12 +311,51 @@ export async function GET(request) {
     });
 
     const targetOrders = isFilteredBranch
-      ? completedAllOrders.filter((o) => targetTenantIds.includes(o.tenant_id))
-      : completedAllOrders;
+      ? paidValidAllOrders.filter((o) => targetTenantIds.includes(o.tenant_id))
+      : paidValidAllOrders;
 
-    const totalRevenue = targetOrders.reduce((sum, order) => sum + Number(order.total_price), 0);
-    const operationalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-    const actualSalaryTx = empTrans.reduce((sum, trx) => sum + Number(trx.amount), 0);
+    const targetUnpaidOrders = isFilteredBranch
+      ? unpaidValidAllOrders.filter((o) => targetTenantIds.includes(o.tenant_id))
+      : unpaidValidAllOrders;
+
+    const totalRevenue = targetOrders.reduce((sum, order) => sum + Number(order.total_price || 0), 0);
+    const unpaidRevenue = targetUnpaidOrders.reduce(
+      (sum, order) => sum + Number(order.total_price || 0),
+      0
+    );
+
+    // Hitung total HPP (COGS) & Laba Kotor Produk
+    let totalCogs = 0;
+    const menuMap = {};
+    targetOrders.forEach((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      items.forEach((item) => {
+        const name = item?.name || item?.menu_name || 'Menu';
+        const qty = Number(item?.qty ?? item?.quantity ?? 1);
+        const price = Number(item?.price ?? 0);
+        const unitCost =
+          item?.cost_price !== undefined && item?.cost_price !== null
+            ? Number(item.cost_price || 0)
+            : (item?.id && menuCostById.get(item.id)) ||
+              (item?.menu_id && menuCostById.get(item.menu_id)) ||
+              menuCostByName.get(String(name).toLowerCase().trim()) ||
+              0;
+
+        totalCogs += unitCost * qty;
+
+        if (!menuMap[name]) {
+          menuMap[name] = { name, qty: 0, revenue: 0, cogs: 0, grossProfit: 0 };
+        }
+        menuMap[name].qty += qty;
+        menuMap[name].revenue += qty * price;
+        menuMap[name].cogs += qty * unitCost;
+        menuMap[name].grossProfit += qty * (price - unitCost);
+      });
+    });
+
+    const grossProfit = totalRevenue - totalCogs;
+    const operationalExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+    const actualSalaryTx = empTrans.reduce((sum, trx) => sum + Number(trx.amount || 0), 0);
 
     let pendingBaseSalary = 0;
     const pendingSalaryByBranch = {};
@@ -264,36 +368,31 @@ export async function GET(request) {
         .forEach((emp) => {
           const base = Number(emp.base_salary || 0);
           pendingBaseSalary += base;
-          pendingSalaryByBranch[emp.tenant_id] = (pendingSalaryByBranch[emp.tenant_id] || 0) + base;
+          pendingSalaryByBranch[emp.tenant_id] =
+            (pendingSalaryByBranch[emp.tenant_id] || 0) + base;
         });
     }
 
     const salaryExpense = actualSalaryTx + pendingBaseSalary;
     const totalExpense = operationalExpense + salaryExpense;
-    const netProfit = totalRevenue - totalExpense;
+    // Laba Bersih = Laba Kotor Produk - Total Biaya Operasional & Gaji
+    const netProfit = grossProfit - totalExpense;
 
     const expenseCategories = {};
     expenses.forEach((exp) => {
       const cat = exp.category || 'Lainnya';
-      expenseCategories[cat] = (expenseCategories[cat] || 0) + Number(exp.amount);
+      expenseCategories[cat] = (expenseCategories[cat] || 0) + Number(exp.amount || 0);
     });
 
-    const menuMap = {};
-    targetOrders.forEach((order) => {
-      const items = Array.isArray(order.items) ? order.items : [];
-      items.forEach((item) => {
-        const name = item?.name || item?.menu_name || 'Menu';
-        const qty = Number(item?.qty ?? item?.quantity ?? 1);
-        const price = Number(item?.price ?? 0);
-        if (!menuMap[name]) {
-          menuMap[name] = { name, qty: 0, revenue: 0 };
-        }
-        menuMap[name].qty += qty;
-        menuMap[name].revenue += qty * price;
-      });
-    });
-    const topMenus = Object.values(menuMap)
-      .sort((a, b) => b.qty - a.qty)
+    const allMenuPerfList = Object.values(menuMap).map((m) => ({
+      ...m,
+      marginPct: m.revenue > 0 ? Number(((m.grossProfit / m.revenue) * 100).toFixed(1)) : 0,
+    }));
+
+    const topMenus = [...allMenuPerfList].sort((a, b) => b.qty - a.qty).slice(0, 5);
+    const lowMarginMenus = [...allMenuPerfList]
+      .filter((m) => m.cogs > 0 && m.marginPct < 35)
+      .sort((a, b) => a.marginPct - b.marginPct)
       .slice(0, 5);
 
     let chartData = [];
@@ -302,11 +401,11 @@ export async function GET(request) {
     if (period === 'weekly') chartData = [0, 0, 0, 0, 0, 0, 0];
 
     targetOrders.forEach((order) => {
-      const orderDate = new Date(order.created_at);
-      const amt = Number(order.total_price);
+      const localDt = getLocalShiftedDate(order.created_at, tzOffsetMinutes);
+      const amt = Number(order.total_price || 0);
 
       if (period === 'daily') {
-        const hour = orderDate.getHours();
+        const hour = localDt.getUTCHours();
         if (hour <= 8) chartData[0] += amt;
         else if (hour <= 10) chartData[1] += amt;
         else if (hour <= 12) chartData[2] += amt;
@@ -316,14 +415,14 @@ export async function GET(request) {
         else if (hour <= 20) chartData[6] += amt;
         else chartData[7] += amt;
       } else if (period === 'monthly') {
-        const date = orderDate.getDate();
+        const date = localDt.getUTCDate();
         if (date <= 7) chartData[0] += amt;
         else if (date <= 14) chartData[1] += amt;
         else if (date <= 21) chartData[2] += amt;
         else if (date <= 28) chartData[3] += amt;
         else chartData[4] += amt;
       } else {
-        let dayIndex = orderDate.getDay() - 1;
+        let dayIndex = localDt.getUTCDay() - 1;
         if (dayIndex === -1) dayIndex = 6;
         chartData[dayIndex] += amt;
       }
@@ -335,26 +434,31 @@ export async function GET(request) {
     // KALKULASI RISET MENDALAM AI AGENT (HEMAT TOKEN - DIHITUNG DI SERVER)
     // =========================================================================
     const recent30Orders = recent30OrdersRes.data || [];
-    const completed30 = recent30Orders.filter((o) => o.status === 'completed');
+    const valid30 = recent30Orders.filter((o) => {
+      if (o.status === 'cancelled') return false;
+      const ps = normPayStatus(o.payment_status);
+      return ps === 'PAID' || !ps;
+    });
 
     const avgBasket =
       targetOrders.length > 0
         ? Math.round(totalRevenue / targetOrders.length)
-        : completed30.length > 0
-        ? Math.round(completed30.reduce((s, o) => s + Number(o.total_price), 0) / completed30.length)
+        : valid30.length > 0
+        ? Math.round(valid30.reduce((s, o) => s + Number(o.total_price || 0), 0) / valid30.length)
         : 0;
 
     const deviceCountMap = {};
-    completed30.forEach((o) => {
+    valid30.forEach((o) => {
       if (o.device_id && String(o.device_id).trim() !== '') {
         deviceCountMap[o.device_id] = (deviceCountMap[o.device_id] || 0) + 1;
       }
     });
     const uniqueDevices = Object.keys(deviceCountMap).length;
     const repeatDevices = Object.values(deviceCountMap).filter((c) => c > 1).length;
-    const repeatRate = uniqueDevices > 0 ? Number(((repeatDevices / uniqueDevices) * 100).toFixed(1)) : 0;
+    const repeatRate =
+      uniqueDevices > 0 ? Number(((repeatDevices / uniqueDevices) * 100).toFixed(1)) : 0;
 
-    // 1. KDS SPEED & PEAK-HOUR BOTTLENECK
+    // 1. KDS SPEED & PEAK-HOUR BOTTLENECK (ZONA WAKTU LOKAL CABANG)
     let kdsTotalMin = 0;
     let kdsCount = 0;
     let maxKdsMin = 0;
@@ -362,7 +466,7 @@ export async function GET(request) {
     let slowestBranch = '-';
     const kdsByHour = {};
 
-    completed30.forEach((o) => {
+    valid30.forEach((o) => {
       if (o.created_at && o.updated_at) {
         const diffMin = (new Date(o.updated_at) - new Date(o.created_at)) / 60000;
         if (diffMin > 0.5 && diffMin <= 180) {
@@ -373,7 +477,7 @@ export async function GET(request) {
             slowestTable = o.table_number || '-';
             slowestBranch = tenantNameMap[o.tenant_id] || 'Cabang';
           }
-          const h = getWibHour(o.created_at);
+          const h = getLocalHour(o.created_at, tzOffsetMinutes);
           if (!kdsByHour[h]) {
             kdsByHour[h] = { hour: h, totalMin: 0, count: 0, branchTotals: {} };
           }
@@ -395,22 +499,26 @@ export async function GET(request) {
       }))
       .sort((a, b) => b.avg - a.avg);
 
-    const topBottleneck = kdsHourList[0] || Object.values(kdsByHour)
-      .map((item) => ({ ...item, avg: item.totalMin / item.count }))
-      .sort((a, b) => b.avg - a.avg)[0];
+    const topBottleneck =
+      kdsHourList[0] ||
+      Object.values(kdsByHour)
+        .map((item) => ({ ...item, avg: item.totalMin / item.count }))
+        .sort((a, b) => b.avg - a.avg)[0];
 
     if (topBottleneck) {
-      const topBranchEntry = Object.entries(topBottleneck.branchTotals).sort((a, b) => b[1] - a[1])[0];
+      const topBranchEntry = Object.entries(topBottleneck.branchTotals).sort(
+        (a, b) => b[1] - a[1]
+      )[0];
       const nextHour = (topBottleneck.hour + 1) % 24;
       kdsPeakBottleneck = {
-        peakHourLabel: `${String(topBottleneck.hour).padStart(2, '0')}.00 – ${String(nextHour).padStart(2, '0')}.00 WIB`,
+        peakHourLabel: `${String(topBottleneck.hour).padStart(2, '0')}.00 – ${String(nextHour).padStart(2, '0')}.00`,
         avgMinutes: Number(topBottleneck.avg.toFixed(1)),
         orderCount: topBottleneck.count,
         branchName: topBranchEntry ? topBranchEntry[0] : 'Semua Cabang',
       };
     }
 
-    // 2. FRAUD WATCHDOG LANJUTAN (CANCELLED + CANCEL MALAM + ORDER TUNAI MENGGANTUNG > 2 JAM)
+    // 2. FRAUD WATCHDOG LANJUTAN (ZONA WAKTU LOKAL)
     const cancelledOrders = recent30Orders.filter(
       (o) => o.status === 'cancelled' || o.payment_status === 'CANCELLED'
     );
@@ -437,26 +545,29 @@ export async function GET(request) {
       const entry = ensureFraudBranch(o.tenant_id);
       entry.count += 1;
       const isCash = (o.payment_method || '').toLowerCase() === 'cash';
-      if (isCash) {
-        entry.cashCount += 1;
-      }
+      if (isCash) entry.cashCount += 1;
       const dtIso = o.updated_at || o.created_at;
-      const wibHr = getWibHour(dtIso);
-      if (isCash && (wibHr >= 20 || wibHr < 5)) {
+      const localHr = getLocalHour(dtIso, tzOffsetMinutes);
+      if (isCash && (localHr >= 20 || localHr < 5)) {
         entry.nightCashCancelCount += 1;
       }
       entry.totalAmount += Number(o.total_price || 0);
       if (!entry.latestAt || new Date(dtIso) > new Date(entry.latestAt)) {
         entry.latestAt = dtIso;
       }
-      const dt = new Date(new Date(dtIso).getTime() + 7 * 60 * 60 * 1000);
-      entry.hours.push(`${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`);
+      const dt = getLocalShiftedDate(dtIso, tzOffsetMinutes);
+      entry.hours.push(
+        `${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`
+      );
     });
 
     const twoHoursAgoMs = Date.now() - 2 * 3600 * 1000;
     recent30Orders.forEach((o) => {
       const isCash = (o.payment_method || '').toLowerCase() === 'cash';
-      const isClosed = o.status === 'completed' || o.status === 'cancelled' || o.payment_status === 'CANCELLED';
+      const isClosed =
+        o.status === 'completed' ||
+        o.status === 'cancelled' ||
+        o.payment_status === 'CANCELLED';
       if (isCash && !isClosed && new Date(o.created_at).getTime() < twoHoursAgoMs) {
         const entry = ensureFraudBranch(o.tenant_id);
         entry.staleCashCount += 1;
@@ -465,18 +576,18 @@ export async function GET(request) {
     });
 
     const fraudAlerts = Object.values(fraudByBranch).sort(
-      (a, b) => (b.totalAmount + b.staleCashAmount) - (a.totalAmount + a.staleCashAmount)
+      (a, b) => b.totalAmount + b.staleCashAmount - (a.totalAmount + a.staleCashAmount)
     );
 
-    // 3. DETEKSI ANOMALI OMZET PER CABANG (VS RATA-RATA HARIAN 30 HARI)
+    // 3. DETEKSI ANOMALI OMZET PER CABANG
     const rev30ByBranch = {};
-    completed30.forEach((o) => {
+    valid30.forEach((o) => {
       const bId = o.tenant_id;
       if (!rev30ByBranch[bId]) {
         rev30ByBranch[bId] = { totalRev: 0, days: new Set() };
       }
       rev30ByBranch[bId].totalRev += Number(o.total_price || 0);
-      rev30ByBranch[bId].days.add(getWibDateKey(o.created_at));
+      rev30ByBranch[bId].days.add(getLocalDateKey(o.created_at, tzOffsetMinutes));
     });
 
     const periodDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 86400000));
@@ -535,10 +646,10 @@ export async function GET(request) {
       }
     });
 
-    // 5. DETEKTOR MENU MATI (DEAD STOCK 30 HARI: 0 PENJUALAN)
+    // 5. DETEKTOR MENU MATI (DEAD STOCK 30 HARI) DENGAN MARGIN GUARD
     const soldMenuIds = new Set();
     const soldMenuNames = new Set();
-    completed30.forEach((order) => {
+    valid30.forEach((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
       items.forEach((i) => {
         if (i?.menu_id) soldMenuIds.add(i.menu_id);
@@ -566,18 +677,21 @@ export async function GET(request) {
         category: m.category,
         stock: Number(m.stock),
         price: Number(m.price),
+        cost_price: Number(m.cost_price || 0),
         discount_price: m.discount_price ? Number(m.discount_price) : null,
-        suggested_discount_price: Math.max(5000, Math.round((Number(m.price) * 0.75) / 1000) * 1000),
+        suggested_discount_price: computeSafeDiscountPrice(m.price, m.cost_price, 0.78),
       }));
 
-    // 6. SMART BASKET ANALYSIS & ACTION PLANS
+    // 6. SMART BASKET ANALYSIS & ACTION PLANS (DENGAN HPP MARGIN GUARD + DURASI 3 JAM)
     const pairCountMap = {};
     const singleMenuPriceMap = {};
+    const singleMenuCostMap = {};
     allMenus.forEach((m) => {
       singleMenuPriceMap[m.name] = Number(m.price || 0);
+      singleMenuCostMap[m.name] = Number(m.cost_price || 0);
     });
 
-    completed30.forEach((order) => {
+    valid30.forEach((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
       const names = [...new Set(items.map((i) => i?.name || i?.menu_name).filter(Boolean))];
       items.forEach((i) => {
@@ -609,15 +723,23 @@ export async function GET(request) {
 
     const normalBundlePrice =
       (singleMenuPriceMap[bundleItemA] || 22000) + (singleMenuPriceMap[bundleItemB] || 20000);
-    const recommendedBundlePrice = Math.max(
-      15000,
-      Math.round((normalBundlePrice * 0.85) / 1000) * 1000
+    const totalBundleCost =
+      (singleMenuCostMap[bundleItemA] || 0) + (singleMenuCostMap[bundleItemB] || 0);
+    const recommendedBundlePrice = computeSafeDiscountPrice(
+      normalBundlePrice,
+      totalBundleCost,
+      0.85
     );
 
     const promoCandidate =
       [...allMenus]
         .filter((m) => m.status === 'available' && Number(m.stock) >= 10 && !m.discount_price)
-        .sort((a, b) => Number(b.stock) - Number(a.stock))[0] ||
+        .sort((a, b) => {
+          // Prioritaskan menu yang punya margin tebal & stok banyak
+          const marginA = Number(a.price || 0) - Number(a.cost_price || 0);
+          const marginB = Number(b.price || 0) - Number(b.cost_price || 0);
+          return marginB + Number(b.stock) * 200 - (marginA + Number(a.stock) * 200);
+        })[0] ||
       allMenus.find((m) => !m.discount_price) ||
       allMenus[0] ||
       null;
@@ -629,8 +751,11 @@ export async function GET(request) {
       null;
 
     const promoDiscountPrice = promoCandidate
-      ? Math.max(5000, Math.round((Number(promoCandidate.price) * 0.8) / 1000) * 1000)
+      ? computeSafeDiscountPrice(promoCandidate.price, promoCandidate.cost_price, 0.8)
       : 15000;
+
+    const promoCost = Number(promoCandidate?.cost_price || 0);
+    const promoNetMargin = promoCost > 0 ? promoDiscountPrice - promoCost : null;
 
     const restockTargetQty = restockCandidate
       ? Math.max(35, Number(restockCandidate.stock || 0) + 25)
@@ -640,20 +765,18 @@ export async function GET(request) {
       ? Number(restockCandidate.price || 25000) * 15
       : 375000;
 
-    let soldoutTimeInfo = '';
-    if (restockCandidate && restockCandidate.updated_at) {
-      const dt = new Date(restockCandidate.updated_at);
-      soldoutTimeInfo = ` (tercatat pada pukul ${String(dt.getHours()).padStart(2, '0')}.${String(dt.getMinutes()).padStart(2, '0')} WIB)`;
-    }
-
     const diagnostics = [
       {
         code: '01',
         badgeColor: 'rose',
-        title: 'Optimasi Trafik Jam Siang & Sore (14.00 – 16.30 WIB)',
+        title: 'Flash Promo 3 Jam & Margin Guard',
         description: promoCandidate
-          ? `Stok ${promoCandidate.name} di ${promoCandidate.branch_name} masih tersisa ${promoCandidate.stock} porsi. Mengaktifkan Harga Coret (${formatRpServer(promoDiscountPrice)}) + label Unggulan pada jam sepi efektif mendorong konversi layar QR.`
-          : 'Trafik transaksi cenderung melandai pada pukul 14.00–16.30 WIB. Disarankan mengaktifkan menu promo unggulan pada jam tersebut.',
+          ? `Menu ${promoCandidate.name} (${promoCandidate.branch_name}, stok ${promoCandidate.stock}) direkomendasikan diskon ke ${formatRpServer(promoDiscountPrice)} selama 3 jam${
+              promoNetMargin !== null
+                ? ` — tetap aman di atas modal ${formatRpServer(promoCost)} (laba +${formatRpServer(promoNetMargin)}/porsi).`
+                : ' untuk mendorong konversi layar QR pembeli.'
+            }`
+          : 'Aktifkan flash promo 3 jam pada menu dengan stok melimpah saat jam sepi.',
       },
       {
         code: '02',
@@ -662,7 +785,7 @@ export async function GET(request) {
           ? `Detektor Potensi Omzet Hilang (~${formatRpServer(estimatedLostRev)}/Hari)`
           : 'Stok Menu Utama Terpantau Stabil',
         description: restockCandidate
-          ? `Menu ${restockCandidate.name} (${restockCandidate.branch_name}) berada pada stok ${restockCandidate.stock} pcs dengan status "${restockCandidate.status}"${soldoutTimeInfo}. Jika habis sebelum jam ramai malam, potensi kehilangan sekitar 15 porsi penjualan.`
+          ? `Menu ${restockCandidate.name} (${restockCandidate.branch_name}) berada pada stok ${restockCandidate.stock} pcs dengan status "${restockCandidate.status}". Segera restock agar tidak kehilangan penjualan di jam ramai.`
           : 'Seluruh menu utama masih memiliki stok di atas batas aman 10 porsi.',
       },
       {
@@ -676,7 +799,15 @@ export async function GET(request) {
       },
     ];
 
-    if (revenueAnomalies.length > 0) {
+    if (lowMarginMenus.length > 0) {
+      const lm = lowMarginMenus[0];
+      diagnostics.push({
+        code: '04',
+        badgeColor: 'amber',
+        title: `Menu Margin Tipis Terdeteksi: ${lm.name} (${lm.marginPct}%)`,
+        description: `Menu ${lm.name} terjual ${lm.qty} porsi dengan omzet ${formatRpServer(lm.revenue)} namun HPP mencapai ${formatRpServer(lm.cogs)}. Pertimbangkan penyesuaian harga jual atau efisiensi bahan baku.`,
+      });
+    } else if (revenueAnomalies.length > 0) {
       const topAnom = revenueAnomalies[0];
       diagnostics.push({
         code: '04',
@@ -704,7 +835,7 @@ export async function GET(request) {
       actionPlans.push({
         id: 'promo_1',
         action_type: 'promo_discount',
-        badge: 'Dongkrak Jam Sepi (14.00–16.30)',
+        badge: 'Flash Promo 3 Jam · Aman Di Atas HPP',
         badgeTheme: 'amber',
         title: `Aktifkan Harga Coret "${promoCandidate.name}"`,
         branch_name: promoCandidate.branch_name,
@@ -712,8 +843,9 @@ export async function GET(request) {
         menu_id: promoCandidate.id,
         original_price: Number(promoCandidate.price),
         discount_price: promoDiscountPrice,
-        description: `AI akan mengaktifkan is_featured = true dan discount_price = ${promoDiscountPrice} pada menu ${promoCandidate.name} (${promoCandidate.branch_name}) agar tampil paling atas di HP pelanggan, lalu otomatis berhenti pada 16:30 WIB.`,
-        buttonLabel: 'Eksekusi Promo 1-Klik Sekarang',
+        duration_hours: 3,
+        description: `AI mengaktifkan Harga Coret ${formatRpServer(promoDiscountPrice)} + label Unggulan pada ${promoCandidate.name} (${promoCandidate.branch_name}) selama 3 jam ke depan, lalu otomatis kembali ke harga normal.`,
+        buttonLabel: 'Aktifkan Promo 3 Jam (1-Klik)',
       });
     }
 
@@ -746,16 +878,23 @@ export async function GET(request) {
       bundle_name: `Paket Hemat: ${bundleItemA} + ${bundleItemB}`,
       bundle_price: recommendedBundlePrice,
       normal_price: normalBundlePrice,
+      cost_price: totalBundleCost,
       description: `Membuat menu baru kategori "Paket Bundling" (${bundleItemA} + ${bundleItemB}) seharga ${formatRpServer(recommendedBundlePrice)} (harga normal ${formatRpServer(normalBundlePrice)}) di bagian Unggulan QR Meja.`,
       buttonLabel: 'Buat & Tampilkan Paket 1-Klik',
     });
 
     const activePromos = allMenus.filter(
-      (m) => m.is_featured || (m.discount_price && Number(m.discount_price) > 0) || m.category === 'Paket Bundling'
+      (m) =>
+        m.is_featured ||
+        (m.discount_price && Number(m.discount_price) > 0) ||
+        m.category === 'Paket Bundling'
     );
 
     return NextResponse.json({
       totalRevenue,
+      unpaidRevenue,
+      totalCogs,
+      grossProfit,
       totalTransactions: targetOrders.length,
       totalBranches: tenants.length,
       activeBranches: tenants.filter((t) => t.is_active).length,
@@ -770,6 +909,7 @@ export async function GET(request) {
       netProfit,
       expenseCategories,
       topMenus,
+      lowMarginMenus,
       lowStockMenus,
       unpaidInvoices,
       savedAiConfig,
@@ -828,11 +968,13 @@ export async function POST(request) {
     }
 
     if (action_type === 'promo_discount') {
-      const { menu_id, discount_price } = body;
+      const { menu_id, discount_price, duration_hours } = body;
       if (!menu_id) {
         return NextResponse.json({ error: 'ID Menu tidak ditemukan' }, { status: 400 });
       }
-      const promoExpiresAt = getPromoExpiresAt1630Wib();
+      const hours = Number(duration_hours) > 0 ? Number(duration_hours) : 3;
+      const promoExpiresAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+
       const { error } = await supabaseAdmin
         .from('menus')
         .update({
@@ -844,17 +986,10 @@ export async function POST(request) {
         .eq('id', menu_id);
 
       if (error) throw error;
-      const expWibLabel = new Date(promoExpiresAt).toLocaleString('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
       return NextResponse.json({
         success: true,
         promo_expires_at: promoExpiresAt,
-        message: `Promo Harga Coret & Label Unggulan aktif dan akan otomatis berhenti pada ${expWibLabel} WIB!`,
+        message: `Promo Harga Coret & Label Unggulan aktif selama ${hours} jam (hitung mundur langsung berjalan di HP pembeli)!`,
       });
     }
 
@@ -879,9 +1014,12 @@ export async function POST(request) {
     }
 
     if (action_type === 'create_bundle') {
-      const { tenant_id, bundle_name, bundle_price, normal_price, description } = body;
+      const { tenant_id, bundle_name, bundle_price, normal_price, cost_price, description } = body;
       if (!tenant_id || !bundle_name) {
-        return NextResponse.json({ error: 'Data cabang atau nama paket belum lengkap' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Data cabang atau nama paket belum lengkap' },
+          { status: 400 }
+        );
       }
       const { error } = await supabaseAdmin.from('menus').insert([
         {
@@ -889,6 +1027,7 @@ export async function POST(request) {
           name: bundle_name,
           category: 'Paket Bundling',
           price: Number(normal_price || bundle_price),
+          cost_price: Number(cost_price || 0),
           discount_price: Number(bundle_price),
           description: description || 'Paket Hemat Rekomendasi AI NexaFlow',
           status: 'available',
@@ -958,20 +1097,36 @@ export async function POST(request) {
         process.env.OPENAI_API_KEY ||
         '';
 
-      const compactSummary = context_summary || { manager: manager_email, info: 'Ringkasan operasional NexaFlow' };
-      const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran multi-cabang di Indonesia. Jawab dalam Bahasa Indonesia yang ringkas, tajam, berbasis angka dari JSON berikut (termasuk anomali omzet, rasio biaya, dead stock, bottleneck KDS, dan alert fraud jika ada), dan berikan saran tindakan nyata (maksimal 4 kalimat). Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
+      const compactSummary = context_summary || {
+        manager: manager_email,
+        info: 'Ringkasan operasional NexaFlow',
+      };
+
+      const systemPrompt = `Anda adalah NexaFlow Executive AI Business Advisor untuk pemilik kafe/restoran di Indonesia.
+Aturan wajib:
+1. Jawab dalam Bahasa Indonesia yang ringkas, tajam, terstruktur (gunakan 2-3 poin singkat dengan angka nyata dari JSON).
+2. Perhitungkan Omzet Lunas, HPP (Modal Menu), Laba Kotor, Biaya Operasional/Gaji, Laba Bersih, margin %, dan stok kritis. Jangan pernah mengarang angka yang tidak ada di JSON.
+3. Jika Owner meminta tindakan nyata (misalnya mengaktifkan promo diskon 3 jam, menaikkan stok, atau membuat paket bundling) dan menu kandidatnya tersedia di field "actionableCandidates" pada JSON, sertakan tepat di baris paling akhir respons sebuah tag aksi valid:
+<<ACTION:{"action_type":"promo_discount","menu_id":"ID_MENU","discount_price":15000,"duration_hours":3,"title":"Aktifkan Promo 3 Jam Nama Menu","buttonLabel":"Terapkan Promo 3 Jam"}>>
+atau untuk restock:
+<<ACTION:{"action_type":"restock_menu","menu_id":"ID_MENU","new_stock":40,"title":"Naikkan Stok Nama Menu","buttonLabel":"Naikkan Stok Sekarang"}>>
+Data JSON Kafe: ${JSON.stringify(compactSummary)}`;
 
       if (!apiKey) {
         const fallbackRev = formatRpServer(compactSummary?.totalRevenue || 0);
+        const fallbackGross = formatRpServer(compactSummary?.grossProfit || 0);
         const fallbackNet = formatRpServer(compactSummary?.netProfit || 0);
         const topMenuName = compactSummary?.topMenus?.[0]?.name || 'Menu Utama';
         return NextResponse.json({
-          answer: `[Mode Analisis Lokal - Belum Ada API Key di Pengaturan] Berdasarkan data aktual cabang Anda, total omzet tercatat ${fallbackRev} dengan laba bersih ${fallbackNet} dan menu terlaris "${topMenuName}". Untuk mengaktifkan diskusi bebas dengan model ${model}, silakan tempelkan API Key Anda di menu Pengaturan -> Konfigurasi AI Business Advisor.`,
+          answer: `[Mode Analisis Lokal - Belum Ada API Key di Pengaturan]\n• Omzet Lunas: ${fallbackRev} | Laba Kotor Produk: ${fallbackGross} | Laba Bersih: ${fallbackNet}\n• Menu Terlaris: "${topMenuName}"\n• Untuk mengaktifkan diskusi bebas dengan model ${model}, tempelkan API Key Anda di menu Pengaturan -> Konfigurasi AI Business Advisor.`,
         });
       }
 
+      let rawReply = '';
       if (provider === 'gemini') {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          model
+        )}:generateContent?key=${encodeURIComponent(apiKey)}`;
         const res = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -982,25 +1137,29 @@ export async function POST(request) {
                 parts: [{ text: `${systemPrompt}\n\nPertanyaan Owner: ${question}` }],
               },
             ],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 420 },
+            generationConfig: { temperature: 0.25, maxOutputTokens: 520 },
           }),
         });
         const data = await res.json();
         if (!res.ok) {
           return NextResponse.json(
-            { error: data?.error?.message || 'Gagal memanggil API Google Gemini. Periksa API Key atau nama model Anda.' },
+            {
+              error:
+                data?.error?.message ||
+                'Gagal memanggil API Google Gemini. Periksa API Key atau nama model Anda.',
+            },
             { status: 400 }
           );
         }
-        const replyText =
+        rawReply =
           data?.candidates?.[0]?.content?.parts?.[0]?.text ||
           'AI selesai menganalisis namun tidak mengembalikan teks.';
-        return NextResponse.json({ answer: replyText });
       } else {
         let endpoint = 'https://api.openai.com/v1/chat/completions';
         if (provider === 'deepseek') endpoint = 'https://api.deepseek.com/chat/completions';
         if (provider === 'groq') endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-        if (provider === 'openrouter') endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+        if (provider === 'openrouter')
+          endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -1014,20 +1173,45 @@ export async function POST(request) {
               { role: 'system', content: systemPrompt },
               { role: 'user', content: question },
             ],
-            temperature: 0.3,
-            max_tokens: 420,
+            temperature: 0.25,
+            max_tokens: 520,
           }),
         });
         const data = await res.json();
         if (!res.ok) {
           return NextResponse.json(
-            { error: data?.error?.message || `Gagal memanggil API ${provider.toUpperCase()}. Periksa API Key atau saldo akun Anda.` },
+            {
+              error:
+                data?.error?.message ||
+                `Gagal memanggil API ${provider.toUpperCase()}. Periksa API Key atau saldo akun Anda.`,
+            },
             { status: 400 }
           );
         }
-        const replyText = data?.choices?.[0]?.message?.content || 'Tidak ada balasan dari model AI.';
-        return NextResponse.json({ answer: replyText });
+        rawReply =
+          data?.choices?.[0]?.message?.content || 'Tidak ada balasan dari model AI.';
       }
+
+      // Ekstrak kartu aksi jika AI menyertakan <<ACTION:{...}>>
+      let cleanAnswer = rawReply;
+      let suggestedAction = null;
+      const actionMatch = rawReply.match(/<<ACTION:(\{[\s\S]*?\})>>/);
+      if (actionMatch) {
+        cleanAnswer = rawReply.replace(actionMatch[0], '').trim();
+        try {
+          const parsedAction = JSON.parse(actionMatch[1]);
+          if (parsedAction && parsedAction.action_type) {
+            suggestedAction = {
+              id: `chat_act_${Date.now()}`,
+              ...parsedAction,
+            };
+          }
+        } catch {
+          suggestedAction = null;
+        }
+      }
+
+      return NextResponse.json({ answer: cleanAnswer, suggestedAction });
     }
 
     return NextResponse.json({ error: 'Aksi tidak dikenali' }, { status: 400 });

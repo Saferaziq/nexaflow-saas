@@ -30,6 +30,21 @@ const Icons = {
 
 const DONUT_COLORS = ['#2563EB', '#10B981', '#D97706', '#E11D48', '#7C3AED', '#DB2777', '#0D9488', '#475569'];
 
+const QUICK_AI_PROMPTS = [
+  'Evaluasi laba bersih & margin HPP',
+  'Buatkan promo 3 jam menu sepi',
+  'Menu apa yang perlu dinaikkan stoknya?',
+  'Cek anomali biaya & kasir hari ini',
+];
+
+const toLocalYYYYMMDD = (dateInput = new Date()) => {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export default function OwnerDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const chartRef = useRef(null);
@@ -46,14 +61,14 @@ export default function OwnerDashboard() {
   const [selectedBranchId, setSelectedBranchId] = useState('all');
   const [activeAiTab, setActiveAiTab] = useState('advisor');
 
-  const [dateDaily, setDateDaily] = useState(new Date().toLocaleDateString('en-CA'));
+  const [dateDaily, setDateDaily] = useState(() => toLocalYYYYMMDD(new Date()));
   const [dateWeekly, setDateWeekly] = useState(() => {
     const now = new Date();
     const onejan = new Date(now.getFullYear(), 0, 1);
     const week = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
     return `${now.getFullYear()}-W${week.toString().padStart(2, '0')}`;
   });
-  const [dateMonthly, setDateMonthly] = useState(new Date().toISOString().slice(0, 7));
+  const [dateMonthly, setDateMonthly] = useState(() => toLocalYYYYMMDD(new Date()).slice(0, 7));
 
   const [branches, setBranches] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -61,11 +76,15 @@ export default function OwnerDashboard() {
   const [employeeTransactions, setEmployeeTransactions] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState({});
   const [topMenus, setTopMenus] = useState([]);
+  const [lowMarginMenus, setLowMarginMenus] = useState([]);
   const [lowStockMenus, setLowStockMenus] = useState([]);
   const [unpaidInvoices, setUnpaidInvoices] = useState([]);
 
   const [stats, setStats] = useState({
     totalRevenue: 0,
+    unpaidRevenue: 0,
+    totalCogs: 0,
+    grossProfit: 0,
     totalTransactions: 0,
     activeBranches: 0,
     chartData: [],
@@ -100,6 +119,7 @@ export default function OwnerDashboard() {
   const [executingActionId, setExecutingActionId] = useState(null);
   const [aiPromptInput, setAiPromptInput] = useState('');
   const [aiChatReply, setAiChatReply] = useState('');
+  const [aiSuggestedAction, setAiSuggestedAction] = useState(null);
   const [isAskingAi, setIsAskingAi] = useState(false);
   const [aiConfig, setAiConfig] = useState({ provider: 'gemini', model: 'gemini-2.5-flash', apiKey: '' });
 
@@ -125,13 +145,13 @@ export default function OwnerDashboard() {
     return `${now.getFullYear()}-W${week.toString().padStart(2, '0')}`;
   };
 
-  const getActiveMonthStr = () => new Date().toISOString().slice(0, 7);
+  const getActiveMonthStr = () => toLocalYYYYMMDD(new Date()).slice(0, 7);
 
   const getPrevPeriodStr = (currentPeriod, currentDateStr) => {
     if (currentPeriod === 'daily') {
-      const d = new Date(currentDateStr);
+      const d = new Date(`${currentDateStr}T00:00:00`);
       d.setDate(d.getDate() - 1);
-      return d.toLocaleDateString('en-CA');
+      return toLocalYYYYMMDD(d);
     }
     if (currentPeriod === 'weekly') {
       const [y, w] = currentDateStr.split('-W').map(Number);
@@ -217,11 +237,14 @@ export default function OwnerDashboard() {
     try {
       const prevDateStr = getPrevPeriodStr(currentPeriod, currentDateStr);
       const branchQuery = branchId && branchId !== 'all' ? `&tenant_id=${encodeURIComponent(branchId)}` : '';
+      const tzOffset = new Date().getTimezoneOffset();
+      const tzQuery = `&tz_offset=${encodeURIComponent(tzOffset)}`;
+
       const [tenantsRes, statsRes, actRes, prevRes] = await Promise.all([
         supabase.from('tenants').select('*').eq('manager_email', email).order('created_at', { ascending: false }),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${currentDateStr}${branchQuery}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${currentDateStr}${branchQuery}${tzQuery}`),
         fetch(`/api/owner/recent-activity?manager_email=${encodeURIComponent(email)}`),
-        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${prevDateStr}${branchQuery}`),
+        fetch(`/api/owner/stats?manager_email=${encodeURIComponent(email)}&period=${currentPeriod}&date_str=${prevDateStr}${branchQuery}${tzQuery}`),
       ]);
 
       const tenantList = tenantsRes.data || [];
@@ -256,6 +279,7 @@ export default function OwnerDashboard() {
         setEmployeeTransactions(txList);
         setExpenseCategories(statData.expenseCategories || {});
         setTopMenus(statData.topMenus || []);
+        setLowMarginMenus(statData.lowMarginMenus || []);
         setLowStockMenus(statData.lowStockMenus || []);
         setUnpaidInvoices(statData.unpaidInvoices || []);
         if (statData.savedAiConfig) {
@@ -271,6 +295,9 @@ export default function OwnerDashboard() {
 
         setStats({
           totalRevenue: statData.totalRevenue || 0,
+          unpaidRevenue: statData.unpaidRevenue || 0,
+          totalCogs: statData.totalCogs || 0,
+          grossProfit: statData.grossProfit ?? (statData.totalRevenue || 0),
           totalTransactions: statData.totalTransactions || 0,
           activeBranches: statData.activeBranches || 0,
           chartData: statData.chartData || [],
@@ -321,7 +348,7 @@ export default function OwnerDashboard() {
       await fetchAllData(email, period, getActiveDateStr(), selectedBranchId);
       setIsLoading(false);
 
-      const todayStr = new Date().toLocaleDateString('en-CA');
+      const todayStr = toLocalYYYYMMDD(new Date());
       const isToday = (period === 'daily' && dateDaily === todayStr) ||
                       (period === 'weekly' && dateWeekly === getActiveWeekStr()) ||
                       (period === 'monthly' && dateMonthly === getActiveMonthStr());
@@ -588,11 +615,11 @@ export default function OwnerDashboard() {
   );
   const selectedBranchLabel = selectedBranchObj ? selectedBranchObj.name : `Semua Cabang (${branches.length} Outlet)`;
 
-  const handleAskAiAdvisor = async (e) => {
-    e.preventDefault();
-    const q = aiPromptInput.trim();
+  const submitAiQuestion = async (questionText) => {
+    const q = String(questionText || '').trim();
     if (!q || isAskingAi) return;
     setIsAskingAi(true);
+    setAiSuggestedAction(null);
     try {
       const branchSummary = branches.map(b => ({
         nama: b.name,
@@ -602,8 +629,12 @@ export default function OwnerDashboard() {
 
       const compactContext = {
         cabangAktif: selectedBranchLabel,
+        zonaWaktu: Intl.DateTimeFormat().resolvedOptions().timeZone,
         periode: `${period} (${getActiveDateStr()})`,
         totalRevenue: stats.totalRevenue,
+        unpaidRevenue: stats.unpaidRevenue,
+        totalCogs: stats.totalCogs,
+        grossProfit: stats.grossProfit,
         totalExpense: stats.totalExpense,
         operationalExpense: stats.operationalExpense,
         salaryExpense: stats.salaryExpense,
@@ -618,9 +649,30 @@ export default function OwnerDashboard() {
         anomaliOmzet: aiInsights.revenueAnomalies || [],
         auditBiayaTinggi: aiInsights.costAudit || [],
         deadStockCount: aiInsights.deadStockMenus?.length || 0,
-        deadStockSample: (aiInsights.deadStockMenus || []).slice(0, 5).map(m => `${m.name} (${m.branch_name})`),
+        deadStockSample: (aiInsights.deadStockMenus || []).slice(0, 5).map(m => ({
+          id: m.id,
+          name: m.name,
+          branch: m.branch_name,
+          stock: m.stock,
+          price: m.price,
+          cost_price: m.cost_price,
+          suggested_discount: m.suggested_discount_price,
+        })),
         topMenus: topMenus.slice(0, 5),
-        lowStockCount: lowStockMenus.length,
+        lowMarginMenus: lowMarginMenus.slice(0, 5),
+        lowStockSample: lowStockMenus.slice(0, 5).map(m => ({
+          id: m.id,
+          name: m.name,
+          branch: m.branch_name,
+          stock: m.stock,
+        })),
+        actionableCandidates: (aiInsights.actionPlans || []).map(a => ({
+          action_type: a.action_type,
+          menu_id: a.menu_id,
+          title: a.title,
+          discount_price: a.discount_price,
+          new_stock: a.new_stock,
+        })),
         activePromoCount: aiInsights.activePromos?.length || 0,
         fraudAlerts: (aiInsights.fraudAlerts || []).map(f => ({
           cabang: f.branch_name,
@@ -648,6 +700,9 @@ export default function OwnerDashboard() {
         showToast(data.error || 'Gagal mendapatkan jawaban AI', 'error');
       } else {
         setAiChatReply(data.answer || '');
+        if (data.suggestedAction) {
+          setAiSuggestedAction(data.suggestedAction);
+        }
         setAiPromptInput('');
       }
     } catch (err) {
@@ -655,6 +710,11 @@ export default function OwnerDashboard() {
     } finally {
       setIsAskingAi(false);
     }
+  };
+
+  const handleAskAiAdvisor = async (e) => {
+    e.preventDefault();
+    await submitAiQuestion(aiPromptInput);
   };
 
   const handleExportCSV = () => {
@@ -677,14 +737,17 @@ export default function OwnerDashboard() {
       ['Tanggal / Filter Aktif', activeDate],
       ['', ''],
       ['Komponen P&L', 'Nilai (IDR)'],
-      ['Pendapatan Kotor', stats.totalRevenue],
+      ['Omzet Lunas', stats.totalRevenue],
+      ['Menunggu Bayar', stats.unpaidRevenue],
+      ['Total Modal Menu (HPP)', stats.totalCogs],
+      ['Laba Kotor Produk', stats.grossProfit],
       ['Total Transaksi', stats.totalTransactions],
       ['Rata-Rata Nilai Struk (Basket Size)', aiInsights.avgBasket],
       ['Pengeluaran Operasional', stats.operationalExpense],
       ['Biaya Karyawan (Gaji/Kasbon/Bonus)', stats.salaryExpense],
       ['Total Pengeluaran', stats.totalExpense],
       ['Laba Bersih (Net Profit)', stats.netProfit],
-      ['Margin Laba (%)', `${marginPct}%`],
+      ['Margin Laba Bersih (%)', `${marginPct}%`],
     ];
 
     const categoryEntries = Object.entries(expenseCategories).sort((a, b) => b[1] - a[1]);
@@ -727,7 +790,7 @@ export default function OwnerDashboard() {
     });
   }, [activities, selectedBranchId, selectedBranchObj]);
 
-  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const currentMonthStr = toLocalYYYYMMDD(new Date()).slice(0, 7);
   const isEndOfMonth = new Date().getDate() >= 25;
   const unpaidEmployees = useMemo(() => {
     if (!isEndOfMonth) return [];
@@ -988,25 +1051,25 @@ export default function OwnerDashboard() {
               </div>
             )}
 
-            {/* 4 KPI UTAMA TEGAS */}
+            {/* 4 KPI UTAMA TEGAS (SELARAS DENGAN KASIR) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-5">
-                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Omzet Periode Ini</p>
+                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Omzet Lunas</p>
                 <h3 className="text-xl sm:text-2xl font-black text-[#1A1512] dark:text-white owner-num mt-1.5">
                   {isLoading ? '...' : formatRp(stats.totalRevenue)}
                 </h3>
                 <p className="mt-2 text-xs font-extrabold text-blue-700 dark:text-sky-300">
-                  {stats.totalTransactions} transaksi selesai
+                  {stats.totalTransactions} transaksi · Belum bayar: {formatRp(stats.unpaidRevenue)}
                 </p>
               </div>
 
               <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-5">
-                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Rata-Rata / Struk</p>
+                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Laba Kotor (Setelah HPP)</p>
                 <h3 className="text-xl sm:text-2xl font-black text-[#1A1512] dark:text-white owner-num mt-1.5">
-                  {isLoading ? '...' : formatRp(aiInsights.avgBasket)}
+                  {isLoading ? '...' : formatRp(stats.grossProfit)}
                 </h3>
                 <p className="mt-2 text-xs font-extrabold text-amber-700 dark:text-amber-300">
-                  Repeat Order: {aiInsights.repeatRate}%
+                  Modal Menu (HPP): {formatRp(stats.totalCogs)}
                 </p>
               </div>
 
@@ -1016,17 +1079,17 @@ export default function OwnerDashboard() {
                   {isLoading ? '...' : formatRp(stats.netProfit)}
                 </h3>
                 <p className="mt-2 text-xs font-extrabold text-rose-700 dark:text-rose-300">
-                  Biaya: {formatRp(stats.totalExpense)}
+                  Operasional & Gaji: {formatRp(stats.totalExpense)}
                 </p>
               </div>
 
               <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-5">
-                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Kecepatan Dapur</p>
+                <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase tracking-wide">Struk & Kecepatan Dapur</p>
                 <h3 className="text-xl sm:text-2xl font-black text-[#1A1512] dark:text-white owner-num mt-1.5">
-                  {isLoading ? '...' : `${aiInsights.avgKdsMinutes} Menit`}
+                  {isLoading ? '...' : formatRp(aiInsights.avgBasket)}
                 </h3>
                 <p className="mt-2 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
-                  Staf Aktif: {employees.filter(e => e.is_active).length}/{employees.length}
+                  KDS {aiInsights.avgKdsMinutes} mnt · Repeat {aiInsights.repeatRate}%
                 </p>
               </div>
             </div>
@@ -1128,10 +1191,10 @@ export default function OwnerDashboard() {
                           </div>
                           <div>
                             <h3 className="text-sm sm:text-base font-black text-[#1A1512] dark:text-white">
-                              Hasil Riset Mendalam AI (Diagnostik Operasional)
+                              Hasil Riset Mendalam AI (Diagnostik Operasional & Margin)
                             </h3>
                             <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">
-                              Dihitung otomatis dari data transaksi, stok menu, pengeluaran, dan perangkat
+                              Dihitung otomatis dari transaksi, HPP modal menu, stok, dan pengeluaran
                             </p>
                           </div>
                         </div>
@@ -1177,7 +1240,7 @@ export default function OwnerDashboard() {
                               Detektor Menu Mati (0 Penjualan 30 Hari Terakhir)
                             </h3>
                             <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">
-                              Menu aktif yang belum terjual sama sekali dalam 30 hari terakhir
+                              Diskon cuci gudang 3 jam otomatis dijaga agar tetap di atas modal (HPP)
                             </p>
                           </div>
                           <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 text-xs font-black">
@@ -1198,6 +1261,7 @@ export default function OwnerDashboard() {
                                   <p className="text-xs font-black text-[#1A1512] dark:text-white truncate">{dm.name}</p>
                                   <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">
                                     {dm.branch_name} · Stok: {dm.stock} pcs · <span className="owner-num">{formatRp(dm.price)}</span>
+                                    {dm.cost_price > 0 ? ` (Modal: ${formatRp(dm.cost_price)})` : ''}
                                   </p>
                                 </div>
                                 <button
@@ -1209,6 +1273,7 @@ export default function OwnerDashboard() {
                                       action_type: 'promo_discount',
                                       menu_id: dm.id,
                                       discount_price: dm.suggested_discount_price,
+                                      duration_hours: 3,
                                     })
                                   }
                                   className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 ${
@@ -1220,12 +1285,12 @@ export default function OwnerDashboard() {
                                   {isDone ? (
                                     <>
                                       <Icons.Check />
-                                      <span>Promo Aktif</span>
+                                      <span>Promo 3 Jam Aktif</span>
                                     </>
                                   ) : (
                                     <>
                                       <Icons.Bolt />
-                                      <span>{isBusy ? 'Memproses...' : `Cuci Gudang (${formatRp(dm.suggested_discount_price)})`}</span>
+                                      <span>{isBusy ? 'Memproses...' : `Promo 3 Jam (${formatRp(dm.suggested_discount_price)})`}</span>
                                     </>
                                   )}
                                 </button>
@@ -1343,7 +1408,7 @@ export default function OwnerDashboard() {
                         })}
                       </div>
 
-                      {/* KOTAK TANYA AI ADVISOR */}
+                      {/* KOTAK TANYA AI ADVISOR + QUICK PROMPTS + KARTU AKSI DARI CHAT */}
                       <div className="mt-5 pt-4 border-t-2 border-[#F4EFE9] dark:border-slate-700">
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-xs font-black text-[#1A1512] dark:text-slate-200">
@@ -1354,12 +1419,62 @@ export default function OwnerDashboard() {
                           </Link>
                         </div>
 
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {QUICK_AI_PROMPTS.map((qp) => (
+                            <button
+                              key={qp}
+                              type="button"
+                              disabled={isAskingAi}
+                              onClick={() => submitAiQuestion(qp)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#FAF6F2] hover:bg-[#EFEAE2] dark:bg-slate-800 dark:hover:bg-slate-700 border border-[#E0D6CC] dark:border-slate-600 text-[11px] font-bold text-[#1A1512] dark:text-slate-200 transition-colors disabled:opacity-50"
+                            >
+                              {qp}
+                            </button>
+                          ))}
+                        </div>
+
                         {aiChatReply && (
-                          <div className="mb-3 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#2563EB]/40 p-3.5 text-xs font-semibold text-[#1A1512] dark:text-slate-100 leading-relaxed whitespace-pre-line">
-                            <strong className="text-[#2563EB] dark:text-sky-300 block mb-1">
-                              AI Advisor ({aiConfig.model}):
-                            </strong>
-                            {aiChatReply}
+                          <div className="mb-3 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#2563EB]/40 p-3.5 text-xs font-semibold text-[#1A1512] dark:text-slate-100 leading-relaxed whitespace-pre-line space-y-3">
+                            <div>
+                              <strong className="text-[#2563EB] dark:text-sky-300 block mb-1">
+                                AI Advisor ({aiConfig.model}):
+                              </strong>
+                              {aiChatReply}
+                            </div>
+
+                            {aiSuggestedAction && (
+                              <div className="pt-2.5 border-t border-[#E0D6CC] dark:border-slate-700">
+                                <button
+                                  type="button"
+                                  disabled={
+                                    Boolean(executedActionIds[aiSuggestedAction.id]) ||
+                                    executingActionId === aiSuggestedAction.id
+                                  }
+                                  onClick={() => handleExecuteAiAction(aiSuggestedAction)}
+                                  className={`w-full py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 ${
+                                    executedActionIds[aiSuggestedAction.id]
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-[#2563EB] hover:bg-blue-700 text-white'
+                                  }`}
+                                >
+                                  {executedActionIds[aiSuggestedAction.id] ? (
+                                    <>
+                                      <Icons.Check />
+                                      <span>Aksi Berhasil Diterapkan!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Icons.Bolt />
+                                      <span>
+                                        {executingActionId === aiSuggestedAction.id
+                                          ? 'Menerapkan...'
+                                          : aiSuggestedAction.buttonLabel || aiSuggestedAction.title || 'Terapkan Saran AI'}
+                                      </span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1368,7 +1483,7 @@ export default function OwnerDashboard() {
                             type="text"
                             value={aiPromptInput}
                             onChange={(e) => setAiPromptInput(e.target.value)}
-                            placeholder="Tanya performa cabang atau biaya..."
+                            placeholder="Tanya margin menu, promo, atau biaya..."
                             className="flex-1 bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white placeholder-[#8C7A6B] dark:placeholder-slate-400 focus:outline-none focus:border-[#2563EB]"
                           />
                           <button
@@ -1478,8 +1593,8 @@ export default function OwnerDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-6">
                     <div className="mb-5">
-                      <h2 className="text-lg font-black text-[#1A1512] dark:text-white">Menu Terlaris</h2>
-                      <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-1">Top 5 periode aktif</p>
+                      <h2 className="text-lg font-black text-[#1A1512] dark:text-white">Menu Terlaris & Laba Kotor</h2>
+                      <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-1">Top 5 periode aktif (berdasarkan HPP per menu)</p>
                     </div>
                     {topMenus.length === 0 ? (
                       <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-400 text-center py-8">Belum ada data penjualan.</p>
@@ -1495,7 +1610,10 @@ export default function OwnerDashboard() {
                                   <span className="text-xs font-black text-[#2563EB] dark:text-sky-400 w-5 shrink-0">#{i + 1}</span>
                                   <span className="text-xs font-black text-[#1A1512] dark:text-white truncate">{m.name}</span>
                                 </div>
-                                <span className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-200 shrink-0 owner-num">{m.qty} pcs · {formatRp(m.revenue)}</span>
+                                <span className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-200 shrink-0 owner-num">
+                                  {m.qty} pcs · {formatRp(m.revenue)}
+                                  {m.cogs > 0 ? ` (Laba ${formatRp(m.grossProfit)})` : ''}
+                                </span>
                               </div>
                               <div className="h-2.5 bg-[#FAF6F2] dark:bg-slate-800 rounded-full overflow-hidden border border-[#E0D6CC] dark:border-slate-700">
                                 <div className="h-full bg-[#2A1F17] dark:bg-[#2563EB]" style={{ width: `${pct}%` }}></div>
@@ -1625,7 +1743,7 @@ export default function OwnerDashboard() {
                       </h2>
                     </div>
                     <span className="text-xs font-extrabold text-[#5C4B3E] dark:text-slate-300">
-                      Dipantau otomatis 30 hari terakhir
+                      Dipantau otomatis 30 hari terakhir (Jam Lokal Cabang)
                     </span>
                   </div>
 
@@ -1656,14 +1774,14 @@ export default function OwnerDashboard() {
                                 Peringatan Audit: {alert.branch_name}
                               </p>
                               <span className="text-xs font-mono font-bold text-rose-700 dark:text-rose-300">
-                                Rentang Jam: {minHour} – {maxHour} WIB
+                                Rentang Jam: {minHour} – {maxHour}
                               </span>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
                               {alert.nightCashCancelCount > 0 && (
                                 <span className="px-2.5 py-0.5 rounded-md bg-rose-600 text-white text-xs font-black">
-                                  {alert.nightCashCancelCount}x Cancel Tunai Jam Malam (mulai 20.00 WIB)
+                                  {alert.nightCashCancelCount}x Cancel Tunai Jam Malam (mulai 20.00)
                                 </span>
                               )}
                               {alert.staleCashCount > 0 && (
@@ -1768,15 +1886,13 @@ export default function OwnerDashboard() {
                               <p className="text-sm font-black text-[#1A1512] dark:text-white truncate">{m.name}</p>
                               {m.promo_expires_at && (
                                 <span className="px-2.5 py-0.5 rounded bg-amber-500 text-[#1A1512] text-xs font-black">
-                                  Auto-stop:{' '}
+                                  Berakhir:{' '}
                                   {new Date(m.promo_expires_at).toLocaleString('id-ID', {
-                                    timeZone: 'Asia/Jakarta',
                                     day: '2-digit',
                                     month: 'short',
                                     hour: '2-digit',
                                     minute: '2-digit',
-                                  })}{' '}
-                                  WIB
+                                  })}
                                 </span>
                               )}
                             </div>
