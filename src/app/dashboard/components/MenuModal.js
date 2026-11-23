@@ -19,6 +19,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
     name: '',
     category: 'makanan',
     price: '',
+    cost_price: '',
     desc: '',
     status: 'available',
     image_url: '',
@@ -26,7 +27,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
     is_featured: false,
     is_new: false,
     discount_price: '',
-    promo_duration_mode: 'unlimited', // 'unlimited' | 'preset' | 'custom' | 'keep'
+    promo_duration_mode: 'unlimited',
     promo_duration_hours: '3',
     existing_promo_expires_at: null,
   });
@@ -44,6 +45,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         name: initialData.name || '',
         category: initialData.category || 'makanan',
         price: initialData.price || '',
+        cost_price: initialData.cost_price ? String(initialData.cost_price) : '',
         desc: initialData.description || '',
         status: initialData.status || 'available',
         image_url: initialData.image_url || '',
@@ -61,6 +63,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
         name: '',
         category: 'makanan',
         price: '',
+        cost_price: '',
         desc: '',
         status: 'available',
         image_url: '',
@@ -82,6 +85,14 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
       ? 'border-[#D4C5B8] bg-white text-[#2A1F17]'
       : 'border-slate-600 bg-slate-800 text-white'
   }`;
+
+  const sellNum = parseFloat(formData.price) || 0;
+  const costNum = parseFloat(formData.cost_price) || 0;
+  const discountNum = parseFloat(formData.discount_price) || 0;
+  const effectiveSell = discountNum > 0 && discountNum < sellNum ? discountNum : sellNum;
+  const profitPerPortion = effectiveSell - costNum;
+  const marginPercent = effectiveSell > 0 ? ((profitPerPortion / effectiveSell) * 100).toFixed(1) : '0.0';
+  const isLossOnPromo = discountNum > 0 && costNum > 0 && discountNum < costNum;
 
   const hasPromoActiveInForm =
     Boolean(formData.discount_price && Number(formData.discount_price) > 0) ||
@@ -246,12 +257,14 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                 required
               />
             </div>
+
             <div>
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>
-                Harga Normal (Rp) <span className="text-rose-500">*</span>
+                Harga Jual (Rp) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className={inputClass}
@@ -259,6 +272,57 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                 required
               />
             </div>
+
+            <div>
+              <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>
+                Harga Modal / HPP (Rp)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.cost_price}
+                onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                className={inputClass}
+                placeholder="Opsional, misal 7000"
+              />
+            </div>
+
+            {/* KALKULATOR MARGIN REAL-TIME */}
+            {sellNum > 0 && costNum > 0 && (
+              <div
+                className={`col-span-2 p-3 rounded-xl border-2 flex items-center justify-between gap-2 ${
+                  isLossOnPromo || profitPerPortion < 0
+                    ? theme === 'light'
+                      ? 'bg-rose-50 border-rose-300 text-rose-800'
+                      : 'bg-rose-950/40 border-rose-700 text-rose-200'
+                    : theme === 'light'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : 'bg-emerald-950/40 border-emerald-700 text-emerald-200'
+                }`}
+              >
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wider">
+                    {isLossOnPromo
+                      ? 'Peringatan: Harga Diskon Di Bawah Modal!'
+                      : discountNum > 0 && discountNum < sellNum
+                      ? 'Estimasi Laba Saat Promo'
+                      : 'Estimasi Laba Bersih / Porsi'}
+                  </p>
+                  <p className="text-xs font-bold opacity-85 mt-0.5">
+                    Jual Rp {effectiveSell.toLocaleString('id-ID')} − Modal Rp{' '}
+                    {costNum.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black">
+                    {profitPerPortion >= 0 ? '+' : ''}Rp{' '}
+                    {profitPerPortion.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-[11px] font-black">Margin {marginPercent}%</p>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Stok Tersedia</label>
               <input
@@ -270,7 +334,8 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                 placeholder="0"
               />
             </div>
-            <div className="col-span-2">
+
+            <div>
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>Kategori</label>
               <select
                 value={formData.category}
@@ -282,6 +347,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                 <option value="cemilan">Cemilan</option>
               </select>
             </div>
+
             <div className="col-span-2">
               <label className={`block text-xs font-bold mb-2 ${textSubClass}`}>
                 Deskripsi (Opsional)
@@ -387,6 +453,7 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.discount_price}
                 onChange={(e) => setFormData({ ...formData, discount_price: e.target.value })}
                 className={`${inputClass} ${
@@ -422,8 +489,8 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                           ? 'bg-emerald-50 border-emerald-400 text-emerald-900'
                           : 'bg-emerald-900/30 border-emerald-500 text-emerald-200'
                         : theme === 'light'
-                          ? 'bg-white border-[#D4C5B8] text-[#5C4B3E]'
-                          : 'bg-slate-900 border-slate-600 text-slate-300'
+                        ? 'bg-white border-[#D4C5B8] text-[#5C4B3E]'
+                        : 'bg-slate-900 border-slate-600 text-slate-300'
                     }`}
                   >
                     <div className="text-xs font-bold">
@@ -476,8 +543,8 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                           isSelected
                             ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)] shadow-sm'
                             : theme === 'light'
-                              ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#FAF6F2]'
-                              : 'bg-slate-900 border-slate-600 text-slate-200 hover:bg-slate-700'
+                            ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#FAF6F2]'
+                            : 'bg-slate-900 border-slate-600 text-slate-200 hover:bg-slate-700'
                         }`}
                       >
                         {preset.label}
@@ -499,8 +566,8 @@ export default function MenuModal({ theme, mode, initialData, onClose, onSave, o
                       formData.promo_duration_mode === 'custom'
                         ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)] shadow-sm'
                         : theme === 'light'
-                          ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#FAF6F2]'
-                          : 'bg-slate-900 border-slate-600 text-slate-200 hover:bg-slate-700'
+                        ? 'bg-white border-[#D4C5B8] text-[#2A1F17] hover:bg-[#FAF6F2]'
+                        : 'bg-slate-900 border-slate-600 text-slate-200 hover:bg-slate-700'
                     }`}
                   >
                     Kustom
