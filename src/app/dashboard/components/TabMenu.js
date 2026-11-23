@@ -1,6 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Icons } from '../helpers/icons';
+
+function formatRemainingTime(ms) {
+  if (ms <= 0) return '00:00:00';
+  const totalSec = Math.floor(ms / 1000);
+  const hrs = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  return [hrs, mins, secs].map((v) => String(v).padStart(2, '0')).join(':');
+}
 
 export default function TabMenu({
   theme, menus, menuSearch, setMenuSearch, menuCategoryFilter, setMenuCategoryFilter,
@@ -11,6 +21,18 @@ export default function TabMenu({
   const textSubClass = isLight ? 'text-[#5C4B3E]' : 'text-slate-300';
   const cardClass = isLight ? 'bg-white border-2 border-[#D4C5B8]' : 'bg-slate-900 border-2 border-slate-700';
   const inputClass = `w-full border-2 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] ${isLight ? 'border-[#D4C5B8] bg-white text-[#2A1F17]' : 'border-slate-600 bg-slate-800 text-white placeholder-slate-400'}`;
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const hasTimedPromo = menus.some(
+    (m) => m.promo_expires_at && new Date(m.promo_expires_at).getTime() > nowMs
+  );
+
+  useEffect(() => {
+    if (!hasTimedPromo) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasTimedPromo]);
 
   const filtered = menus.filter(m => {
     const matchSearch = !menuSearch || m.name.toLowerCase().includes(menuSearch.toLowerCase());
@@ -48,7 +70,7 @@ export default function TabMenu({
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className={`font-black text-xl ${textMainClass}`}>Manajemen Menu</h2>
-            <p className={`text-xs font-bold mt-1 ${textSubClass}`}>Kelola menu, harga, dan stok Anda</p>
+            <p className={`text-xs font-bold mt-1 ${textSubClass}`}>Kelola menu, harga modal (HPP), promo berbatas waktu, dan stok Anda</p>
           </div>
           <button onClick={onOpenAddMenu} className="bg-[var(--primary-color)] hover:bg-[var(--primary-dark)] text-white font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-md transition-all flex items-center gap-2">
             <span className="text-lg">+</span> Tambah Menu
@@ -69,6 +91,18 @@ export default function TabMenu({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map(m => {
           const stockStatus = getStockStatus(m.stock);
+          const expiryMs = m.promo_expires_at ? new Date(m.promo_expires_at).getTime() : null;
+          const isPromoExpired = Boolean(expiryMs && expiryMs <= nowMs);
+          const remainingMs = expiryMs && !isPromoExpired ? expiryMs - nowMs : 0;
+
+          const normalPrice = Number(m.price || 0);
+          const rawDiscount = Number(m.discount_price || 0);
+          const hasActiveDiscount = !isPromoExpired && rawDiscount > 0 && rawDiscount < normalPrice;
+          const activeSellPrice = hasActiveDiscount ? rawDiscount : normalPrice;
+
+          const costPrice = Number(m.cost_price || 0);
+          const profitUnit = costPrice > 0 ? activeSellPrice - costPrice : null;
+
           return (
             <div key={m.id} className={`rounded-2xl p-4 shadow-sm border-2 flex flex-col ${cardClass}`}>
               <div className={`w-full aspect-video rounded-xl overflow-hidden mb-3 relative border-2 ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
@@ -79,6 +113,14 @@ export default function TabMenu({
                     <Icons.Utensils />
                   </div>
                 )}
+
+                {remainingMs > 0 && (
+                  <div className="absolute bottom-2 left-2 bg-rose-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black tracking-wide shadow-md flex items-center gap-1 border border-rose-400">
+                    <Icons.Clock />
+                    <span>Promo {formatRemainingTime(remainingMs)}</span>
+                  </div>
+                )}
+
                 <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                   <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${m.status === 'available' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-rose-100 text-rose-700 border-rose-300'}`}>
                     {m.status === 'available' ? 'Tersedia' : 'Habis'}
@@ -94,7 +136,23 @@ export default function TabMenu({
               <div className="flex-1">
                 <h3 className={`font-black text-base line-clamp-1 ${textMainClass}`}>{m.name}</h3>
                 <p className={`text-xs font-bold uppercase tracking-wider mt-1 ${textSubClass}`}>{m.category}</p>
-                <p className={`font-black text-lg mt-2 ${isLight ? 'text-[var(--primary-color)]' : 'text-cyan-400'}`}>{rp(m.price)}</p>
+
+                {hasActiveDiscount ? (
+                  <div className="mt-2 flex items-baseline gap-2 flex-wrap">
+                    <span className="font-black text-lg text-rose-600">{rp(rawDiscount)}</span>
+                    <span className="text-xs font-bold line-through text-slate-400">{rp(normalPrice)}</span>
+                  </div>
+                ) : (
+                  <p className={`font-black text-lg mt-2 ${isLight ? 'text-[var(--primary-color)]' : 'text-cyan-400'}`}>
+                    {rp(normalPrice)}
+                  </p>
+                )}
+
+                {costPrice > 0 && (
+                  <p className={`text-[11px] font-bold mt-1 ${profitUnit < 0 ? 'text-rose-500' : isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                    Modal: {rp(costPrice)} · Laba: {profitUnit >= 0 ? '+' : ''}{rp(profitUnit)}
+                  </p>
+                )}
               </div>
 
               <div className={`mt-3 rounded-xl border-2 p-2.5 ${stockStatus.wrap}`}>
