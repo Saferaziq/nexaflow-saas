@@ -124,6 +124,29 @@ const getEffectivePrice = (menu, nowMs = Date.now()) => {
   return Number(menu.price);
 };
 
+const getPromoCountdown = (menu, nowMs = Date.now()) => {
+  if (!menu || !menu.promo_expires_at) return null;
+  const hasPromoAttr = Boolean((menu.discount_price && Number(menu.discount_price) > 0) || menu.is_featured);
+  if (!hasPromoAttr) return null;
+
+  const expiresAt = new Date(menu.promo_expires_at).getTime();
+  if (Number.isNaN(expiresAt)) return null;
+
+  const diffMs = expiresAt - nowMs;
+  if (diffMs <= 0) return null;
+
+  const totalSecs = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const label = `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+  const isUrgent = totalSecs < 900; // kurang dari 15 menit
+
+  return { label, totalSecs, isUrgent };
+};
+
 const getDeviceId = () => {
   if (typeof window === 'undefined') return null;
   let id = safeStorageGet('nexaflow_device_id');
@@ -173,6 +196,7 @@ const Icons = {
   Coffee: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
   Utensils: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>,
   Cake: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>,
+  Clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
   Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   Filter: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>,
   Back: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
@@ -253,13 +277,21 @@ function OrderContent() {
     });
   };
 
-  // Ticker setiap 30 detik agar promo kadaluarsa (16:30 WIB) otomatis berhenti walau tab tidak di-refresh
+  // Cek apakah ada promo berbatas waktu yang masih aktif -> ticker 1 detik hanya aktif bila perlu (hemat performa)
+  const hasTimedPromo = menus.some(m => {
+    if (!m || !m.promo_expires_at) return false;
+    const hasPromoAttr = Boolean((m.discount_price && Number(m.discount_price) > 0) || m.is_featured);
+    if (!hasPromoAttr) return false;
+    return new Date(m.promo_expires_at).getTime() > nowTick;
+  });
+
   useEffect(() => {
+    if (!hasTimedPromo) return;
     const promoTimer = setInterval(() => {
       setNowTick(Date.now());
-    }, 30000);
+    }, 1000);
     return () => clearInterval(promoTimer);
-  }, []);
+  }, [hasTimedPromo]);
 
   // SESSION INIT — deteksi new scan vs refresh, anti-bypass lock, tetap pertahankan riwayat permanen
   useEffect(() => {
@@ -393,6 +425,7 @@ function OrderContent() {
   const fetchAllMenus = async () => {
     const { data } = await supabase.from('menus').select('*').eq('tenant_id', tenantId);
     if (data) {
+      setNowTick(Date.now());
       const sorted = [...data].sort((a, b) => {
         const sa = getMenuStock(a);
         const sb = getMenuStock(b);
@@ -451,6 +484,8 @@ function OrderContent() {
           .eq('id', tenantId).single(),
         supabase.from('menus').select('*').eq('tenant_id', tenantId)
       ]);
+
+      setNowTick(Date.now());
 
       if (cafeRes.data) {
         setCafe(cafeRes.data);
@@ -555,7 +590,7 @@ function OrderContent() {
         return updatedItem;
       }).filter(i => i.qty > 0);
       if (stockChanged) showToast('Beberapa item disesuaikan dengan stok terkini');
-      else if (priceChanged) showToast('Harga promo berakhir, harga keranjang disesuaikan');
+      else if (priceChanged) showToast('Waktu promo habis, harga kembali normal');
       return (stockChanged || priceChanged) ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1190,6 +1225,7 @@ function OrderContent() {
                   const effectivePrice = getEffectivePrice(menu, nowTick);
                   const hasDiscount = isDiscountActive(menu, nowTick);
                   const showFeaturedBadge = isFeaturedActive(menu, nowTick);
+                  const promoCountdown = getPromoCountdown(menu, nowTick);
                   return (
                     <div key={menu.id} onClick={() => setSelectedMenu(menu)} className="snap-start shrink-0 w-64 bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group transition-transform duration-300 cursor-pointer">
                       <div className="relative h-48 w-full bg-[#F4EFE9] overflow-hidden">
@@ -1206,13 +1242,33 @@ function OrderContent() {
                             Baru
                           </div>
                         )}
+
+                        {promoCountdown && (
+                          <div className={`absolute top-3 right-3 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-1 tabular-nums border ${
+                            promoCountdown.isUrgent
+                              ? 'bg-rose-600 border-rose-700 animate-pulse'
+                              : 'bg-[#1A1512]/90 backdrop-blur-md border-white/20'
+                          }`}>
+                            <Icons.Clock />
+                            <span>{promoCountdown.label}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="p-4">
                         <h3 className="font-sans font-black text-[15px] text-[#1A1512] leading-tight mb-1 line-clamp-1">{menu.name}</h3>
                         <p className="text-[11px] text-[#5C4B3E] font-bold line-clamp-1 mb-3">{menu.description || 'Deskripsi hidangan lezat.'}</p>
-                        <div className="flex items-end gap-2">
-                          {hasDiscount && <p className="text-[11px] text-[#A69B91] font-bold line-through mb-0.5">Rp {Number(menu.price).toLocaleString('id-ID')}</p>}
-                          <p className="font-black text-base text-[#1A1512]">Rp {effectivePrice.toLocaleString('id-ID')}</p>
+                        <div className="flex items-end justify-between gap-2">
+                          <div className="flex items-end gap-2">
+                            {hasDiscount && <p className="text-[11px] text-[#A69B91] font-bold line-through mb-0.5">Rp {Number(menu.price).toLocaleString('id-ID')}</p>}
+                            <p className="font-black text-base text-[#1A1512]">Rp {effectivePrice.toLocaleString('id-ID')}</p>
+                          </div>
+                          {promoCountdown && (
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                              promoCountdown.isUrgent ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              Promo Terbatas
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1238,6 +1294,7 @@ function OrderContent() {
                 const isLow = stock.isLow;
                 const effectivePrice = getEffectivePrice(menu, nowTick);
                 const hasDiscount = isDiscountActive(menu, nowTick);
+                const promoCountdown = !isOut ? getPromoCountdown(menu, nowTick) : null;
 
                 return (
                   <div key={menu.id} className={`bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-[#E0D6CC] relative group ${isOut ? 'opacity-60 grayscale' : ''}`}>
@@ -1245,12 +1302,27 @@ function OrderContent() {
                       {menu.image_url ? <img src={menu.image_url} className="w-full h-full object-cover" alt={menu.name} /> : <div className="w-full h-full flex items-center justify-center text-[#A69B91] font-bold text-xs">No Image</div>}
 
                       {cartItem && !isOut && (
-                        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md w-7 h-7 rounded-full flex items-center justify-center shadow-md border-2 border-[#E0D6CC]">
+                        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md w-7 h-7 rounded-full flex items-center justify-center shadow-md border-2 border-[#E0D6CC] z-10">
                           <span className="text-[11px] font-black text-[#1A1512]">{cartItem.qty}</span>
                         </div>
                       )}
                       {isLow && !isOut && (
                         <div className="absolute top-2 left-2 bg-rose-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider border border-rose-700 shadow-sm">Sisa {stock.value}</div>
+                      )}
+                      {hasDiscount && !isOut && (
+                        <div className="absolute top-2 right-2 bg-rose-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider border border-rose-700 shadow-sm">
+                          -{Math.round(((Number(menu.price) - Number(menu.discount_price)) / Number(menu.price)) * 100)}%
+                        </div>
+                      )}
+                      {promoCountdown && (
+                        <div className={`absolute bottom-2 left-2 text-white text-[9px] font-black px-2 py-1 rounded-md shadow-sm flex items-center gap-1 tabular-nums border ${
+                          promoCountdown.isUrgent
+                            ? 'bg-rose-600 border-rose-700 animate-pulse'
+                            : 'bg-[#1A1512]/90 backdrop-blur-md border-white/20'
+                        }`}>
+                          <Icons.Clock />
+                          <span>{promoCountdown.label}</span>
+                        </div>
                       )}
                       {isOut && (
                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
@@ -1633,6 +1705,7 @@ function OrderContent() {
         const effectivePrice = getEffectivePrice(selectedMenu, nowTick);
         const hasDiscount = isDiscountActive(selectedMenu, nowTick);
         const showFeaturedBadge = isFeaturedActive(selectedMenu, nowTick);
+        const selectedPromoCountdown = !selectedStock.isOut ? getPromoCountdown(selectedMenu, nowTick) : null;
 
         return (
           <div className="fixed inset-0 bg-[#1A1512]/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4" onClick={() => setSelectedMenu(null)}>
@@ -1674,6 +1747,23 @@ function OrderContent() {
                       )}
                     </div>
                   </div>
+
+                  {selectedPromoCountdown && (
+                    <div className={`mb-5 px-4 py-3 rounded-xl border-2 flex items-center justify-between ${
+                      selectedPromoCountdown.isUrgent
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : 'bg-amber-50 border-amber-200 text-amber-900'
+                    }`}>
+                      <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                        <Icons.Clock /> Promo Berakhir Dalam
+                      </span>
+                      <span className={`text-sm font-black tabular-nums px-2.5 py-1 rounded-lg text-white ${
+                        selectedPromoCountdown.isUrgent ? 'bg-rose-600 animate-pulse' : 'bg-[#1A1512]'
+                      }`}>
+                        {selectedPromoCountdown.label}
+                      </span>
+                    </div>
+                  )}
 
                   <p className="text-[15px] text-[#5C4B3E] leading-relaxed mb-6 font-bold">
                     {selectedMenu.description || 'Belum ada deskripsi untuk menu ini.'}
