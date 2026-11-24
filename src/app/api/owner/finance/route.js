@@ -116,6 +116,89 @@ export async function POST(request) {
       });
     }
 
+    if (action === 'add_menu') {
+      if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
+      const price = Math.max(0, Number(payload.price || 0));
+      const costPrice = Math.max(0, Number(payload.cost_price || 0));
+      const rawDiscount = Number(payload.discount_price || 0);
+      const hasDiscount = rawDiscount > 0 && rawDiscount < price;
+      const stock = Math.max(0, Number(payload.stock ?? 20));
+      const promoHours = Number(payload.promo_hours || 0);
+      const promoExpiresAt = (hasDiscount || payload.is_featured) && promoHours > 0
+        ? new Date(Date.now() + promoHours * 3600 * 1000).toISOString()
+        : null;
+
+      const { error } = await supabaseAdmin.from('menus').insert([{
+        tenant_id: payload.tenant_id,
+        name: String(payload.name || '').trim(),
+        category: payload.category || 'makanan',
+        price,
+        cost_price: costPrice,
+        discount_price: hasDiscount ? rawDiscount : null,
+        promo_expires_at: promoExpiresAt,
+        is_featured: Boolean(payload.is_featured),
+        is_new: Boolean(payload.is_new),
+        stock,
+        status: stock > 0 ? 'available' : 'soldout',
+        description: String(payload.description || '').trim(),
+        image_url: String(payload.image_url || '').trim(),
+      }]);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Menu baru & HPP berhasil ditambahkan!' });
+    }
+
+    if (action === 'edit_menu') {
+      if (!tenantIds.includes(payload.tenant_id)) throw new Error('Akses ditolak');
+      const price = Math.max(0, Number(payload.price || 0));
+      const costPrice = Math.max(0, Number(payload.cost_price || 0));
+      const rawDiscount = Number(payload.discount_price || 0);
+      const hasDiscount = rawDiscount > 0 && rawDiscount < price;
+      const stock = Math.max(0, Number(payload.stock ?? 0));
+      const promoHours = Number(payload.promo_hours || 0);
+
+      let promoExpiresAt = payload.promo_expires_at || null;
+      if (!hasDiscount && !payload.is_featured) {
+        promoExpiresAt = null;
+      } else if (promoHours > 0) {
+        promoExpiresAt = new Date(Date.now() + promoHours * 3600 * 1000).toISOString();
+      }
+
+      const { error } = await supabaseAdmin
+        .from('menus')
+        .update({
+          tenant_id: payload.tenant_id,
+          name: String(payload.name || '').trim(),
+          category: payload.category || 'makanan',
+          price,
+          cost_price: costPrice,
+          discount_price: hasDiscount ? rawDiscount : null,
+          promo_expires_at: promoExpiresAt,
+          is_featured: Boolean(payload.is_featured),
+          is_new: Boolean(payload.is_new),
+          stock,
+          status: stock > 0 ? 'available' : 'soldout',
+          description: String(payload.description || '').trim(),
+          image_url: String(payload.image_url || '').trim(),
+        })
+        .eq('id', payload.id)
+        .in('tenant_id', tenantIds);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Perubahan menu, HPP & promo disimpan!' });
+    }
+
+    if (action === 'delete_menu') {
+      const { error } = await supabaseAdmin
+        .from('menus')
+        .delete()
+        .eq('id', payload.id)
+        .in('tenant_id', tenantIds);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Menu berhasil dihapus!' });
+    }
+
     return NextResponse.json({ error: 'Aksi tidak dikenal' }, { status: 400 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -143,7 +226,11 @@ export async function GET(request) {
       supabaseAdmin.from('expenses').select('*').in('tenant_id', tenantIds).order('expense_date', { ascending: false }),
       supabaseAdmin.from('employees').select('*').in('tenant_id', tenantIds).order('name', { ascending: true }),
       supabaseAdmin.from('employee_transactions').select('*').in('tenant_id', tenantIds).order('transaction_date', { ascending: false }),
-      supabaseAdmin.from('menus').select('id, tenant_id, name, category, price, stock, status').in('tenant_id', tenantIds).order('stock', { ascending: true })
+      supabaseAdmin
+        .from('menus')
+        .select('id, tenant_id, name, category, price, cost_price, discount_price, promo_expires_at, is_featured, is_new, stock, status, description, image_url')
+        .in('tenant_id', tenantIds)
+        .order('name', { ascending: true })
     ]);
 
     return NextResponse.json({
