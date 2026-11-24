@@ -216,7 +216,7 @@ export default function TabMenu({
 
       {filtered.length === 0 && (
         <div className={`rounded-2xl p-10 text-center border-2 border-dashed ${isLight ? 'border-[#D4C5B8] bg-white' : 'border-slate-700 bg-slate-900'}`}>
-          <p className={`font-bold ${textSubClass}`}>Tidak ada menu yang sesuai pencarian.</p>
+          <p className={`font-bold ${textSubClass}`}>Tidak ada menu yang sesuai .</p>
         </div>
       )}
     </div>
