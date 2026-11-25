@@ -1,24 +1,87 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 const Icons = {
-  Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-  Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-  Overview: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
-  Finance: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
-  Reports: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  Menu: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+  Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  Moon: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  ChevronDown: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="6 9 12 15 18 9"/></svg>,
+  Overview: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className="w-4 h-4 shrink-0"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
+  Finance: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className="w-4 h-4 shrink-0"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  Box: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className="w-4 h-4 shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  Reports: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className="w-4 h-4 shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  Close: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="20 6 9 17 4 12"/></svg>,
+  Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
   Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
 };
 
+function NeuSelect({ value, onChange, options, placeholder = 'Pilih...', className = '' }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutside);
+    return () => document.removeEventListener('click', handleOutside);
+  }, []);
+
+  const selectedObj = options.find(opt => String(opt.value) === String(value));
+
+  return (
+    <div className={`relative ${className}`} ref={wrapRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="neu-inset w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left text-xs font-extrabold neu-text cursor-pointer"
+      >
+        <span className="truncate">{selectedObj ? selectedObj.label : placeholder}</span>
+        <span className={`neu-sub shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <Icons.ChevronDown />
+        </span>
+      </button>
+
+      {open && (
+        <div className="neu-dropdown-menu absolute left-0 right-0 mt-2 p-1.5 z-50 space-y-1 max-h-60 overflow-y-auto">
+          {options.map((opt) => {
+            const isSelected = String(opt.value) === String(value);
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`neu-dropdown-option w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 ${
+                  isSelected ? 'selected font-extrabold' : 'font-bold'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Icons.Check />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OwnerFinance() {
   const [userEmail, setUserEmail] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('expenses_daily');
 
   const [tenants, setTenants] = useState([]);
@@ -79,6 +142,22 @@ export default function OwnerFinance() {
 
   useEffect(() => {
     try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'stocks') {
+        setActiveTab('stocks');
+      } else if (tabParam === 'employees') {
+        setActiveTab('employees');
+      } else if (tabParam === 'expenses_monthly') {
+        setActiveTab('expenses_monthly');
+      } else {
+        setActiveTab('expenses_daily');
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const savedTheme = localStorage.getItem('nexaflow_theme');
       if (savedTheme === 'dark') setIsDarkMode(true);
       else setIsDarkMode(false);
@@ -134,6 +213,16 @@ export default function OwnerFinance() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const handleSwitchSection = (targetTab) => {
+    setActiveTab(targetTab);
+    setIsSidebarOpen(false);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', targetTab === 'stocks' ? 'stocks' : 'expenses');
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {}
   };
 
   const handleAddExpense = async (e) => {
@@ -377,6 +466,7 @@ export default function OwnerFinance() {
       }
     });
   };
+
   const handleRestoreEmployee = async (emp) => {
     try {
       const res = await fetch('/api/owner/finance', {
@@ -448,443 +538,811 @@ export default function OwnerFinance() {
   const modalNetMargin = modalSellPrice - modalCostPrice;
   const modalMarginPct = modalSellPrice > 0 ? Math.round((modalNetMargin / modalSellPrice) * 100) : 0;
 
+  const isStockSection = activeTab === 'stocks';
+
+  const tenantFilterOptions = useMemo(() => [
+    { value: 'all', label: `Semua Cabang (${tenants.length})` },
+    ...tenants.map(t => ({ value: t.id, label: t.name }))
+  ], [tenants]);
+
+  const tenantOptions = useMemo(() => tenants.map(t => ({ value: t.id, label: t.name })), [tenants]);
+
+  const categoryOptions = [
+    { value: 'makanan', label: 'Makanan' },
+    { value: 'minuman', label: 'Minuman' },
+    { value: 'cemilan', label: 'Cemilan' },
+    { value: 'Paket Bundling', label: 'Paket Bundling' },
+  ];
+
+  const promoHourOptions = [
+    { value: '0', label: 'Tanpa Batas Waktu / Pertahankan' },
+    { value: '1', label: '1 Jam (Flash Sale)' },
+    { value: '3', label: '3 Jam (Happy Hour)' },
+    { value: '6', label: '6 Jam' },
+    { value: '24', label: '24 Jam (1 Hari)' },
+  ];
+
+  const roleOptions = [
+    { value: 'Kasir', label: 'Kasir' },
+    { value: 'Koki / Barista', label: 'Koki / Barista' },
+    { value: 'Pelayan', label: 'Pelayan' },
+    { value: 'Manager', label: 'Manager' },
+  ];
+
   return (
-    <div className="bg-[#F4EFE9] text-[#1A1512] dark:bg-[#0a192f] dark:text-white min-h-screen font-sans">
+    <div className={`neu-owner-shell font-sans ${isDarkMode ? 'neu-dark' : ''}`}>
       <style>{`
+        .neu-owner-shell {
+          --bg-base: #E6E9EF;
+          --surface: #E6E9EF;
+          --surface-elevated: #EDF0F6;
+          --shadow-light: #FFFFFF;
+          --shadow-dark: #C2C8D4;
+          --border-subtle: rgba(255, 255, 255, 0.65);
+          --divider: rgba(148, 163, 184, 0.28);
+          --text-primary: #1E2532;
+          --text-secondary: #626E82;
+          --sb-thumb: #C5CCD8;
+
+          background-color: var(--bg-base);
+          color: var(--text-primary);
+          min-height: 100vh;
+          min-height: -webkit-fill-available;
+          transition: background-color 0.2s ease, color 0.18s ease;
+        }
+        .neu-owner-shell.neu-dark {
+          --bg-base: #1B202C;
+          --surface: #1B202C;
+          --surface-elevated: #222838;
+          --shadow-light: #252C3C;
+          --shadow-dark: #11151D;
+          --border-subtle: rgba(255, 255, 255, 0.06);
+          --divider: rgba(148, 163, 184, 0.14);
+          --text-primary: #F1F5F9;
+          --text-secondary: #94A3B8;
+          --sb-thumb: #2A3244;
+        }
+
+        .neu-owner-shell * {
+          scrollbar-width: thin;
+          scrollbar-color: var(--sb-thumb) var(--bg-base);
+          -webkit-tap-highlight-color: transparent;
+        }
+        .neu-owner-shell ::-webkit-scrollbar { width: 8px; height: 8px; }
+        .neu-owner-shell ::-webkit-scrollbar-track { background: var(--bg-base); }
+        .neu-owner-shell ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+        .neu-owner-shell ::-webkit-scrollbar-thumb {
+          background: var(--sb-thumb);
+          border-radius: 9999px;
+          border: 2px solid var(--bg-base);
+        }
+        .neu-owner-shell ::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #2563EB, #10B981);
+        }
+
+        .neu-text { color: var(--text-primary); }
+        .neu-sub { color: var(--text-secondary); }
+        .neu-div { border-color: var(--divider); }
         .num-tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-        .owner-card { box-shadow: 0 2px 8px rgba(26, 21, 18, 0.06); }
-        .dark .owner-card { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .neu-card {
+          background: var(--surface);
+          border-radius: 26px;
+          box-shadow: 9px 9px 18px var(--shadow-dark), -9px -9px 18px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+          transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.16s ease;
+        }
+        .neu-card-hover:hover {
+          background: var(--surface-elevated);
+          border-color: rgba(37, 99, 235, 0.35);
+          box-shadow: 11px 11px 22px var(--shadow-dark), -11px -11px 22px var(--shadow-light);
+        }
+
+        .neu-inset {
+          background: var(--surface);
+          border-radius: 16px;
+          box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+          border: 1px solid transparent;
+        }
+        .neu-inset:focus-within {
+          border-color: rgba(37, 99, 235, 0.5);
+          box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light), 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .neu-inset-pill {
+          background: var(--surface);
+          border-radius: 9999px;
+          box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+        }
+
+        .neu-item {
+          background: var(--surface);
+          border-radius: 18px;
+          box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+          transition: all 0.18s ease;
+        }
+        .neu-item:hover {
+          background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.07)), var(--surface-elevated);
+          border-color: rgba(59, 130, 246, 0.45);
+          transform: translateY(-1px);
+        }
+
+        .neu-btn {
+          background: var(--surface);
+          border-radius: 15px;
+          box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+          transition: all 0.18s ease;
+          cursor: pointer;
+        }
+        .neu-btn:hover {
+          background: linear-gradient(135deg, #2563EB, #1D4ED8);
+          color: #FFFFFF !important;
+          border-color: #60A5FA;
+          box-shadow: 6px 6px 14px var(--shadow-dark), 0 0 14px rgba(37, 99, 235, 0.35);
+          transform: translateY(-1px);
+        }
+        .neu-btn:hover * { color: #FFFFFF !important; }
+        .neu-btn:active {
+          box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.4);
+          transform: scale(0.97);
+        }
+        .neu-btn.active {
+          background: linear-gradient(135deg, #2563EB, #10B981);
+          color: #FFFFFF !important;
+          border-color: rgba(255, 255, 255, 0.3);
+          box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.28), 0 4px 12px rgba(37, 99, 235, 0.28);
+        }
+        .neu-btn.active * { color: #FFFFFF !important; }
+
+        .neu-btn-green:hover {
+          background: linear-gradient(135deg, #16A34A, #15803D);
+          border-color: #4ADE80;
+          box-shadow: 6px 6px 14px var(--shadow-dark), 0 0 14px rgba(22, 163, 74, 0.38);
+        }
+        .neu-btn-amber:hover {
+          background: linear-gradient(135deg, #D97706, #B45309);
+          border-color: #FCD34D;
+          box-shadow: 6px 6px 14px var(--shadow-dark), 0 0 14px rgba(217, 119, 6, 0.38);
+        }
+        .neu-btn-danger:hover {
+          background: linear-gradient(135deg, #E11D48, #BE123C);
+          border-color: #FDA4AF;
+          box-shadow: 6px 6px 14px var(--shadow-dark), 0 0 14px rgba(225, 29, 72, 0.38);
+        }
+
+        .neu-orb {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          background: var(--surface);
+          box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.18s ease;
+          cursor: pointer;
+        }
+        .neu-orb:hover {
+          background: linear-gradient(135deg, #2563EB, #0EA5E9);
+          color: #FFFFFF !important;
+          border-color: #7DD3FC;
+          box-shadow: 0 0 14px rgba(14, 165, 233, 0.45);
+          transform: scale(1.06);
+        }
+        .neu-orb:active {
+          box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.4);
+          transform: scale(0.94);
+        }
+
+        .neu-knob {
+          background: var(--surface);
+          border-radius: 50%;
+          box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+        }
+
+        .neu-dropdown-menu {
+          background: var(--surface-elevated);
+          border-radius: 20px;
+          box-shadow: 10px 12px 24px var(--shadow-dark), -6px -6px 16px var(--shadow-light);
+          border: 1px solid var(--border-subtle);
+        }
+        .neu-dropdown-option {
+          border-radius: 12px;
+          color: var(--text-primary);
+          transition: all 0.15s ease;
+          cursor: pointer;
+        }
+        .neu-dropdown-option:hover {
+          background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(16, 185, 129, 0.12));
+          color: #3B82F6;
+        }
+        .neu-dropdown-option.selected {
+          background: linear-gradient(135deg, #2563EB, #10B981);
+          color: #FFFFFF !important;
+        }
+        .neu-dropdown-option.selected * { color: #FFFFFF !important; }
+
+        .ios-blur-backdrop {
+          background: rgba(15, 23, 42, 0.48);
+          -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
+        }
       `}</style>
 
-      <div className="flex min-h-screen">
-        <aside className="group hidden lg:flex w-[80px] hover:w-64 transition-[width] duration-200 ease-out bg-[#2A1F17] text-white dark:bg-slate-900 border-r-2 border-[#1A1512] dark:border-slate-700 flex-col justify-between z-50 shrink-0 h-screen sticky top-0 overflow-hidden">
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="h-20 flex items-center px-5 border-b border-white/15 dark:border-slate-700 shrink-0 overflow-hidden">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 p-1 shadow-sm">
+      {/* BACKDROP SIDEBAR BUKA-TUTUP */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 ios-blur-backdrop z-40"
+        />
+      )}
+
+      {/* SIDEBAR BUKA-TUTUP OWNER (TERPISAH ANTARA KEUANGAN & STOK MENU) */}
+      <aside
+        className={`neu-card fixed top-3.5 left-3.5 bottom-3.5 z-50 w-64 p-5 flex flex-col justify-between transition-all duration-200 ${
+          isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-[130%] opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex items-center justify-between gap-2.5 pb-4 border-b neu-div shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="neu-knob w-10 h-10 flex items-center justify-center shrink-0 p-1.5">
                 <img src="/logo-nexaflow-3d.png" alt="NF" className="w-full h-full object-contain" />
               </div>
-              <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                <p className="text-base font-black tracking-tight text-white leading-none">NEXAFLOW</p>
-                <p className="text-[11px] font-extrabold text-amber-400 tracking-wider uppercase mt-1">Owner Panel</p>
+              <div className="min-w-0">
+                <p className="text-sm font-black tracking-tight neu-text leading-none truncate">NEXAFLOW</p>
+                <p className="text-[10px] font-extrabold text-emerald-500 tracking-wider uppercase mt-1">Owner Panel</p>
               </div>
             </div>
 
-            <nav className="flex-1 px-3 py-5 space-y-1.5 overflow-y-auto overflow-x-hidden">
-              <Link href="/owner" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
-                <Icons.Overview />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Command Center AI</span>
-              </Link>
-              <Link href="/owner/finance" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl bg-[#2563EB] text-white text-xs font-black border border-blue-400/40 whitespace-nowrap">
-                <Icons.Finance />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Keuangan & Menu</span>
-              </Link>
-              <Link href="/owner/reports" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
-                <Icons.Reports />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Laporan Global P&L</span>
-              </Link>
-              <Link href="/owner/settings" className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-stone-200 dark:text-slate-200 hover:bg-white/10 dark:hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors whitespace-nowrap">
-                <Icons.Settings />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Pengaturan & AI Key</span>
-              </Link>
-            </nav>
-          </div>
-
-          <div className="p-3 border-t border-white/15 dark:border-slate-700 space-y-3 shrink-0">
-            <div className="px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden">
-              <p className="text-xs font-black text-white truncate">{userEmail || 'Owner'}</p>
-              <p className="text-[11px] font-bold text-amber-300 dark:text-slate-300 mt-0.5">{tenants.length} Cabang Terdaftar</p>
-            </div>
-            <button type="button" onClick={handleLogout} className="w-full flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors whitespace-nowrap">
-              <Icons.Logout />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Logout</span>
-            </button>
-          </div>
-        </aside>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="lg:hidden bg-[#2A1F17] dark:bg-slate-900 border-b-2 border-[#1A1512] dark:border-slate-700 px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1.5">
-              <Link href="/owner" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Overview</Link>
-              <Link href="/owner/finance" className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white text-xs font-black whitespace-nowrap">Keuangan & Menu</Link>
-              <Link href="/owner/reports" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Laporan</Link>
-              <Link href="/owner/settings" className="px-3 py-1.5 rounded-lg text-stone-200 text-xs font-bold whitespace-nowrap">Pengaturan</Link>
-            </div>
-            <button type="button" onClick={() => setIsDarkMode(!isDarkMode)} className="p-1.5 rounded-lg bg-white/10 text-amber-300 shrink-0">
-              {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Tutup Sidebar"
+              className="neu-orb w-9 h-9 neu-sub shrink-0"
+            >
+              <Icons.Close />
             </button>
           </div>
 
-          <header className="bg-white dark:bg-slate-900 border-b-2 border-[#E0D6CC] dark:border-slate-700 px-5 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
-            <div>
-              <h1 className="text-lg sm:text-xl font-black tracking-tight text-[#1A1512] dark:text-white">Keuangan, Karyawan & Master Menu</h1>
-              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">Kendali pusat pengeluaran, gaji staf, HPP modal, promo & stok cabang</p>
-            </div>
-            <button type="button" onClick={() => setIsDarkMode(!isDarkMode)} title="Ubah Tema" className="hidden lg:inline-flex p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-amber-400">
-              {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
-            </button>
-          </header>
+          <nav className="flex-1 mt-5 space-y-2.5 overflow-y-auto overflow-x-hidden pr-0.5">
+            <Link
+              href="/owner"
+              onClick={() => setIsSidebarOpen(false)}
+              className="neu-btn flex items-center gap-3 px-3.5 py-3 neu-sub text-xs font-bold whitespace-nowrap"
+            >
+              <Icons.Overview />
+              <span>Command Center AI</span>
+            </Link>
 
-          <main className="p-5 sm:p-8 max-w-6xl w-full mx-auto space-y-6">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <button type="button" onClick={() => setActiveTab('expenses_daily')} className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${activeTab === 'expenses_daily' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'}`}>
+            <button
+              type="button"
+              onClick={() => handleSwitchSection('expenses_daily')}
+              className={`neu-btn w-full flex items-center gap-3 px-3.5 py-3 text-left text-xs whitespace-nowrap ${
+                !isStockSection ? 'active font-extrabold' : 'neu-sub font-bold'
+              }`}
+            >
+              <Icons.Finance />
+              <span>Keuangan & Gaji</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSwitchSection('stocks')}
+              className={`neu-btn w-full flex items-center justify-between gap-2 px-3.5 py-3 text-left text-xs whitespace-nowrap ${
+                isStockSection ? 'active font-extrabold' : 'neu-sub font-bold'
+              }`}
+            >
+              <span className="flex items-center gap-3 truncate">
+                <Icons.Box />
+                <span className="truncate">Master Menu & Stok</span>
+              </span>
+              {lowStockCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 text-[10px] font-black shrink-0">
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+
+            <Link
+              href="/owner/reports"
+              onClick={() => setIsSidebarOpen(false)}
+              className="neu-btn flex items-center gap-3 px-3.5 py-3 neu-sub text-xs font-bold whitespace-nowrap"
+            >
+              <Icons.Reports />
+              <span>Laporan Global P&L</span>
+            </Link>
+
+            <Link
+              href="/owner/settings"
+              onClick={() => setIsSidebarOpen(false)}
+              className="neu-btn flex items-center gap-3 px-3.5 py-3 neu-sub text-xs font-bold whitespace-nowrap"
+            >
+              <Icons.Settings />
+              <span>Pengaturan & AI Key</span>
+            </Link>
+          </nav>
+        </div>
+
+        <div className="pt-4 mt-4 border-t neu-div space-y-3 shrink-0">
+          <div className="neu-inset p-3.5 overflow-hidden">
+            <p className="text-xs font-black neu-text truncate">{userEmail || 'Owner'}</p>
+            <p className="text-[11px] font-bold text-emerald-500 mt-0.5">{tenants.length} Cabang Terdaftar</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="neu-btn neu-btn-danger w-full flex items-center justify-center gap-2 py-2.5 px-3 text-rose-500 text-xs font-black"
+          >
+            <Icons.Logout />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* AREA KONTEN UTAMA */}
+      <div className="max-w-6xl w-full mx-auto p-3.5 sm:p-6 space-y-6 pb-20">
+        {/* HEADER */}
+        <header className="neu-card px-4 sm:px-6 py-4 flex items-center justify-between gap-3 sticky top-3 z-30">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label="Buka atau Tutup Sidebar"
+              className="neu-orb neu-text shrink-0"
+            >
+              <Icons.Menu />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-black tracking-tight neu-text truncate">
+                {isStockSection ? 'Master Menu, HPP (Modal) & Stok' : 'Keuangan, Pengeluaran & Gaji Karyawan'}
+              </h1>
+              <p className="text-xs font-bold neu-sub truncate">
+                {isStockSection
+                  ? 'Kendali harga modal HPP, diskon promo berbatas waktu & stok seluruh cabang'
+                  : 'Kendali pengeluaran kasir, biaya tetap bulanan & payroll slip WhatsApp'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            title="Ubah Tema"
+            aria-label="Ubah Tema"
+            className={`neu-orb shrink-0 ${isDarkMode ? 'text-sky-400' : 'text-amber-500'}`}
+          >
+            {isDarkMode ? <Icons.Sun /> : <Icons.Moon />}
+          </button>
+        </header>
+
+        {/* SUB-TABS KEUANGAN (HANYA TAMPIL SAAT DI BAGIAN KEUANGAN & GAJI) */}
+        {!isStockSection && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('expenses_daily')}
+                className={`neu-btn px-4 py-2.5 text-xs font-black whitespace-nowrap ${
+                  activeTab === 'expenses_daily' ? 'active' : 'neu-sub'
+                }`}
+              >
                 Pengeluaran Harian (Kasir)
               </button>
-              <button type="button" onClick={() => setActiveTab('expenses_monthly')} className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${activeTab === 'expenses_monthly' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'}`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('expenses_monthly')}
+                className={`neu-btn px-4 py-2.5 text-xs font-black whitespace-nowrap ${
+                  activeTab === 'expenses_monthly' ? 'active' : 'neu-sub'
+                }`}
+              >
                 Biaya Bulanan (Fixed Cost)
               </button>
-              <button type="button" onClick={() => setActiveTab('employees')} className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 ${activeTab === 'employees' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'}`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('employees')}
+                className={`neu-btn px-4 py-2.5 text-xs font-black whitespace-nowrap ${
+                  activeTab === 'employees' ? 'active' : 'neu-sub'
+                }`}
+              >
                 Data Karyawan & Gaji
-              </button>
-              <button type="button" onClick={() => setActiveTab('stocks')} className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap border-2 flex items-center gap-2 ${activeTab === 'stocks' ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#1A1512] dark:text-slate-100'}`}>
-                <span>Master Menu, HPP & Promo</span>
-                {lowStockCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[#1A1512] text-[10px] font-black">{lowStockCount}</span>
-                )}
               </button>
             </div>
 
-            {activeTab === 'expenses_daily' && (
-              <div className="space-y-4">
-                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-200">Catatan pengeluaran harian yang diinput oleh Kasir (bahan baku, gas, es, dll).</p>
-                  <span className="text-sm font-black text-rose-600 dark:text-rose-400 num-tabular">Total: {formatRp(totalPengeluaranHarian)}</span>
-                </div>
+            <button
+              type="button"
+              onClick={() => handleSwitchSection('stocks')}
+              className="neu-btn px-4 py-2.5 text-xs font-black text-blue-500 inline-flex items-center gap-2"
+            >
+              <Icons.Box />
+              <span>Buka Master Menu & Stok</span>
+            </button>
+          </div>
+        )}
 
-                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
-                          <th className="py-3.5 px-6">Tanggal</th>
-                          <th className="py-3.5 px-4">Cabang</th>
-                          <th className="py-3.5 px-4">Keterangan</th>
-                          <th className="py-3.5 px-4">Nominal</th>
-                          <th className="py-3.5 px-6 text-right">Aksi</th>
+        {/* TAB 1: PENGELUARAN HARIAN KASIR */}
+        {activeTab === 'expenses_daily' && (
+          <div className="space-y-4">
+            <div className="neu-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-bold neu-sub">Catatan pengeluaran harian yang diinput oleh Kasir (bahan baku, gas, es, dll).</p>
+              <span className="neu-inset-pill px-4 py-1.5 text-sm font-black text-rose-500 num-tabular">Total: {formatRp(totalPengeluaranHarian)}</span>
+            </div>
+
+            <div className="neu-card overflow-hidden p-3 sm:p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-separate border-spacing-y-2">
+                  <thead>
+                    <tr className="text-xs font-black uppercase neu-sub">
+                      <th className="py-2.5 px-4">Tanggal</th>
+                      <th className="py-2.5 px-4">Cabang</th>
+                      <th className="py-2.5 px-4">Keterangan</th>
+                      <th className="py-2.5 px-4">Nominal</th>
+                      <th className="py-2.5 px-4 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-xs">
+                    {isLoading ? (
+                      <tr><td colSpan="5" className="py-8 text-center font-bold neu-sub">Memuat data...</td></tr>
+                    ) : expensesDaily.map(ex => {
+                      const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
+                      return (
+                        <tr key={ex.id} className="neu-item">
+                          <td className="py-3.5 px-4 rounded-l-2xl font-bold neu-sub whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                          <td className="py-3.5 px-4 font-black neu-text">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-extrabold neu-text">{ex.description || '-'}</span>
+                            <span className="neu-sub font-bold ml-2">({ex.quantity || 1} x {formatRp(safeUnitPrice)})</span>
+                          </td>
+                          <td className="py-3.5 px-4 font-black text-rose-500 num-tabular whitespace-nowrap">-{formatRp(ex.amount)}</td>
+                          <td className="py-3.5 px-4 text-right rounded-r-2xl">
+                            <button type="button" onClick={() => handleDelete('expense', ex.id)} className="neu-btn neu-btn-danger p-2 text-rose-500" title="Hapus"><Icons.Trash /></button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
-                        {isLoading ? (
-                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Memuat data...</td></tr>
-                        ) : expensesDaily.map(ex => {
-                          const safeUnitPrice = Number(ex.unit_price) || (Number(ex.amount) / (Number(ex.quantity) || 1));
-                          return (
-                            <tr key={ex.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
-                              <td className="py-3.5 px-6 font-bold text-[#5C4B3E] dark:text-slate-300 whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                              <td className="py-3.5 px-4 font-black text-[#1A1512] dark:text-white">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                              <td className="py-3.5 px-4">
-                                <span className="font-extrabold text-[#1A1512] dark:text-white">{ex.description || '-'}</span>
-                                <span className="text-[#5C4B3E] dark:text-slate-300 font-bold ml-2">({ex.quantity || 1} x {formatRp(safeUnitPrice)})</span>
-                              </td>
-                              <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 num-tabular whitespace-nowrap">-{formatRp(ex.amount)}</td>
-                              <td className="py-3.5 px-6 text-right">
-                                <button onClick={() => handleDelete('expense', ex.id)} className="p-2 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white" title="Hapus"><Icons.Trash /></button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        {!isLoading && expensesDaily.length === 0 && (
-                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada pengeluaran harian dari kasir.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                      );
+                    })}
+                    {!isLoading && expensesDaily.length === 0 && (
+                      <tr><td colSpan="5" className="py-8 text-center font-bold neu-sub">Belum ada pengeluaran harian dari kasir.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: BIAYA BULANAN (FIXED COST) */}
+        {activeTab === 'expenses_monthly' && (
+          <div className="space-y-4">
+            <div className="neu-card p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="neu-inset px-4 py-3">
+                  <p className="text-[11px] font-black neu-sub uppercase">Total Beban Bulanan + Gaji</p>
+                  <p className="text-lg font-black text-rose-500 num-tabular mt-0.5">{formatRp(totalPengeluaranBulanan)}</p>
+                </div>
+                <div className="neu-inset px-4 py-3">
+                  <p className="text-[11px] font-black neu-sub uppercase">Gaji Dibayarkan</p>
+                  <p className="text-lg font-black neu-text num-tabular mt-0.5">{formatRp(totalGajiBulanIni)}</p>
                 </div>
               </div>
-            )}
+              <button type="button" onClick={() => { setFormExpense({ ...formExpense, category: 'Bulanan' }); setExpenseModal(true); }} className="neu-btn neu-btn-green px-4 py-2.5 text-emerald-500 text-xs font-black">+ Catat Biaya Bulanan</button>
+            </div>
 
-            {activeTab === 'expenses_monthly' && (
-              <div className="space-y-4">
-                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-6">
-                    <div>
-                      <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase">Total Beban Bulanan + Gaji</p>
-                      <p className="text-lg font-black text-rose-600 dark:text-rose-400 num-tabular mt-0.5">{formatRp(totalPengeluaranBulanan)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-[#5C4B3E] dark:text-slate-300 uppercase">Gaji Dibayarkan</p>
-                      <p className="text-lg font-black text-[#1A1512] dark:text-white num-tabular mt-0.5">{formatRp(totalGajiBulanIni)}</p>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => { setFormExpense({ ...formExpense, category: 'Bulanan' }); setExpenseModal(true); }} className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black transition-colors">+ Catat Biaya Bulanan</button>
-                </div>
-
-                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
-                          <th className="py-3.5 px-6">Tanggal</th>
-                          <th className="py-3.5 px-4">Cabang</th>
-                          <th className="py-3.5 px-4">Keterangan Biaya</th>
-                          <th className="py-3.5 px-4">Nominal</th>
-                          <th className="py-3.5 px-6 text-right">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
-                        {expensesMonthly.map(ex => (
-                          <tr key={ex.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
-                            <td className="py-3.5 px-6 font-bold text-[#5C4B3E] dark:text-slate-300 whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                            <td className="py-3.5 px-4 font-black text-[#1A1512] dark:text-white">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
-                            <td className="py-3.5 px-4 font-extrabold text-[#1A1512] dark:text-slate-100">{ex.description || '-'}</td>
-                            <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 num-tabular whitespace-nowrap">-{formatRp(ex.amount)}</td>
-                            <td className="py-3.5 px-6 text-right">
-                              <button onClick={() => handleDelete('expense', ex.id)} className="p-2 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white" title="Hapus"><Icons.Trash /></button>
-                            </td>
-                          </tr>
-                        ))}
-                        {expensesMonthly.length === 0 && (
-                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Belum ada catatan biaya bulanan.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            <div className="neu-card overflow-hidden p-3 sm:p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-separate border-spacing-y-2">
+                  <thead>
+                    <tr className="text-xs font-black uppercase neu-sub">
+                      <th className="py-2.5 px-4">Tanggal</th>
+                      <th className="py-2.5 px-4">Cabang</th>
+                      <th className="py-2.5 px-4">Keterangan Biaya</th>
+                      <th className="py-2.5 px-4">Nominal</th>
+                      <th className="py-2.5 px-4 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-xs">
+                    {expensesMonthly.map(ex => (
+                      <tr key={ex.id} className="neu-item">
+                        <td className="py-3.5 px-4 rounded-l-2xl font-bold neu-sub whitespace-nowrap">{new Date(ex.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="py-3.5 px-4 font-black neu-text">{tenants.find(t => t.id === ex.tenant_id)?.name || '-'}</td>
+                        <td className="py-3.5 px-4 font-extrabold neu-text">{ex.description || '-'}</td>
+                        <td className="py-3.5 px-4 font-black text-rose-500 num-tabular whitespace-nowrap">-{formatRp(ex.amount)}</td>
+                        <td className="py-3.5 px-4 text-right rounded-r-2xl">
+                          <button type="button" onClick={() => handleDelete('expense', ex.id)} className="neu-btn neu-btn-danger p-2 text-rose-500" title="Hapus"><Icons.Trash /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {expensesMonthly.length === 0 && (
+                      <tr><td colSpan="5" className="py-8 text-center font-bold neu-sub">Belum ada catatan biaya bulanan.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {activeTab === 'employees' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={() => setShowInactiveEmployees(false)} className={`px-3.5 py-2 rounded-xl text-xs font-black border-2 transition-colors ${!showInactiveEmployees ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#5C4B3E] dark:text-slate-300'}`}>Aktif ({activeEmployees.length})</button>
-                    <button type="button" onClick={() => setShowInactiveEmployees(true)} className={`px-3.5 py-2 rounded-xl text-xs font-black border-2 transition-colors ${showInactiveEmployees ? 'bg-[#2A1F17] dark:bg-[#2563EB] text-white border-[#1A1512] dark:border-blue-500' : 'bg-white dark:bg-slate-900 border-[#E0D6CC] dark:border-slate-700 text-[#5C4B3E] dark:text-slate-300'}`}>Nonaktif ({inactiveEmployees.length})</button>
-                  </div>
-                  <button type="button" onClick={() => { setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' }); setEmployeeModal({ open: true, data: null }); }} className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black transition-colors">+ Tambah Karyawan</button>
-                </div>
+        {/* TAB 3: DATA KARYAWAN & GAJI */}
+        {activeTab === 'employees' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setShowInactiveEmployees(false)} className={`neu-btn px-3.5 py-2 text-xs font-black ${!showInactiveEmployees ? 'active' : 'neu-sub'}`}>Aktif ({activeEmployees.length})</button>
+                <button type="button" onClick={() => setShowInactiveEmployees(true)} className={`neu-btn px-3.5 py-2 text-xs font-black ${showInactiveEmployees ? 'active' : 'neu-sub'}`}>Nonaktif ({inactiveEmployees.length})</button>
+              </div>
+              <button type="button" onClick={() => { setFormEmployee({ id: null, tenant_id: tenants[0]?.id || '', name: '', role: 'Kasir', base_salary: '', wa_number: '', address: '', bank_name: '', bank_account: '' }); setEmployeeModal({ open: true, data: null }); }} className="neu-btn neu-btn-green px-4 py-2.5 text-emerald-500 text-xs font-black">+ Tambah Karyawan</button>
+            </div>
 
-                <div className="space-y-3">
-                  {displayedEmployees.map(emp => {
-                    const empTrans = transactions.filter(t => t.employee_id === emp.id);
-                    const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
-                    const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
-                    const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
-                    const isActive = emp.is_active !== false;
-                    const showSalaryReminder = isActive && isEndOfMonth && !hasBeenPaidThisMonth;
+            <div className="space-y-3">
+              {displayedEmployees.map(emp => {
+                const empTrans = transactions.filter(t => t.employee_id === emp.id);
+                const totalKasbon = empTrans.filter(t => t.type === 'Kasbon').reduce((s, t) => s + t.amount, 0);
+                const totalBonus = empTrans.filter(t => t.type === 'Bonus').reduce((s, t) => s + t.amount, 0);
+                const hasBeenPaidThisMonth = empTrans.some(t => t.type === 'Gaji' && t.transaction_date.startsWith(currentMonthStr));
+                const isActive = emp.is_active !== false;
+                const showSalaryReminder = isActive && isEndOfMonth && !hasBeenPaidThisMonth;
 
-                    return (
-                      <div key={emp.id} className={`owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${!isActive ? 'opacity-80' : ''}`}>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-black text-[#1A1512] dark:text-white">{emp.name}</p>
-                            {!isActive && <span className="px-2.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-black">Nonaktif</span>}
-                            {showSalaryReminder && <span className="px-2.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-black">Belum Digaji</span>}
-                          </div>
-                          <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">{emp.role} · {tenants.find(t => t.id === emp.tenant_id)?.name || 'Cabang'}</p>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-6 text-xs">
-                          <div>
-                            <p className="font-bold text-[#5C4B3E] dark:text-slate-300">Gaji Pokok</p>
-                            <p className="font-black text-[#1A1512] dark:text-white num-tabular mt-0.5">{formatRp(emp.base_salary)}</p>
-                          </div>
-                          <div>
-                            <p className="font-bold text-[#5C4B3E] dark:text-slate-300">Kasbon</p>
-                            <p className="font-black text-amber-700 dark:text-amber-400 num-tabular mt-0.5">{totalKasbon > 0 ? formatRp(totalKasbon) : '—'}</p>
-                          </div>
-                          <div>
-                            <p className="font-bold text-[#5C4B3E] dark:text-slate-300">Bonus</p>
-                            <p className="font-black text-emerald-700 dark:text-emerald-400 num-tabular mt-0.5">{totalBonus > 0 ? formatRp(totalBonus) : '—'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          {isActive ? (
-                            <>
-                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-[#2563EB] text-xs font-black text-[#1A1512] dark:text-white">Gaji</button>
-                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-amber-500 text-xs font-black text-[#1A1512] dark:text-white">Kasbon</button>
-                              <button onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="px-3 py-1.5 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 hover:border-emerald-500 text-xs font-black text-[#1A1512] dark:text-white">Bonus</button>
-                              <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
-                              <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
-                              <button onClick={() => handleDelete('employee', emp.id)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400" title="Nonaktifkan"><Icons.Trash /></button>
-                            </>
-                          ) : (
-                            <>
-                              <button onClick={() => handleSendSalaryWA(emp)} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">Slip WA</button>
-                              <button onClick={() => handleOpenEditEmployee(emp)} className="p-2 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-slate-200" title="Edit"><Icons.Edit /></button>
-                              <button onClick={() => handleRestoreEmployee(emp)} className="px-3 py-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black">Aktifkan Kembali</button>
-                            </>
-                          )}
-                        </div>
+                return (
+                  <div key={emp.id} className={`neu-card neu-card-hover p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${!isActive ? 'opacity-80' : ''}`}>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-black neu-text">{emp.name}</p>
+                        {!isActive && <span className="neu-inset-pill px-2.5 py-0.5 neu-sub text-[10px] font-black">Nonaktif</span>}
+                        {showSalaryReminder && <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black">Belum Digaji</span>}
                       </div>
-                    );
-                  })}
-                  {displayedEmployees.length === 0 && (
-                    <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl p-8 text-center text-xs font-bold text-[#5C4B3E] dark:text-slate-300">
-                      {showInactiveEmployees ? 'Tidak ada karyawan nonaktif.' : 'Belum ada data karyawan aktif.'}
+                      <p className="text-xs font-bold neu-sub mt-0.5">{emp.role} · {tenants.find(t => t.id === emp.tenant_id)?.name || 'Cabang'}</p>
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-3 gap-4 sm:gap-6 text-xs">
+                      <div className="neu-inset px-3 py-2">
+                        <p className="font-bold neu-sub">Gaji Pokok</p>
+                        <p className="font-black neu-text num-tabular mt-0.5">{formatRp(emp.base_salary)}</p>
+                      </div>
+                      <div className="neu-inset px-3 py-2">
+                        <p className="font-bold neu-sub">Kasbon</p>
+                        <p className="font-black text-amber-500 num-tabular mt-0.5">{totalKasbon > 0 ? formatRp(totalKasbon) : '-'}</p>
+                      </div>
+                      <div className="neu-inset px-3 py-2">
+                        <p className="font-bold neu-sub">Bonus</p>
+                        <p className="font-black text-emerald-500 num-tabular mt-0.5">{totalBonus > 0 ? formatRp(totalBonus) : '-'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isActive ? (
+                        <>
+                          <button type="button" onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Gaji' })} className="neu-btn px-3 py-1.5 text-xs font-black text-blue-500">Gaji</button>
+                          <button type="button" onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Kasbon' })} className="neu-btn neu-btn-amber px-3 py-1.5 text-xs font-black text-amber-500">Kasbon</button>
+                          <button type="button" onClick={() => setPayrollModal({ open: true, employee: emp, type: 'Bonus' })} className="neu-btn neu-btn-green px-3 py-1.5 text-xs font-black text-emerald-500">Bonus</button>
+                          <button type="button" onClick={() => handleSendSalaryWA(emp)} className="neu-btn neu-btn-green px-3 py-1.5 text-emerald-500 text-xs font-black">Slip WA</button>
+                          <button type="button" onClick={() => handleOpenEditEmployee(emp)} className="neu-btn p-2 neu-text" title="Edit"><Icons.Edit /></button>
+                          <button type="button" onClick={() => handleDelete('employee', emp.id)} className="neu-btn neu-btn-danger p-2 text-rose-500" title="Nonaktifkan"><Icons.Trash /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => handleSendSalaryWA(emp)} className="neu-btn neu-btn-green px-3 py-1.5 text-emerald-500 text-xs font-black">Slip WA</button>
+                          <button type="button" onClick={() => handleOpenEditEmployee(emp)} className="neu-btn p-2 neu-text" title="Edit"><Icons.Edit /></button>
+                          <button type="button" onClick={() => handleRestoreEmployee(emp)} className="neu-btn px-3 py-1.5 text-blue-500 text-xs font-black">Aktifkan Kembali</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {displayedEmployees.length === 0 && (
+                <div className="neu-card p-8 text-center text-xs font-bold neu-sub">
+                  {showInactiveEmployees ? 'Tidak ada karyawan nonaktif.' : 'Belum ada data karyawan aktif.'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: MASTER MENU, HPP (MODAL), PROMO & STOK EKSKLUSIF OWNER */}
+        {isStockSection && (
+          <div className="space-y-4">
+            <div className="neu-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
+                <NeuSelect
+                  value={stockBranchFilter}
+                  onChange={setStockBranchFilter}
+                  options={tenantFilterOptions}
+                  className="w-52"
+                />
+                <div className="neu-inset px-3.5 py-2.5 flex-1 max-w-xs">
+                  <input
+                    type="text"
+                    value={stockSearch}
+                    onChange={(e) => setStockSearch(e.target.value)}
+                    placeholder="Cari nama menu..."
+                    className="bg-transparent w-full text-xs font-bold neu-text outline-none"
+                  />
                 </div>
               </div>
-            )}
-            {/* TAB 4: MASTER MENU, HPP (MODAL), PROMO & STOK EKSKLUSIF OWNER */}
-            {activeTab === 'stocks' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select value={stockBranchFilter} onChange={(e) => setStockBranchFilter(e.target.value)} className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#1A1512] dark:text-white outline-none">
-                      <option value="all">Semua Cabang ({tenants.length})</option>
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <input type="text" value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Cari nama menu..." className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-[#1A1512] dark:text-white placeholder-[#8C7A6B] dark:placeholder-slate-400 outline-none" />
-                  </div>
-                  <button type="button" onClick={handleOpenAddMenu} className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-black transition-colors shadow-sm">
-                    + Tambah Menu & HPP
-                  </button>
-                </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchSection('expenses_daily')}
+                  className="neu-btn px-3.5 py-2.5 text-xs font-bold neu-sub"
+                >
+                  Ke Keuangan & Gaji
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAddMenu}
+                  className="neu-btn neu-btn-green px-4 py-2.5 text-emerald-500 text-xs font-black inline-flex items-center gap-1.5"
+                >
+                  <Icons.Plus />
+                  <span>Tambah Menu & HPP</span>
+                </button>
+              </div>
+            </div>
 
-                <div className="owner-card bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b-2 border-[#E0D6CC] dark:border-slate-700 text-xs font-black uppercase text-[#5C4B3E] dark:text-slate-300 bg-[#FAF6F2] dark:bg-slate-800/50">
-                          <th className="py-3.5 px-6">Menu & Cabang</th>
-                          <th className="py-3.5 px-4">Harga Jual / Promo</th>
-                          <th className="py-3.5 px-4">HPP (Modal) & Margin</th>
-                          <th className="py-3.5 px-4 text-center">Stok</th>
-                          <th className="py-3.5 px-6 text-right">Kelola</th>
+            <div className="neu-card overflow-hidden p-3 sm:p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-separate border-spacing-y-2">
+                  <thead>
+                    <tr className="text-xs font-black uppercase neu-sub">
+                      <th className="py-2.5 px-4">Menu & Cabang</th>
+                      <th className="py-2.5 px-4">Harga Jual / Promo</th>
+                      <th className="py-2.5 px-4">HPP (Modal) & Margin</th>
+                      <th className="py-2.5 px-4 text-center">Stok</th>
+                      <th className="py-2.5 px-4 text-right">Kelola</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-xs">
+                    {filteredMenus.map(m => {
+                      const branchName = tenants.find(t => t.id === m.tenant_id)?.name || 'Cabang';
+                      const stockNum = Number(m.stock || 0);
+                      const normalPrice = Number(m.price || 0);
+                      const discPrice = Number(m.discount_price || 0);
+                      const isPromoExpired = m.promo_expires_at && new Date(m.promo_expires_at).getTime() <= Date.now();
+                      const hasPromo = !isPromoExpired && discPrice > 0 && discPrice < normalPrice;
+                      const activeSell = hasPromo ? discPrice : normalPrice;
+                      const costNum = Number(m.cost_price || 0);
+                      const unitMargin = activeSell - costNum;
+                      const marginPct = activeSell > 0 ? Math.round((unitMargin / activeSell) * 100) : 0;
+
+                      return (
+                        <tr key={m.id} className="neu-item">
+                          <td className="py-3.5 px-4 rounded-l-2xl">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-black neu-text">{m.name}</p>
+                              {m.is_featured && !isPromoExpired && (
+                                <span className="neu-inset-pill px-2.5 py-0.5 text-amber-500 text-[10px] font-black">Unggulan</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] font-bold neu-sub mt-0.5">{branchName} · {m.category}</p>
+                          </td>
+                          <td className="py-3.5 px-4 num-tabular">
+                            {hasPromo ? (
+                              <div>
+                                <span className="font-black text-rose-500">{formatRp(discPrice)}</span>
+                                <span className="text-[10px] font-bold line-through neu-sub ml-1.5">{formatRp(normalPrice)}</span>
+                              </div>
+                            ) : (
+                              <span className="font-black neu-text">{formatRp(normalPrice)}</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 num-tabular">
+                            {costNum > 0 ? (
+                              <div>
+                                <p className="font-bold neu-sub">Modal: {formatRp(costNum)}</p>
+                                <p className={`text-[11px] font-black ${unitMargin < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                  Laba: {formatRp(unitMargin)} ({marginPct}%)
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-bold text-amber-500">HPP belum diisi</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`px-3 py-1 rounded-full font-black num-tabular ${stockNum <= 3 ? 'bg-rose-600 text-white' : stockNum <= 10 ? 'bg-amber-500 text-slate-900' : 'neu-inset-pill text-emerald-500'}`}>
+                              {stockNum} pcs
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right rounded-r-2xl">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button type="button" onClick={() => handleQuickAddStock(m, 10)} className="neu-btn neu-btn-green px-2.5 py-1.5 text-emerald-500 font-black" title="Tambah 10 stok">+10</button>
+                              <button type="button" onClick={() => setStockModal({ open: true, menu: m, mode: 'add', qty: '20' })} className="neu-btn px-2.5 py-1.5 neu-text font-black">Stok</button>
+                              <button type="button" onClick={() => handleOpenEditMenu(m)} className="neu-btn px-3 py-1.5 text-blue-500 font-black">Edit / Promo</button>
+                              <button type="button" onClick={() => handleDelete('menu', m.id)} className="neu-btn neu-btn-danger p-1.5 text-rose-500" title="Hapus Menu"><Icons.Trash /></button>
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y-2 divide-[#F4EFE9] dark:divide-slate-800 text-xs">
-                        {filteredMenus.map(m => {
-                          const branchName = tenants.find(t => t.id === m.tenant_id)?.name || 'Cabang';
-                          const stockNum = Number(m.stock || 0);
-                          const normalPrice = Number(m.price || 0);
-                          const discPrice = Number(m.discount_price || 0);
-                          const isPromoExpired = m.promo_expires_at && new Date(m.promo_expires_at).getTime() <= Date.now();
-                          const hasPromo = !isPromoExpired && discPrice > 0 && discPrice < normalPrice;
-                          const activeSell = hasPromo ? discPrice : normalPrice;
-                          const costNum = Number(m.cost_price || 0);
-                          const unitMargin = activeSell - costNum;
-                          const marginPct = activeSell > 0 ? Math.round((unitMargin / activeSell) * 100) : 0;
-
-                          return (
-                            <tr key={m.id} className="hover:bg-[#FAF6F2] dark:hover:bg-slate-800/50">
-                              <td className="py-3.5 px-6">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <p className="font-black text-[#1A1512] dark:text-white">{m.name}</p>
-                                  {m.is_featured && !isPromoExpired && (
-                                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-black">Unggulan</span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">{branchName} · {m.category}</p>
-                              </td>
-                              <td className="py-3.5 px-4 num-tabular">
-                                {hasPromo ? (
-                                  <div>
-                                    <span className="font-black text-rose-600 dark:text-rose-400">{formatRp(discPrice)}</span>
-                                    <span className="text-[10px] font-bold line-through text-slate-400 ml-1.5">{formatRp(normalPrice)}</span>
-                                  </div>
-                                ) : (
-                                  <span className="font-black text-[#1A1512] dark:text-white">{formatRp(normalPrice)}</span>
-                                )}
-                              </td>
-                              <td className="py-3.5 px-4 num-tabular">
-                                {costNum > 0 ? (
-                                  <div>
-                                    <p className="font-bold text-[#5C4B3E] dark:text-slate-300">Modal: {formatRp(costNum)}</p>
-                                    <p className={`text-[11px] font-black ${unitMargin < 0 ? 'text-rose-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                      Laba: {formatRp(unitMargin)} ({marginPct}%)
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">HPP belum diisi</span>
-                                )}
-                              </td>
-                              <td className="py-3.5 px-4 text-center">
-                                <span className={`px-2.5 py-1 rounded-lg font-black num-tabular ${stockNum <= 3 ? 'bg-rose-600 text-white' : stockNum <= 10 ? 'bg-amber-500 text-[#1A1512]' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
-                                  {stockNum} pcs
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-6 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button type="button" onClick={() => handleQuickAddStock(m, 10)} className="px-2 py-1.5 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-emerald-700 dark:text-emerald-400 font-black" title="Tambah 10 stok">+10</button>
-                                  <button type="button" onClick={() => setStockModal({ open: true, menu: m, mode: 'add', qty: '20' })} className="px-2.5 py-1.5 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-[#1A1512] dark:text-white font-black">Stok</button>
-                                  <button type="button" onClick={() => handleOpenEditMenu(m)} className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white font-black">Edit / Promo</button>
-                                  <button type="button" onClick={() => handleDelete('menu', m.id)} className="p-1.5 rounded-lg bg-[#FAF6F2] dark:bg-slate-800 border border-[#E0D6CC] dark:border-slate-600 text-rose-600 dark:text-rose-400" title="Hapus Menu"><Icons.Trash /></button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        {filteredMenus.length === 0 && (
-                          <tr><td colSpan="5" className="py-8 text-center font-bold text-[#5C4B3E] dark:text-slate-300">Tidak ada menu yang cocok.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                      );
+                    })}
+                    {filteredMenus.length === 0 && (
+                      <tr><td colSpan="5" className="py-8 text-center font-bold neu-sub">Tidak ada menu yang cocok.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </main>
-        </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* MODAL TAMBAH / EDIT MASTER MENU, HPP & PROMO (EKSKLUSIF OWNER) */}
+      {/* MODAL TAMBAH / EDIT MASTER MENU, HPP & PROMO */}
       {menuModal.open && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
-            <div>
-              <h3 className="text-base font-black text-[#1A1512] dark:text-white">
-                {menuModal.mode === 'edit' ? 'Edit Menu, HPP & Promo' : 'Tambah Menu Baru & HPP'}
-              </h3>
-              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">Data modal HPP & pengaturan promo hanya tampil untuk Owner</p>
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-lg p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-base font-black neu-text">
+                  {menuModal.mode === 'edit' ? 'Edit Menu, HPP & Promo' : 'Tambah Menu Baru & HPP'}
+                </h3>
+                <p className="text-xs font-bold neu-sub">Data modal HPP & pengaturan promo hanya tampil untuk Owner</p>
+              </div>
+              <button type="button" onClick={() => setMenuModal({ open: false, mode: 'add' })} className="neu-orb w-9 h-9 neu-sub">
+                <Icons.Close />
+              </button>
             </div>
 
             <form onSubmit={handleSaveMenu} className="space-y-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Cabang</label>
-                  <select value={formMenu.tenant_id} onChange={e => setFormMenu({ ...formMenu, tenant_id: e.target.value })} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
+                  <label className="block text-xs font-black neu-sub mb-1">Cabang</label>
+                  <NeuSelect
+                    value={formMenu.tenant_id}
+                    onChange={(val) => setFormMenu({ ...formMenu, tenant_id: val })}
+                    options={tenantOptions}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Kategori</label>
-                  <select value={formMenu.category} onChange={e => setFormMenu({ ...formMenu, category: e.target.value })} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                    <option value="makanan">Makanan</option>
-                    <option value="minuman">Minuman</option>
-                    <option value="cemilan">Cemilan</option>
-                    <option value="Paket Bundling">Paket Bundling</option>
-                  </select>
+                  <label className="block text-xs font-black neu-sub mb-1">Kategori</label>
+                  <NeuSelect
+                    value={formMenu.category}
+                    onChange={(val) => setFormMenu({ ...formMenu, category: val })}
+                    options={categoryOptions}
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nama Menu</label>
-                <input type="text" required value={formMenu.name} onChange={e => setFormMenu({ ...formMenu, name: e.target.value })} placeholder="Contoh: Kopi Susu Aren" className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Harga Jual Normal (Rp)</label>
-                  <input type="number" required min="0" value={formMenu.price} onChange={e => setFormMenu({ ...formMenu, price: e.target.value })} placeholder="22000" className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-emerald-700 dark:text-emerald-400 mb-1">Harga Modal / HPP (Rp)</label>
-                  <input type="number" min="0" value={formMenu.cost_price} onChange={e => setFormMenu({ ...formMenu, cost_price: e.target.value })} placeholder="8500" className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Nama Menu</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" required value={formMenu.name} onChange={e => setFormMenu({ ...formMenu, name: e.target.value })} placeholder="Contoh: Kopi Susu Aren" className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-rose-600 dark:text-rose-400 mb-1">Harga Promo / Coret (Opsional)</label>
-                  <input type="number" min="0" value={formMenu.discount_price} onChange={e => setFormMenu({ ...formMenu, discount_price: e.target.value })} placeholder="Kosongkan jika normal" className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">Harga Jual Normal (Rp)</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="number" required min="0" value={formMenu.price} onChange={e => setFormMenu({ ...formMenu, price: e.target.value })} placeholder="22000" className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Durasi Promo</label>
-                  <select value={formMenu.promo_hours} onChange={e => setFormMenu({ ...formMenu, promo_hours: e.target.value })} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                    <option value="0">Tanpa Batas Waktu / Pertahankan</option>
-                    <option value="1">1 Jam (Flash Sale)</option>
-                    <option value="3">3 Jam (Happy Hour)</option>
-                    <option value="6">6 Jam</option>
-                    <option value="24">24 Jam (1 Hari)</option>
-                  </select>
+                  <label className="block text-xs font-black text-emerald-500 mb-1">Harga Modal / HPP (Rp)</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="number" min="0" value={formMenu.cost_price} onChange={e => setFormMenu({ ...formMenu, cost_price: e.target.value })} placeholder="8500" className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-rose-500 mb-1">Harga Promo / Coret (Opsional)</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="number" min="0" value={formMenu.discount_price} onChange={e => setFormMenu({ ...formMenu, discount_price: e.target.value })} placeholder="Kosongkan jika normal" className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black neu-sub mb-1">Durasi Promo</label>
+                  <NeuSelect
+                    value={formMenu.promo_hours}
+                    onChange={(val) => setFormMenu({ ...formMenu, promo_hours: val })}
+                    options={promoHourOptions}
+                  />
                 </div>
               </div>
 
               {modalSellPrice > 0 && (
-                <div className={`p-3 rounded-xl border-2 flex items-center justify-between text-xs ${modalNetMargin < 0 ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-700 dark:text-rose-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-300'}`}>
+                <div className={`neu-inset p-3 flex items-center justify-between text-xs ${modalNetMargin < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                   <span className="font-bold">Estimasi Laba Bersih / Porsi:</span>
                   <span className="font-black num-tabular">{formatRp(modalNetMargin)} ({modalMarginPct}%)</span>
                 </div>
@@ -892,15 +1350,17 @@ export default function OwnerFinance() {
 
               <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Stok Awal (Porsi)</label>
-                  <input type="number" min="0" required value={formMenu.stock} onChange={e => setFormMenu({ ...formMenu, stock: e.target.value })} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">Stok Awal (Porsi)</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="number" min="0" required value={formMenu.stock} onChange={e => setFormMenu({ ...formMenu, stock: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 pt-4">
-                  <label className="flex items-center gap-2 text-xs font-black text-[#1A1512] dark:text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-black neu-text cursor-pointer">
                     <input type="checkbox" checked={formMenu.is_featured} onChange={e => setFormMenu({ ...formMenu, is_featured: e.target.checked })} className="w-4 h-4 rounded" />
                     Tampilkan di Unggulan QR
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-black text-[#1A1512] dark:text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-black neu-text cursor-pointer">
                     <input type="checkbox" checked={formMenu.is_new} onChange={e => setFormMenu({ ...formMenu, is_new: e.target.checked })} className="w-4 h-4 rounded" />
                     Tandai Menu Baru
                   </label>
@@ -908,178 +1368,215 @@ export default function OwnerFinance() {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Deskripsi Singkat (Opsional)</label>
-                <input type="text" value={formMenu.description} onChange={e => setFormMenu({ ...formMenu, description: e.target.value })} placeholder="Komposisi atau rasa menu..." className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Deskripsi Singkat (Opsional)</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" value={formMenu.description} onChange={e => setFormMenu({ ...formMenu, description: e.target.value })} placeholder="Komposisi atau rasa menu..." className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">URL Gambar Menu (Opsional)</label>
-                <input type="text" value={formMenu.image_url} onChange={e => setFormMenu({ ...formMenu, image_url: e.target.value })} placeholder="https://..." className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">URL Gambar Menu (Opsional)</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" value={formMenu.image_url} onChange={e => setFormMenu({ ...formMenu, image_url: e.target.value })} placeholder="https://..." className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setMenuModal({ open: false, mode: 'add' })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-                <button type="submit" disabled={isSavingMenu} className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">{isSavingMenu ? 'Menyimpan...' : 'Simpan Menu'}</button>
+              <div className="flex gap-2.5 pt-2">
+                <button type="button" onClick={() => setMenuModal({ open: false, mode: 'add' })} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+                <button type="submit" disabled={isSavingMenu} className="neu-btn neu-btn-green flex-1 py-2.5 text-emerald-500 text-xs font-black">{isSavingMenu ? 'Menyimpan...' : 'Simpan Menu'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL ATUR STOK */}
       {stockModal.open && stockModal.menu && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-md p-6 space-y-4">
             <div>
-              <h3 className="text-base font-black text-[#1A1512] dark:text-white">Atur Stok Menu</h3>
-              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300 mt-0.5">{stockModal.menu.name} · Stok saat ini: {stockModal.menu.stock} pcs</p>
+              <h3 className="text-base font-black neu-text">Atur Stok Menu</h3>
+              <p className="text-xs font-bold neu-sub mt-0.5">{stockModal.menu.name} · Stok saat ini: {stockModal.menu.stock} pcs</p>
             </div>
             <form onSubmit={handleSaveStockModal} className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-700">
-                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'add' }))} className={`py-2 rounded-lg text-xs font-black ${stockModal.mode === 'add' ? 'bg-[#2563EB] text-white' : 'text-[#5C4B3E] dark:text-slate-300'}`}>+ Tambah Stok</button>
-                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'set', qty: String(stockModal.menu.stock || 0) }))} className={`py-2 rounded-lg text-xs font-black ${stockModal.mode === 'set' ? 'bg-[#2563EB] text-white' : 'text-[#5C4B3E] dark:text-slate-300'}`}>Setel Angka Pasti</button>
+              <div className="neu-inset grid grid-cols-2 gap-1.5 p-1.5">
+                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'add' }))} className={`neu-btn py-2 text-xs font-black ${stockModal.mode === 'add' ? 'active' : 'neu-sub'}`}>+ Tambah Stok</button>
+                <button type="button" onClick={() => setStockModal(prev => ({ ...prev, mode: 'set', qty: String(stockModal.menu.stock || 0) }))} className={`neu-btn py-2 text-xs font-black ${stockModal.mode === 'set' ? 'active' : 'neu-sub'}`}>Setel Angka Pasti</button>
               </div>
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">{stockModal.mode === 'add' ? 'Jumlah Porsi Ditambahkan' : 'Total Stok Baru'}</label>
-                <input type="number" min="0" required value={stockModal.qty} onChange={(e) => setStockModal(prev => ({ ...prev, qty: e.target.value }))} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">{stockModal.mode === 'add' ? 'Jumlah Porsi Ditambahkan' : 'Total Stok Baru'}</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="number" min="0" required value={stockModal.qty} onChange={(e) => setStockModal(prev => ({ ...prev, qty: e.target.value }))} className="bg-transparent w-full text-sm font-bold neu-text outline-none" />
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setStockModal({ open: false, menu: null, mode: 'add', qty: '' })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-                <button type="submit" disabled={isUpdatingStock} className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">{isUpdatingStock ? 'Menyimpan...' : 'Simpan'}</button>
+              <div className="flex gap-2.5">
+                <button type="button" onClick={() => setStockModal({ open: false, menu: null, mode: 'add', qty: '' })} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+                <button type="submit" disabled={isUpdatingStock} className="neu-btn neu-btn-green flex-1 py-2.5 text-emerald-500 text-xs font-black">{isUpdatingStock ? 'Menyimpan...' : 'Simpan'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL CATAT BIAYA BULANAN */}
       {expenseModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
-            <h3 className="text-base font-black text-[#1A1512] dark:text-white">Catat Biaya Bulanan</h3>
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-md p-6 space-y-4">
+            <h3 className="text-base font-black neu-text">Catat Biaya Bulanan</h3>
             <form onSubmit={handleAddExpense} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Cabang</label>
-                <select value={formExpense.tenant_id} onChange={e => setFormExpense({...formExpense, tenant_id: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <label className="block text-xs font-black neu-sub mb-1">Cabang</label>
+                <NeuSelect
+                  value={formExpense.tenant_id}
+                  onChange={(val) => setFormExpense({ ...formExpense, tenant_id: val })}
+                  options={tenantOptions}
+                />
               </div>
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Keterangan Biaya</label>
-                <input type="text" required value={formExpense.description} onChange={e => setFormExpense({...formExpense, description: e.target.value})} placeholder="Sewa, Listrik, WiFi..." className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Keterangan Biaya</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" required value={formExpense.description} onChange={e => setFormExpense({ ...formExpense, description: e.target.value })} placeholder="Sewa, Listrik, WiFi..." className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nominal (Rp)</label>
-                <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({...formExpense, amount: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Nominal (Rp)</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="number" required value={formExpense.amount} onChange={e => setFormExpense({ ...formExpense, amount: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setExpenseModal(false)} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
+              <div className="flex gap-2.5 pt-2">
+                <button type="button" onClick={() => setExpenseModal(false)} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+                <button type="submit" className="neu-btn neu-btn-green flex-1 py-2.5 text-emerald-500 text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL TAMBAH / EDIT KARYAWAN */}
       {employeeModal.open && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-black text-[#1A1512] dark:text-white">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-black neu-text">{formEmployee.id ? 'Edit Karyawan' : 'Tambah Karyawan'}</h3>
             <form onSubmit={handleSaveEmployee} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Cabang</label>
-                <select value={formEmployee.tenant_id} onChange={e => setFormEmployee({...formEmployee, tenant_id: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <label className="block text-xs font-black neu-sub mb-1">Cabang</label>
+                <NeuSelect
+                  value={formEmployee.tenant_id}
+                  onChange={(val) => setFormEmployee({ ...formEmployee, tenant_id: val })}
+                  options={tenantOptions}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nama Lengkap</label>
-                  <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({...formEmployee, name: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">Nama Lengkap</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="text" required value={formEmployee.name} onChange={e => setFormEmployee({ ...formEmployee, name: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">No. WhatsApp</label>
-                  <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({...formEmployee, wa_number: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">No. WhatsApp</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="tel" value={formEmployee.wa_number} onChange={e => setFormEmployee({ ...formEmployee, wa_number: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Alamat</label>
-                <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({...formEmployee, address: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Jabatan</label>
-                  <select value={formEmployee.role} onChange={e => setFormEmployee({...formEmployee, role: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white">
-                    <option>Kasir</option>
-                    <option>Koki / Barista</option>
-                    <option>Pelayan</option>
-                    <option>Manager</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Gaji Pokok (Rp)</label>
-                  <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({...formEmployee, base_salary: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Alamat</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" value={formEmployee.address} onChange={e => setFormEmployee({ ...formEmployee, address: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nama Bank</label>
-                  <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({...formEmployee, bank_name: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">Jabatan</label>
+                  <NeuSelect
+                    value={formEmployee.role}
+                    onChange={(val) => setFormEmployee({ ...formEmployee, role: val })}
+                    options={roleOptions}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">No. Rekening</label>
-                  <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({...formEmployee, bank_account: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                  <label className="block text-xs font-black neu-sub mb-1">Gaji Pokok (Rp)</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="number" required value={formEmployee.base_salary} onChange={e => setFormEmployee({ ...formEmployee, base_salary: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black neu-sub mb-1">Nama Bank</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="text" value={formEmployee.bank_name} onChange={e => setFormEmployee({ ...formEmployee, bank_name: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black neu-sub mb-1">No. Rekening</label>
+                  <div className="neu-inset px-3.5 py-2.5">
+                    <input type="text" value={formEmployee.bank_account} onChange={e => setFormEmployee({ ...formEmployee, bank_account: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2.5 pt-2">
+                <button type="button" onClick={() => setEmployeeModal({ open: false, data: null })} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+                <button type="submit" className="neu-btn neu-btn-green flex-1 py-2.5 text-emerald-500 text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL CATAT GAJI / KASBON / BONUS */}
       {payrollModal.open && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4">
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-md p-6 space-y-4">
             <div>
-              <h3 className="text-base font-black text-[#1A1512] dark:text-white">Catat {payrollModal.type}</h3>
-              <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">{payrollModal.employee.name}</p>
+              <h3 className="text-base font-black neu-text">Catat {payrollModal.type}</h3>
+              <p className="text-xs font-bold neu-sub">{payrollModal.employee.name}</p>
             </div>
             <form onSubmit={handlePayroll} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Nominal (Rp)</label>
-                <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({...formPayroll, amount: e.target.value})} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Nominal (Rp)</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="number" required value={formPayroll.amount} onChange={e => setFormPayroll({ ...formPayroll, amount: e.target.value })} placeholder={payrollModal.type === 'Gaji' ? payrollModal.employee.base_salary : ''} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-black text-[#1A1512] dark:text-slate-200 mb-1">Catatan (Opsional)</label>
-                <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({...formPayroll, notes: e.target.value})} className="w-full bg-[#FAF6F2] dark:bg-slate-800 border-2 border-[#E0D6CC] dark:border-slate-600 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1A1512] dark:text-white" />
+                <label className="block text-xs font-black neu-sub mb-1">Catatan (Opsional)</label>
+                <div className="neu-inset px-3.5 py-2.5">
+                  <input type="text" value={formPayroll.notes} onChange={e => setFormPayroll({ ...formPayroll, notes: e.target.value })} className="bg-transparent w-full text-xs font-bold neu-text outline-none" />
+                </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-black">Simpan</button>
+              <div className="flex gap-2.5 pt-2">
+                <button type="button" onClick={() => setPayrollModal({ open: false, employee: null, type: 'Gaji' })} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+                <button type="submit" className="neu-btn neu-btn-green flex-1 py-2.5 text-emerald-500 text-xs font-black">Simpan</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL KONFIRMASI HAPUS / NONAKTIFKAN */}
       {confirmModal.open && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 w-full max-w-sm rounded-2xl p-6 space-y-4 text-center">
-            <h3 className="text-base font-black text-[#1A1512] dark:text-white">{confirmModal.title}</h3>
-            <p className="text-xs font-bold text-[#5C4B3E] dark:text-slate-300">{confirmModal.message}</p>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setConfirmModal({ open: false, title: '', message: '', confirmText: 'Hapus', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl border-2 border-[#E0D6CC] dark:border-slate-600 text-xs font-black text-[#1A1512] dark:text-slate-200">Batal</button>
-              <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-black">{confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}</button>
+        <div className="fixed inset-0 ios-blur-backdrop z-50 flex items-center justify-center p-4">
+          <div className="neu-card w-full max-w-sm p-6 space-y-4 text-center">
+            <h3 className="text-base font-black neu-text">{confirmModal.title}</h3>
+            <p className="text-xs font-bold neu-sub">{confirmModal.message}</p>
+            <div className="flex gap-2.5 pt-2">
+              <button type="button" onClick={() => setConfirmModal({ open: false, title: '', message: '', confirmText: 'Hapus', isDanger: false, onConfirm: null, loading: false })} disabled={confirmModal.loading} className="neu-btn flex-1 py-2.5 text-xs font-black neu-sub">Batal</button>
+              <button type="button" onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="neu-btn neu-btn-danger flex-1 py-2.5 text-rose-500 text-xs font-black">{confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* TOAST */}
       {toast.show && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-white dark:bg-slate-900 border-2 border-[#E0D6CC] dark:border-slate-700 px-4 py-3 rounded-xl shadow-lg">
-          <span className={`w-2.5 h-2.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-          <p className="text-xs font-black text-[#1A1512] dark:text-white">{toast.message}</p>
+        <div className="fixed bottom-5 right-5 z-50">
+          <div className="neu-card flex items-center gap-2.5 px-4 py-3 rounded-2xl">
+            <span className={`w-2.5 h-2.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+            <p className="text-xs font-black neu-text">{toast.message}</p>
+          </div>
         </div>
       )}
     </div>
